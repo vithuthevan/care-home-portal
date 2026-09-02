@@ -268,6 +268,16 @@ namespace CareHome.Api.Controllers
 
             await dbContext.SaveChangesAsync();
 
+            await audit.LogAsync(
+                "Invoice",
+                invoice.Id.ToString(),
+                "Send",
+                null,
+                new { invoice.InvoiceNumber, result.Success, result.Simulated },
+                result.Success
+                    ? $"Sent invoice {invoice.InvoiceNumber}."
+                    : $"Failed to send invoice {invoice.InvoiceNumber}.");
+
             if (!result.Success)
             {
                 return BadRequest(new { message = result.ErrorMessage ?? "Email failed." });

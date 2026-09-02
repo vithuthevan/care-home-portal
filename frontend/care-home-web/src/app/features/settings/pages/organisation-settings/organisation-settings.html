@@ -117,7 +117,8 @@
             <mat-label>Email from address</mat-label>
             <input matInput formControlName="emailFromAddress" type="email" />
             @if (
-              form.controls.emailFromAddress.touched && form.controls.emailFromAddress.hasError('email')
+              form.controls.emailFromAddress.touched &&
+              form.controls.emailFromAddress.hasError('email')
             ) {
               <mat-error>Enter a valid email address.</mat-error>
             }

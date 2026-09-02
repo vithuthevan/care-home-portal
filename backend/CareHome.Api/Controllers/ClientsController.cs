@@ -1,3 +1,4 @@
+using CareHome.Api.Audit;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.Clients;
@@ -14,7 +15,8 @@ namespace CareHome.Api.Controllers
     public class ClientsController(
         CareHomeDbContext dbContext,
         ITenantContext tenantContext,
-        UserAccessService userAccess) : ControllerBase
+        UserAccessService userAccess,
+        AuditService audit) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<PagedResult<ClientDto>>> GetClients(
@@ -203,6 +205,14 @@ namespace CareHome.Api.Controllers
 
             await dbContext.SaveChangesAsync();
 
+            await audit.LogAsync(
+                "Client",
+                client.Id.ToString(),
+                "Create",
+                null,
+                new { client.ReferenceNumber, client.SageId, client.FirstName, client.LastName },
+                $"Created client {client.FirstName} {client.LastName}.");
+
             var dto = await ProjectToDto(
                     dbContext.Clients.AsNoTracking())
                 .FirstAsync(x => x.Id == client.Id);
@@ -364,6 +374,14 @@ namespace CareHome.Api.Controllers
 
             await dbContext.SaveChangesAsync();
 
+            await audit.LogAsync(
+                "Client",
+                client.Id.ToString(),
+                "Update",
+                null,
+                new { client.ReferenceNumber, client.FirstName, client.LastName, client.Status },
+                $"Updated client {client.FirstName} {client.LastName}.");
+
             var dto = await ProjectToDto(
                     dbContext.Clients.AsNoTracking())
                 .FirstAsync(x => x.Id == client.Id);
@@ -394,6 +412,14 @@ namespace CareHome.Api.Controllers
             client.IsArchived = true;
 
             await dbContext.SaveChangesAsync();
+
+            await audit.LogAsync(
+                "Client",
+                client.Id.ToString(),
+                "Archive",
+                null,
+                new { client.ReferenceNumber, client.IsArchived },
+                $"Archived client {client.FirstName} {client.LastName}.");
 
             return NoContent();
         }

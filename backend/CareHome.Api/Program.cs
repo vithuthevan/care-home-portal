@@ -199,6 +199,13 @@ app.UseMiddleware<InactiveTenantMiddleware>();
 app.UseMiddleware<MustChangePasswordMiddleware>();
 app.MapControllers();
 
+if (app.Environment.IsDevelopment())
+{
+    app.MapGet("/api/_dev/throw", (HttpContext _) =>
+        throw new InvalidOperationException("UAT forced server error for diagnostics."))
+        .AllowAnonymous();
+}
+
 app.MapHealthChecks("/health/live", new HealthCheckOptions
 {
     Predicate = check => check.Tags.Contains("live"),
