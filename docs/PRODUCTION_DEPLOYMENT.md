@@ -150,6 +150,16 @@ If a migration was applied, **restore the pre-deployment backup**. Do not run `d
 
 Restore the document storage copy taken with the database backup so PDF paths on invoices still resolve.
 
+## Azure (recommended managed host)
+
+Same-origin App Service + Azure SQL + Azure Files for documents. Automated provision/migrate/deploy:
+
+```powershell
+.\scripts\Deploy-Azure.ps1 -ResourceGroup rg-carehome -Location uksouth -AppName carehome-pilot
+```
+
+Details: `docs/AZURE_HOSTING.md`. Bicep: `infra/azure/main.bicep`. Publish package (SPA into API `wwwroot`): `scripts/Publish-CareHome.ps1`.
+
 ## Deployment models
 
 **A. Multi-tenant SaaS** — one API, one database, many `Tenant` rows. Isolation is `TenantId` + JWT `tenant_id`. PlatformAdmin has no organisation context.

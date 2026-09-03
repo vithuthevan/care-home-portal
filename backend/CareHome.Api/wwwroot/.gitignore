@@ -1,0 +1,4 @@
+# Keep directory for local/publish so same-origin SPA hosting can drop files here.
+# Populate via: scripts/Publish-CareHome.ps1 (copies frontend dist into wwwroot).
+*
+!.gitignore

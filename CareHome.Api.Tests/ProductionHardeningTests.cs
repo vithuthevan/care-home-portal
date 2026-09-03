@@ -76,4 +76,15 @@ public class ProductionHardeningTests
         Assert.Throws<InvalidOperationException>(() =>
             ProductionStartupValidator.ValidateProductionSeed(config));
     }
+
+    [Theory]
+    [InlineData("/api/auth/login", true)]
+    [InlineData("/health/ready", true)]
+    [InlineData("/", false)]
+    [InlineData("/index.html", false)]
+    [InlineData("/main.js", false)]
+    public void Security_headers_use_api_csp_only_for_api_and_health(string path, bool expectApiCsp)
+    {
+        Assert.Equal(expectApiCsp, SecurityHeadersMiddleware.MatchesApiOrHealthPath(path));
+    }
 }

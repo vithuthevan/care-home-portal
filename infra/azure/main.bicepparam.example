@@ -1,0 +1,8 @@
+@param location = 'uksouth'
+@param appName
+@param sqlServerName
+@param sqlAdminLogin
+@param sqlAdminPassword
+@param sqlDatabaseName = 'CareHome'
+@param appServiceSku = 'B1'
+@param appServiceSkuTier = 'Basic'

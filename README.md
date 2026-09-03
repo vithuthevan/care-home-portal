@@ -21,6 +21,15 @@ docs/                     Architecture and learning notes
 
 .NET 10 SDK, SQL Server LocalDB (or SQL Server), Node.js.
 
+## Host on Azure
+
+Recommended Production host: App Service (API + Angular same origin) + Azure SQL. See `docs/AZURE_HOSTING.md`.
+
+```powershell
+az login
+.\scripts\Deploy-Azure.ps1 -ResourceGroup rg-carehome -Location uksouth -AppName carehome-pilot
+```
+
 ## Configure database
 
 Edit `backend/CareHome.Api/appsettings.json` → `ConnectionStrings:DefaultConnection`.

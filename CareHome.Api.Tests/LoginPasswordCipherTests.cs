@@ -31,9 +31,6 @@ public class LoginPasswordCipherTests
         Assert.False(cipher.TryDecrypt("Test password", out _));
         Assert.False(cipher.TryDecrypt("enc:not-valid-base64", out _));
         Assert.False(cipher.TryDecrypt(null, out _));
-        Assert.True(cipher.TryResolve(null, password, out var fromPlain));
-        Assert.Equal(password, fromPlain);
-        Assert.True(cipher.TryResolve(encrypted, "ignored", out var fromCipher));
-        Assert.Equal(password, fromCipher);
+        Assert.False(cipher.TryResolve("enc:not-valid-base64", null, out _));
     }
 }

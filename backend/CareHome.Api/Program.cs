@@ -197,6 +197,15 @@ app.UseAuthorization();
 app.UseMiddleware<RequestLoggingScopeMiddleware>();
 app.UseMiddleware<InactiveTenantMiddleware>();
 app.UseMiddleware<MustChangePasswordMiddleware>();
+
+// Same-origin Angular SPA (wwwroot). API and health stay on dedicated routes.
+var wwwRoot = Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+if (Directory.Exists(wwwRoot))
+{
+    app.UseDefaultFiles();
+    app.UseStaticFiles();
+}
+
 app.MapControllers();
 
 if (app.Environment.IsDevelopment())
@@ -217,6 +226,11 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
     Predicate = check => check.Tags.Contains("ready"),
     ResponseWriter = WriteHealthResponse
 }).AllowAnonymous();
+
+if (Directory.Exists(wwwRoot))
+{
+    app.MapFallbackToFile("index.html").AllowAnonymous();
+}
 
 using (var scope = app.Services.CreateScope())
 {
