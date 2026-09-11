@@ -3,6 +3,7 @@ using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.CreditNotes;
 using CareHome.Api.Models;
+using CareHome.Api.Security;
 using CareHome.Api.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,6 +13,7 @@ namespace CareHome.Api.Billing
         CareHomeDbContext dbContext,
         DocumentSequenceService sequences,
         AuditService audit,
+        UserAccessService userAccess,
         ILogger<CreditNoteService> logger)
     {
         public async Task<CreditNotePreviewResponse> PreviewAsync(
@@ -93,9 +95,18 @@ namespace CareHome.Api.Billing
             CreditNotePreviewRequest request,
             CancellationToken cancellationToken = default)
         {
+            // Serialize credit generates per tenant, then rebuild preview under the lock so
+            // remaining-balance checks cannot race with a concurrent credit.
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
+            await SqlAppLock.AcquireExclusiveAsync(
+                dbContext.Database,
+                $"credit-generate-{tenantId}",
+                cancellationToken);
+
             var preview = await PreviewAsync(tenantId, request, cancellationToken);
             if (!preview.CanGenerate)
             {
+                await transaction.RollbackAsync(cancellationToken);
                 logger.LogWarning(
                     "Credit generate blocked. TenantId={TenantId} Reason={Reason}",
                     tenantId,
@@ -103,25 +114,45 @@ namespace CareHome.Api.Billing
                 return (null, preview.Exceptions.FirstOrDefault() ?? "Credit note cannot be generated.");
             }
 
-            await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
-
             var lineIds = preview.Lines.Select(l => l.InvoiceLineId).ToList();
-            var invoiceIds = await dbContext.InvoiceLines.AsNoTracking()
-                .Where(x => lineIds.Contains(x.Id))
-                .Select(x => x.InvoiceId)
-                .Distinct()
+            var freshLines = await dbContext.InvoiceLines
+                .Include(x => x.Invoice)
+                .Include(x => x.CreditNoteLines)
+                    .ThenInclude(x => x.CreditNote)
+                .Where(x => lineIds.Contains(x.Id) && x.Invoice.TenantId == tenantId)
                 .ToListAsync(cancellationToken);
 
+            if (freshLines.Count != lineIds.Count)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return (null, "One or more invoice lines are no longer available for credit. Refresh and try again.");
+            }
+
+            var invoiceIds = freshLines.Select(x => x.InvoiceId).Distinct().ToList();
             if (invoiceIds.Count != 1)
             {
                 await transaction.RollbackAsync(cancellationToken);
                 return (null, "Credit lines must belong to a single invoice. Narrow the client or period and generate again.");
             }
 
-            var invoiceId = invoiceIds[0];
+            var invoice = freshLines[0].Invoice;
+            if (invoice.Status == "Void")
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return (null, "Cannot credit a void invoice.");
+            }
 
-            var invoice = await dbContext.Invoices
-                .FirstAsync(x => x.Id == invoiceId && x.TenantId == tenantId, cancellationToken);
+            foreach (var previewLine in preview.Lines)
+            {
+                var fresh = freshLines.First(x => x.Id == previewLine.InvoiceLineId);
+                var remaining = RemainingCreditable(fresh);
+                if (previewLine.CreditAmount > remaining)
+                {
+                    await transaction.RollbackAsync(cancellationToken);
+                    return (null,
+                        $"Credit for invoice line {previewLine.InvoiceLineId} cannot exceed the remaining invoiced amount of {remaining:0.00}.");
+                }
+            }
 
             var number = await sequences.NextAsync(tenantId, DocumentTypes.CreditNote, cancellationToken);
             var now = DateTimeOffset.UtcNow;
@@ -189,6 +220,12 @@ namespace CareHome.Api.Billing
                 .Where(x => x.Invoice.TenantId == tenantId)
                 .Where(x => x.Invoice.Status != "Void")
                 .Where(x => x.ServicePeriodStart <= request.PeriodEnd && x.ServicePeriodEnd >= request.PeriodStart);
+
+            var allowedHomes = await userAccess.GetAllowedCareHomeIdsAsync(cancellationToken);
+            if (allowedHomes is not null)
+            {
+                query = query.Where(x => allowedHomes.Contains(x.Invoice.CareHomeId));
+            }
 
             if (request.ClientId.HasValue)
             {

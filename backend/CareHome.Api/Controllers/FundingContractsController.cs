@@ -15,14 +15,16 @@ namespace CareHome.Api.Controllers
     public class FundingContractsController(
         CareHomeDbContext dbContext,
         AuditService audit,
-        ITenantContext tenantContext) : ControllerBase
+        ITenantContext tenantContext,
+        UserAccessService userAccess) : ControllerBase
     {
         [HttpGet("api/clients/{clientId:int}/funding-contracts")]
         public async Task<ActionResult<List<FundingContractDto>>> GetForClient(int clientId)
         {
-            if (!await dbContext.Clients.AnyAsync(x => x.Id == clientId && x.TenantId == tenantContext.TenantId))
+            var access = await EnsureClientAccessAsync(clientId);
+            if (access is not null)
             {
-                return NotFound();
+                return access;
             }
 
             var contracts = await dbContext.ClientFundingContracts
@@ -47,6 +49,11 @@ namespace CareHome.Api.Controllers
                 return NotFound();
             }
 
+            if (!await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, client.CareHomeId))
+            {
+                return NotFound();
+            }
+
             var error = ValidateContract(request);
             if (error is not null)
             {
@@ -59,6 +66,15 @@ namespace CareHome.Api.Controllers
                 return relatedError;
             }
 
+            await using var transaction = await dbContext.Database.BeginTransactionAsync();
+            await SqlAppLock.AcquireExclusiveAsync(
+                dbContext.Database,
+                FundingContractLockResource(
+                    tenantContext.TenantId,
+                    clientId,
+                    request.FundingAuthorityId,
+                    request.InvoiceCategoryId));
+
             var overlapError = await EnsureNoOverlappingContract(
                 clientId,
                 request.FundingAuthorityId,
@@ -68,6 +84,7 @@ namespace CareHome.Api.Controllers
                 excludeContractId: null);
             if (overlapError is not null)
             {
+                await transaction.RollbackAsync();
                 return overlapError;
             }
 
@@ -90,6 +107,7 @@ namespace CareHome.Api.Controllers
             dbContext.ClientFundingContracts.Add(contract);
             await dbContext.SaveChangesAsync();
             await audit.LogAsync("ClientFundingContract", contract.Id.ToString(), "Create", null, request, "Created funding contract.");
+            await transaction.CommitAsync();
 
             return CreatedAtAction(nameof(GetOne), new { id = contract.Id }, await LoadDto(contract.Id));
         }
@@ -97,6 +115,12 @@ namespace CareHome.Api.Controllers
         [HttpGet("api/funding-contracts/{id:int}")]
         public async Task<ActionResult<FundingContractDto>> GetOne(int id)
         {
+            var access = await EnsureContractAccessAsync(id);
+            if (access is not null)
+            {
+                return access;
+            }
+
             var dto = await LoadDto(id);
             return dto is null ? NotFound() : Ok(dto);
         }
@@ -106,6 +130,11 @@ namespace CareHome.Api.Controllers
         {
             var contract = await dbContext.ClientFundingContracts.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
             if (contract is null)
+            {
+                return NotFound();
+            }
+
+            if (!await CanAccessContractClientAsync(contract.ClientId))
             {
                 return NotFound();
             }
@@ -120,21 +149,6 @@ namespace CareHome.Api.Controllers
             if (relatedError is not null)
             {
                 return relatedError;
-            }
-
-            if (request.Status == "Active")
-            {
-                var overlapError = await EnsureNoOverlappingContract(
-                    contract.ClientId,
-                    request.FundingAuthorityId,
-                    request.InvoiceCategoryId,
-                    request.ContractStartDate,
-                    request.ContractEndDate,
-                    excludeContractId: contract.Id);
-                if (overlapError is not null)
-                {
-                    return overlapError;
-                }
             }
 
             var used = await dbContext.InvoiceLines.AnyAsync(x =>
@@ -157,6 +171,43 @@ namespace CareHome.Api.Controllers
                 return BadRequest(new { message = "Status must be Active or Inactive." });
             }
 
+            await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+            var previousResource = FundingContractLockResource(
+                tenantContext.TenantId,
+                contract.ClientId,
+                contract.FundingAuthorityId,
+                contract.InvoiceCategoryId);
+            var nextResource = FundingContractLockResource(
+                tenantContext.TenantId,
+                contract.ClientId,
+                request.FundingAuthorityId,
+                request.InvoiceCategoryId);
+
+            // Acquire in deterministic order to avoid deadlocks when two updates swap streams.
+            foreach (var resource in new[] { previousResource, nextResource }
+                .Distinct(StringComparer.Ordinal)
+                .OrderBy(x => x, StringComparer.Ordinal))
+            {
+                await SqlAppLock.AcquireExclusiveAsync(dbContext.Database, resource);
+            }
+
+            if (request.Status == "Active")
+            {
+                var overlapError = await EnsureNoOverlappingContract(
+                    contract.ClientId,
+                    request.FundingAuthorityId,
+                    request.InvoiceCategoryId,
+                    request.ContractStartDate,
+                    request.ContractEndDate,
+                    excludeContractId: contract.Id);
+                if (overlapError is not null)
+                {
+                    await transaction.RollbackAsync();
+                    return overlapError;
+                }
+            }
+
             contract.FundingAuthorityId = request.FundingAuthorityId;
             contract.InvoiceCategoryId = request.InvoiceCategoryId;
             contract.NominalCodeId = request.NominalCodeId;
@@ -168,15 +219,17 @@ namespace CareHome.Api.Controllers
 
             await dbContext.SaveChangesAsync();
             await audit.LogAsync("ClientFundingContract", id.ToString(), "Update", null, request, "Updated funding contract.");
+            await transaction.CommitAsync();
             return Ok(await LoadDto(id));
         }
 
         [HttpGet("api/funding-contracts/{id:int}/rates")]
         public async Task<ActionResult<List<FundingRateDto>>> GetRates(int id)
         {
-            if (!await dbContext.ClientFundingContracts.AnyAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId))
+            var access = await EnsureContractAccessAsync(id);
+            if (access is not null)
             {
-                return NotFound();
+                return access;
             }
 
             var rates = await dbContext.FundingRates.AsNoTracking()
@@ -200,15 +253,6 @@ namespace CareHome.Api.Controllers
         [HttpPost("api/funding-contracts/{id:int}/rates")]
         public async Task<ActionResult<FundingRateDto>> AddRate(int id, CreateFundingRateRequest request)
         {
-            var contract = await dbContext.ClientFundingContracts
-                .Include(x => x.Rates)
-                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
-
-            if (contract is null)
-            {
-                return NotFound();
-            }
-
             if (request.Amount <= 0)
             {
                 return BadRequest(new { message = "Rate amount must be greater than zero." });
@@ -224,6 +268,27 @@ namespace CareHome.Api.Controllers
                 return BadRequest(new { message = "Effective to cannot be before effective from." });
             }
 
+            await using var transaction = await dbContext.Database.BeginTransactionAsync();
+            await SqlAppLock.AcquireExclusiveAsync(
+                dbContext.Database,
+                $"funding-rate-{tenantContext.TenantId}-{id}");
+
+            var contract = await dbContext.ClientFundingContracts
+                .Include(x => x.Rates)
+                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
+
+            if (contract is null)
+            {
+                await transaction.RollbackAsync();
+                return NotFound();
+            }
+
+            if (!await CanAccessContractClientAsync(contract.ClientId))
+            {
+                await transaction.RollbackAsync();
+                return NotFound();
+            }
+
             if (request.ClosePreviousOpenEnded)
             {
                 var open = contract.Rates
@@ -236,6 +301,7 @@ namespace CareHome.Api.Controllers
                     var closedTo = request.EffectiveFrom.AddDays(-1);
                     if (closedTo < open.EffectiveFrom)
                     {
+                        await transaction.RollbackAsync();
                         return BadRequest(new { message = "Closing the previous open-ended rate would make its period invalid." });
                     }
 
@@ -243,6 +309,7 @@ namespace CareHome.Api.Controllers
                 }
             }
 
+            // Re-check overlap under the lock (includes any close-previous mutation above).
             var overlap = contract.Rates.Any(existing =>
                 DateRanges.Overlaps(
                     existing.EffectiveFrom,
@@ -252,6 +319,7 @@ namespace CareHome.Api.Controllers
 
             if (overlap)
             {
+                await transaction.RollbackAsync();
                 return BadRequest(new { message = "This rate period overlaps an existing rate on the same contract." });
             }
 
@@ -269,6 +337,7 @@ namespace CareHome.Api.Controllers
             dbContext.FundingRates.Add(rate);
             await dbContext.SaveChangesAsync();
             await audit.LogAsync("FundingRate", rate.Id.ToString(), "Create", null, request, "Added funding rate.");
+            await transaction.CommitAsync();
 
             return Ok(new FundingRateDto
             {
@@ -280,6 +349,56 @@ namespace CareHome.Api.Controllers
                 Amount = rate.Amount,
                 Notes = rate.Notes
             });
+        }
+
+        private async Task<ActionResult?> EnsureClientAccessAsync(int clientId)
+        {
+            var client = await dbContext.Clients.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == clientId && x.TenantId == tenantContext.TenantId);
+            if (client is null)
+            {
+                return NotFound();
+            }
+
+            if (!await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, client.CareHomeId))
+            {
+                return NotFound();
+            }
+
+            return null;
+        }
+
+        private async Task<ActionResult?> EnsureContractAccessAsync(int contractId)
+        {
+            var clientId = await dbContext.ClientFundingContracts.AsNoTracking()
+                .Where(x => x.Id == contractId && x.TenantId == tenantContext.TenantId)
+                .Select(x => (int?)x.ClientId)
+                .FirstOrDefaultAsync();
+            if (clientId is null)
+            {
+                return NotFound();
+            }
+
+            if (!await CanAccessContractClientAsync(clientId.Value))
+            {
+                return NotFound();
+            }
+
+            return null;
+        }
+
+        private async Task<bool> CanAccessContractClientAsync(int clientId)
+        {
+            var careHomeId = await dbContext.Clients.AsNoTracking()
+                .Where(x => x.Id == clientId && x.TenantId == tenantContext.TenantId)
+                .Select(x => (int?)x.CareHomeId)
+                .FirstOrDefaultAsync();
+            if (careHomeId is null)
+            {
+                return false;
+            }
+
+            return await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, careHomeId.Value);
         }
 
         private async Task<FundingContractDto?> LoadDto(int id)
@@ -324,6 +443,13 @@ namespace CareHome.Api.Controllers
 
             return null;
         }
+
+        private static string FundingContractLockResource(
+            int tenantId,
+            int clientId,
+            int fundingAuthorityId,
+            int invoiceCategoryId) =>
+            $"funding-contract-{tenantId}-{clientId}-{fundingAuthorityId}-{invoiceCategoryId}";
 
         private async Task<ActionResult?> EnsureNoOverlappingContract(
             int clientId,

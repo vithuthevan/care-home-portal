@@ -833,22 +833,11 @@ namespace CareHome.Api.Billing
                 cancellationToken);
         }
 
-        private async Task AcquireBillingLockAsync(int tenantId, CancellationToken cancellationToken)
-        {
-            var resource = $"billing-generate-{tenantId}";
-            await dbContext.Database.ExecuteSqlInterpolatedAsync(
-                $"""
-                DECLARE @result int;
-                EXEC @result = sp_getapplock
-                    @Resource = {resource},
-                    @LockMode = N'Exclusive',
-                    @LockOwner = N'Transaction',
-                    @LockTimeout = 30000;
-                IF @result < 0
-                    THROW 51000, 'Another billing generation is in progress for this organisation. Retry shortly.', 1;
-                """,
+        private Task AcquireBillingLockAsync(int tenantId, CancellationToken cancellationToken) =>
+            SqlAppLock.AcquireExclusiveAsync(
+                dbContext.Database,
+                $"billing-generate-{tenantId}",
                 cancellationToken);
-        }
 
         private static BillingDateRangeDto ToRange(DateOnly start, DateOnly end)
         {
