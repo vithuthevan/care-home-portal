@@ -587,10 +587,12 @@ namespace CareHome.Api.Data
                 entity.Property(x => x.UsedDate)
                     .HasColumnType("date");
 
+                entity.HasIndex(x => new { x.TenantId, x.ClientId, x.UsedDate, x.Description, x.Amount })
+                    .IsUnique();
+
                 entity.HasIndex(x => x.TenantId);
                 entity.HasIndex(x => x.ClientId);
                 entity.HasIndex(x => x.ImportBatchId);
-                entity.HasIndex(x => new { x.ClientId, x.UsedDate, x.Description, x.Amount });
 
                 entity.HasOne(x => x.Tenant)
                     .WithMany()
