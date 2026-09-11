@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Identity;
+
 namespace CareHome.Api.Security;
 
 public class MustChangePasswordMiddleware(RequestDelegate next)
@@ -5,7 +7,7 @@ public class MustChangePasswordMiddleware(RequestDelegate next)
     public async Task InvokeAsync(HttpContext context)
     {
         if (context.User.Identity?.IsAuthenticated == true
-            && IsPasswordChangeRequired(context)
+            && await IsPasswordChangeRequiredAsync(context)
             && !IsAllowedWhilePasswordChangeRequired(context.Request.Path))
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
@@ -19,8 +21,20 @@ public class MustChangePasswordMiddleware(RequestDelegate next)
         await next(context);
     }
 
-    private static bool IsPasswordChangeRequired(HttpContext context)
+    private static async Task<bool> IsPasswordChangeRequiredAsync(HttpContext context)
     {
+        // Prefer live DB flag so admin resets bind without waiting for claim-only JWT.
+        var userManager = context.RequestServices.GetService<UserManager<ApplicationUser>>();
+        var userId = JwtSecurityStamp.GetUserId(context.User);
+        if (userManager is not null && !string.IsNullOrEmpty(userId))
+        {
+            var user = await userManager.FindByIdAsync(userId);
+            if (user is not null)
+            {
+                return user.MustChangePassword;
+            }
+        }
+
         return string.Equals(
             context.User.FindFirst(TenantClaimTypes.MustChangePassword)?.Value,
             "true",

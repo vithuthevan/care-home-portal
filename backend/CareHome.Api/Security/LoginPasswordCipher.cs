@@ -1,14 +1,16 @@
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
+using Microsoft.Extensions.Hosting;
 
 namespace CareHome.Api.Security;
 
-public sealed class LoginPasswordCipher : IDisposable
+public sealed class LoginPasswordCipher(IHostEnvironment environment) : IDisposable
 {
     public const string Prefix = "enc:";
 
     private readonly RSA _rsa = RSA.Create(2048);
+    private readonly bool _allowPlaintext = environment.IsDevelopment();
 
     public LoginPublicKeyDto PublicKey()
     {
@@ -31,8 +33,15 @@ public sealed class LoginPasswordCipher : IDisposable
             return TryDecrypt(cipher, out password);
         }
 
-        password = plaintext ?? string.Empty;
-        return password.Length > 0;
+        // Plaintext body passwords are Development-only (tests / emergency tooling).
+        if (_allowPlaintext)
+        {
+            password = plaintext ?? string.Empty;
+            return password.Length > 0;
+        }
+
+        password = string.Empty;
+        return false;
     }
 
     public bool TryDecrypt(string? cipher, out string password)

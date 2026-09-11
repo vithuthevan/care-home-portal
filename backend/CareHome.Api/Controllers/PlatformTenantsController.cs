@@ -16,7 +16,8 @@ namespace CareHome.Api.Controllers
     public class PlatformTenantsController(
         CareHomeDbContext dbContext,
         TenantProvisioningService provisioning,
-        AuditService audit) : ControllerBase
+        AuditService audit,
+        IHostEnvironment environment) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<List<TenantDto>>> List()
@@ -153,7 +154,7 @@ namespace CareHome.Api.Controllers
             };
         }
 
-        private static CreateTenantResponse ToCreateResponse(TenantProvisionResult provisioned)
+        private CreateTenantResponse ToCreateResponse(TenantProvisionResult provisioned)
         {
             var tenant = provisioned.Tenant;
             return new CreateTenantResponse
@@ -171,7 +172,10 @@ namespace CareHome.Api.Controllers
                 CreatedAt = tenant.CreatedAt,
                 CredentialsEmailed = provisioned.CredentialsEmailed,
                 CredentialsEmailSimulated = provisioned.CredentialsEmailSimulated,
-                TemporaryPassword = provisioned.TemporaryPassword
+                // Never return temporary passwords outside Development.
+                TemporaryPassword = environment.IsDevelopment()
+                    ? provisioned.TemporaryPassword
+                    : null
             };
         }
 

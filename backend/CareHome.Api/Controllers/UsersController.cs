@@ -64,7 +64,7 @@ namespace CareHome.Api.Controllers
                 return BadRequest(new { message = "Invalid role." });
             }
 
-            var homesError = await ValidateHomes(request.CareHomeIds);
+            var homesError = await ValidateHomes(request.Role, request.CareHomeIds);
             if (homesError is not null)
             {
                 return homesError;
@@ -87,7 +87,8 @@ namespace CareHome.Api.Controllers
                 Email = request.Email.Trim(),
                 DisplayName = request.DisplayName.Trim(),
                 EmailConfirmed = true,
-                IsActive = true
+                IsActive = true,
+                MustChangePassword = true
             };
 
             var created = await userManager.CreateAsync(user, password);
@@ -116,7 +117,14 @@ namespace CareHome.Api.Controllers
                 return BadRequest(new { message = "Invalid role." });
             }
 
-            var homesError = await ValidateHomes(request.CareHomeIds);
+            var currentUserId = userManager.GetUserId(User);
+            if (string.Equals(currentUserId, id, StringComparison.Ordinal)
+                && (!request.IsActive || request.Role is AppRoles.LocationManager or AppRoles.ReadOnly))
+            {
+                return BadRequest(new { message = "You cannot deactivate your own account or remove your own administrator access." });
+            }
+
+            var homesError = await ValidateHomes(request.Role, request.CareHomeIds);
             if (homesError is not null)
             {
                 return homesError;
@@ -130,6 +138,8 @@ namespace CareHome.Api.Controllers
             await userManager.RemoveFromRolesAsync(user, roles);
             await userManager.AddToRoleAsync(user, request.Role);
             await ReplaceHomes(id, request.CareHomeIds);
+            // Invalidate existing JWTs so role claims refresh on next login.
+            await userManager.UpdateSecurityStampAsync(user);
             await audit.LogAsync("User", id, "Update", null, request, "Updated user.");
             return Ok(await ToDto(user));
         }
@@ -143,8 +153,15 @@ namespace CareHome.Api.Controllers
                 return NotFound();
             }
 
+            var currentUserId = userManager.GetUserId(User);
+            if (string.Equals(currentUserId, id, StringComparison.Ordinal))
+            {
+                return BadRequest(new { message = "You cannot deactivate your own account." });
+            }
+
             user.IsActive = false;
             await userManager.UpdateAsync(user);
+            await userManager.UpdateSecurityStampAsync(user);
             await audit.LogAsync("User", id, "Deactivate", null, null, "Deactivated user.");
             return NoContent();
         }
@@ -175,6 +192,8 @@ namespace CareHome.Api.Controllers
                 return BadRequest(new { message = string.Join(" ", result.Errors.Select(e => e.Description)) });
             }
 
+            user.MustChangePassword = true;
+            await userManager.UpdateAsync(user);
             await audit.LogAsync("User", id, "ResetPassword", null, null, "Admin reset password.");
             return NoContent();
         }
@@ -186,8 +205,13 @@ namespace CareHome.Api.Controllers
                 .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
         }
 
-        private async Task<ActionResult?> ValidateHomes(List<int> careHomeIds)
+        private async Task<ActionResult?> ValidateHomes(string role, List<int> careHomeIds)
         {
+            if (role == AppRoles.LocationManager && careHomeIds.Count == 0)
+            {
+                return BadRequest(new { message = "Location managers must be assigned at least one care home." });
+            }
+
             if (careHomeIds.Count == 0)
             {
                 return null;

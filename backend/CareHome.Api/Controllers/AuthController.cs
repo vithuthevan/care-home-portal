@@ -166,7 +166,8 @@ namespace CareHome.Api.Controllers
                 new(JwtRegisteredClaimNames.Sub, user.Id),
                 new(ClaimTypes.NameIdentifier, user.Id),
                 new(ClaimTypes.Name, user.DisplayName),
-                new(ClaimTypes.Email, user.Email ?? "")
+                new(ClaimTypes.Email, user.Email ?? ""),
+                JwtSecurityStamp.CreateClaim(user.SecurityStamp)
             };
             claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 

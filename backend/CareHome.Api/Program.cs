@@ -124,6 +124,10 @@ builder.Services.AddAuthentication(options =>
         ValidAudience = builder.Configuration["Jwt:Audience"] ?? "CareHomeWeb",
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
     };
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = JwtSecurityStamp.OnTokenValidated
+    };
 });
 
 builder.Services.AddAuthorization();
@@ -149,8 +153,25 @@ builder.Services.AddHealthChecks()
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-    options.KnownIPNetworks.Clear();
-    options.KnownProxies.Clear();
+    if (builder.Environment.IsDevelopment())
+    {
+        // Local reverse proxies / ngrok without static known IPs.
+        options.KnownIPNetworks.Clear();
+        options.KnownProxies.Clear();
+    }
+    else
+    {
+        // Keep default loopback trust; only add explicitly configured proxies.
+        var proxies = builder.Configuration.GetSection("ForwardedHeaders:KnownProxies").Get<string[]>()
+            ?? [];
+        foreach (var proxy in proxies)
+        {
+            if (System.Net.IPAddress.TryParse(proxy, out var address))
+            {
+                options.KnownProxies.Add(address);
+            }
+        }
+    }
 });
 
 builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
