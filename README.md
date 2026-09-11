@@ -101,4 +101,13 @@ CSV files under the document store. Mapping is provisional — see `docs/SAGE50_
 13. Update Payment Status  
 14. Export to Sage  
 
-Start learning with **[docs/LEARNING_GUIDE.md](docs/LEARNING_GUIDE.md)**.
+New product users: start with **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** (A–Z section walkthrough).
+
+Engineers: start learning with **[docs/LEARNING_GUIDE.md](docs/LEARNING_GUIDE.md)**.
+
+Deep-dive notes from architecture review:
+
+- [Auth & multi-tenancy](docs/LEARNING_NOTES_01_AUTH_TENANCY.md)
+- [Billing engine](docs/LEARNING_NOTES_02_BILLING.md)
+- [Concurrency & idempotency](docs/LEARNING_NOTES_03_CONCURRENCY.md)
+- [Architect interview answers](docs/ARCHITECT_INTERVIEW_ANSWERS.md)
