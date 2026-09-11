@@ -1,3 +1,4 @@
+using CareHome.Api.Audit;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.Companies;
@@ -13,7 +14,8 @@ namespace CareHome.Api.Controllers
     [RequireTenant]
     public class CompaniesController(
         CareHomeDbContext dbContext,
-        ITenantContext tenantContext) : ControllerBase
+        ITenantContext tenantContext,
+        AuditService audit) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<List<CompanyDto>>> GetCompanies()
@@ -87,6 +89,7 @@ namespace CareHome.Api.Controllers
             dbContext.Companies.Add(company);
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("Company", company.Id.ToString(), "Create", null, new { company.Name }, "Created company.");
 
             return CreatedAtAction(
                 nameof(GetCompany),
@@ -139,6 +142,7 @@ namespace CareHome.Api.Controllers
             company.IsActive = request.IsActive;
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("Company", company.Id.ToString(), "Update", null, request, "Updated company.");
 
             return Ok(ToDto(company));
         }
@@ -169,6 +173,7 @@ namespace CareHome.Api.Controllers
             company.IsActive = false;
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("Company", id.ToString(), "Deactivate", null, null, "Deactivated company.");
 
             return NoContent();
         }

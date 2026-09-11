@@ -1,3 +1,4 @@
+using CareHome.Api.Audit;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.InvoiceCategories;
@@ -13,7 +14,8 @@ namespace CareHome.Api.Controllers
     [RequireTenant]
     public class InvoiceCategoriesController(
         CareHomeDbContext dbContext,
-        ITenantContext tenantContext) : ControllerBase
+        ITenantContext tenantContext,
+        AuditService audit) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<List<InvoiceCategoryDto>>> GetInvoiceCategories(
@@ -95,6 +97,7 @@ namespace CareHome.Api.Controllers
             dbContext.InvoiceCategories.Add(category);
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("InvoiceCategory", category.Id.ToString(), "Create", null, new { category.Code, category.Name }, "Created invoice category.");
 
             return CreatedAtAction(
                 nameof(GetInvoiceCategory),
@@ -137,6 +140,7 @@ namespace CareHome.Api.Controllers
             category.IsActive = request.IsActive;
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("InvoiceCategory", category.Id.ToString(), "Update", null, request, "Updated invoice category.");
 
             return Ok(ToDto(category));
         }
@@ -155,6 +159,7 @@ namespace CareHome.Api.Controllers
             category.IsActive = false;
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("InvoiceCategory", id.ToString(), "Deactivate", null, null, "Deactivated invoice category.");
 
             return NoContent();
         }

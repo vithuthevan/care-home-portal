@@ -1,3 +1,4 @@
+using CareHome.Api.Audit;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.InvoiceTemplates;
 using CareHome.Api.Models;
@@ -12,7 +13,8 @@ namespace CareHome.Api.Controllers
     [RequireTenant]
     public class InvoiceTemplatesController(
         CareHomeDbContext dbContext,
-        ITenantContext tenantContext) : ControllerBase
+        ITenantContext tenantContext,
+        AuditService audit) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<List<InvoiceTemplateDto>>> List()
@@ -57,6 +59,7 @@ namespace CareHome.Api.Controllers
             var template = FromRequest(tenantId, request);
             dbContext.InvoiceTemplates.Add(template);
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("InvoiceTemplate", template.Id.ToString(), "Create", null, new { template.Name }, "Created invoice template.");
             var created = await dbContext.InvoiceTemplates
                 .Include(x => x.InvoiceCategory)
                 .Include(x => x.FundingAuthority)
@@ -101,6 +104,7 @@ namespace CareHome.Api.Controllers
             template.EmailBodyTemplate = request.EmailBodyTemplate?.Trim();
             template.IsActive = request.IsActive;
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("InvoiceTemplate", id.ToString(), "Update", null, request, "Updated invoice template.");
             var updated = await dbContext.InvoiceTemplates
                 .Include(x => x.InvoiceCategory)
                 .Include(x => x.FundingAuthority)
@@ -122,6 +126,7 @@ namespace CareHome.Api.Controllers
 
             template.IsActive = false;
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("InvoiceTemplate", id.ToString(), "Deactivate", null, null, "Deactivated invoice template.");
             return NoContent();
         }
 

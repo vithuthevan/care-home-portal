@@ -1,3 +1,4 @@
+using CareHome.Api.Audit;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.FundingAuthorities;
@@ -13,7 +14,8 @@ namespace CareHome.Api.Controllers
     [RequireTenant]
     public class FundingAuthoritiesController(
         CareHomeDbContext dbContext,
-        ITenantContext tenantContext) : ControllerBase
+        ITenantContext tenantContext,
+        AuditService audit) : ControllerBase
     {
         private static readonly string[] AllowedTypes =
         [
@@ -151,6 +153,7 @@ namespace CareHome.Api.Controllers
             dbContext.FundingAuthorities.Add(authority);
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("FundingAuthority", authority.Id.ToString(), "Create", null, new { authority.Code, authority.Name }, "Created funding authority.");
 
             return CreatedAtAction(
                 nameof(GetFundingAuthority),
@@ -219,6 +222,7 @@ namespace CareHome.Api.Controllers
             authority.IsActive = request.IsActive;
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("FundingAuthority", authority.Id.ToString(), "Update", null, request, "Updated funding authority.");
 
             return Ok(MapToDto(authority));
         }
@@ -237,6 +241,7 @@ namespace CareHome.Api.Controllers
             authority.IsActive = false;
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("FundingAuthority", id.ToString(), "Deactivate", null, null, "Deactivated funding authority.");
 
             return NoContent();
         }

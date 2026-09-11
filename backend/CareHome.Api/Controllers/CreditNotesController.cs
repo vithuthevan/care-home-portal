@@ -1,3 +1,4 @@
+using CareHome.Api.Audit;
 using CareHome.Api.Billing;
 using CareHome.Api.Data;
 using CareHome.Api.Documents;
@@ -19,7 +20,8 @@ namespace CareHome.Api.Controllers
         InvoicePdfService pdfs,
         IEmailSender email,
         ITenantContext tenantContext,
-        UserAccessService userAccess) : ControllerBase
+        UserAccessService userAccess,
+        AuditService audit) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<List<CreditNoteDto>>> List()
@@ -155,6 +157,16 @@ namespace CareHome.Api.Controllers
             }
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync(
+                "CreditNote",
+                note.Id.ToString(),
+                "Send",
+                null,
+                new { note.CreditNoteNumber, result.Success, result.Simulated },
+                result.Success
+                    ? $"Sent credit note {note.CreditNoteNumber}."
+                    : $"Failed to send credit note {note.CreditNoteNumber}.");
+
             if (!result.Success)
             {
                 return BadRequest(new { message = result.ErrorMessage ?? "Email failed." });

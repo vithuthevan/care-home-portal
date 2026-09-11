@@ -68,15 +68,21 @@ export class ClientProfilePage implements OnInit {
   };
 
   ngOnInit(): void {
-    this.http
-      .get<any[]>('/api/funding-authorities?activeOnly=true')
-      .subscribe((x) => this.authorities.set(x));
-    this.http
-      .get<any[]>('/api/invoice-categories?activeOnly=true')
-      .subscribe((x) => this.categories.set(x));
-    this.http
-      .get<any[]>('/api/nominal-codes?activeOnly=true')
-      .subscribe((x) => this.nominals.set(x));
+    this.http.get<any[]>('/api/funding-authorities?activeOnly=true').subscribe({
+      next: (x) => this.authorities.set(x),
+      error: (error) =>
+        this.errorMessage.set(getApiErrorMessage(error, 'Unable to load funding authorities.')),
+    });
+    this.http.get<any[]>('/api/invoice-categories?activeOnly=true').subscribe({
+      next: (x) => this.categories.set(x),
+      error: (error) =>
+        this.errorMessage.set(getApiErrorMessage(error, 'Unable to load invoice categories.')),
+    });
+    this.http.get<any[]>('/api/nominal-codes?activeOnly=true').subscribe({
+      next: (x) => this.nominals.set(x),
+      error: (error) =>
+        this.errorMessage.set(getApiErrorMessage(error, 'Unable to load nominal codes.')),
+    });
 
     this.route.paramMap.subscribe((params) => {
       const id = Number(params.get('id'));
@@ -101,17 +107,21 @@ export class ClientProfilePage implements OnInit {
   loadContracts(): void {
     const current = this.client();
     if (!current) return;
-    this.http
-      .get<any[]>(`/api/clients/${current.id}/funding-contracts`)
-      .subscribe((x) => this.contracts.set(x));
+    this.http.get<any[]>(`/api/clients/${current.id}/funding-contracts`).subscribe({
+      next: (x) => this.contracts.set(x),
+      error: (error) =>
+        this.errorMessage.set(getApiErrorMessage(error, 'Unable to load funding contracts.')),
+    });
   }
 
   loadInvoices(): void {
     const current = this.client();
     if (!current) return;
-    this.http
-      .get<any>('/api/invoices', { params: { clientId: current.id } })
-      .subscribe((x) => this.invoices.set(x.items ?? []));
+    this.http.get<any>('/api/invoices', { params: { clientId: current.id } }).subscribe({
+      next: (x) => this.invoices.set(x.items ?? []),
+      error: (error) =>
+        this.errorMessage.set(getApiErrorMessage(error, 'Unable to load invoices.')),
+    });
   }
 
   saveContract(): void {

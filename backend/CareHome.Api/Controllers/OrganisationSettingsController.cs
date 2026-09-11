@@ -1,3 +1,4 @@
+using CareHome.Api.Audit;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.Tenants;
@@ -14,7 +15,8 @@ namespace CareHome.Api.Controllers
     [Authorize(Roles = $"{AppRoles.TenantAdmin},{AppRoles.Administrator}")]
     public class OrganisationSettingsController(
         CareHomeDbContext dbContext,
-        ITenantContext tenantContext) : ControllerBase
+        ITenantContext tenantContext,
+        AuditService audit) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<OrganisationSettingsDto>> Get()
@@ -103,6 +105,7 @@ namespace CareHome.Api.Controllers
             }
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("OrganisationSettings", tenantId.ToString(), "Update", null, request, "Updated organisation settings.");
             return Ok(ToDto(tenant));
         }
 

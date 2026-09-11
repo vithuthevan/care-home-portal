@@ -1,3 +1,4 @@
+using CareHome.Api.Audit;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.NominalCodes;
@@ -13,7 +14,8 @@ namespace CareHome.Api.Controllers
     [RequireTenant]
     public class NominalCodesController(
         CareHomeDbContext dbContext,
-        ITenantContext tenantContext) : ControllerBase
+        ITenantContext tenantContext,
+        AuditService audit) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<List<NominalCodeDto>>> GetNominalCodes(
@@ -95,6 +97,7 @@ namespace CareHome.Api.Controllers
             dbContext.NominalCodes.Add(nominalCode);
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("NominalCode", nominalCode.Id.ToString(), "Create", null, new { nominalCode.Code, nominalCode.Name }, "Created nominal code.");
 
             return CreatedAtAction(
                 nameof(GetNominalCode),
@@ -137,6 +140,7 @@ namespace CareHome.Api.Controllers
             nominalCode.IsActive = request.IsActive;
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("NominalCode", nominalCode.Id.ToString(), "Update", null, request, "Updated nominal code.");
 
             return Ok(ToDto(nominalCode));
         }
@@ -155,6 +159,7 @@ namespace CareHome.Api.Controllers
             nominalCode.IsActive = false;
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("NominalCode", id.ToString(), "Deactivate", null, null, "Deactivated nominal code.");
 
             return NoContent();
         }

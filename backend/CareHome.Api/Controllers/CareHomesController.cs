@@ -1,3 +1,4 @@
+using CareHome.Api.Audit;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.CareHomes;
@@ -14,7 +15,8 @@ namespace CareHome.Api.Controllers
     public class CareHomesController(
         CareHomeDbContext dbContext,
         ITenantContext tenantContext,
-        UserAccessService userAccess) : ControllerBase
+        UserAccessService userAccess,
+        AuditService audit) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<List<CareHomeDto>>> GetCareHomes()
@@ -96,6 +98,7 @@ namespace CareHome.Api.Controllers
             dbContext.CareHomes.Add(careHome);
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("CareHome", careHome.Id.ToString(), "Create", null, new { careHome.Code, careHome.Name }, "Created care home.");
 
             var dto = await ProjectToDto(
                     dbContext.CareHomes.AsNoTracking())
@@ -170,6 +173,7 @@ namespace CareHome.Api.Controllers
             careHome.IsActive = request.IsActive;
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("CareHome", careHome.Id.ToString(), "Update", null, request, "Updated care home.");
 
             var dto = await ProjectToDto(
                     dbContext.CareHomes.AsNoTracking())
@@ -203,6 +207,7 @@ namespace CareHome.Api.Controllers
             careHome.IsActive = false;
 
             await dbContext.SaveChangesAsync();
+            await audit.LogAsync("CareHome", id.ToString(), "Deactivate", null, null, "Deactivated care home.");
 
             return NoContent();
         }
