@@ -1,4 +1,5 @@
 using CareHome.Api.Audit;
+using CareHome.Api.Billing;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Documents;
@@ -217,73 +218,8 @@ namespace CareHome.Api.Controllers
         [HttpPost("{id:int}/send")]
         public async Task<IActionResult> Send(int id)
         {
-            var invoice = await dbContext.Invoices
-                .Include(x => x.Lines)
-                .Include(x => x.InvoiceTemplate)
-                .Include(x => x.CareHome)
-                .Include(x => x.Tenant)
-                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
-            if (invoice is null)
-            {
-                return NotFound();
-            }
-
-            if (!await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, invoice.CareHomeId))
-            {
-                return NotFound();
-            }
-
-            if (invoice.Status == "Void")
-            {
-                return BadRequest(new { message = "A void invoice cannot be emailed." });
-            }
-
-            if (string.IsNullOrWhiteSpace(invoice.RecipientEmail))
-            {
-                return BadRequest(new { message = "This invoice has no recipient email." });
-            }
-
-            var pdf = await pdfs.GetOrCreateInvoicePdfAsync(invoice, await TenantPublicIdAsync());
-            var subject = $"Invoice {invoice.InvoiceNumber}";
-            var body = $"Please find invoice {invoice.InvoiceNumber} attached.";
-            var result = await email.SendAsync(invoice.RecipientEmail, subject, body, $"invoice-{invoice.InvoiceNumber}.pdf", pdf);
-
-            dbContext.EmailSendLogs.Add(new EmailSendLog
-            {
-                TenantId = tenantContext.TenantId,
-                AttemptedAt = DateTimeOffset.UtcNow,
-                DocumentType = "Invoice",
-                DocumentId = invoice.Id,
-                Recipient = invoice.RecipientEmail,
-                Success = result.Success,
-                Simulated = result.Simulated,
-                ErrorMessage = result.ErrorMessage
-            });
-
-            if (result.Success)
-            {
-                invoice.SentAt = DateTimeOffset.UtcNow;
-                invoice.Status = "Sent";
-            }
-
-            await dbContext.SaveChangesAsync();
-
-            await audit.LogAsync(
-                "Invoice",
-                invoice.Id.ToString(),
-                "Send",
-                null,
-                new { invoice.InvoiceNumber, result.Success, result.Simulated },
-                result.Success
-                    ? $"Sent invoice {invoice.InvoiceNumber}."
-                    : $"Failed to send invoice {invoice.InvoiceNumber}.");
-
-            if (!result.Success)
-            {
-                return BadRequest(new { message = result.ErrorMessage ?? "Email failed." });
-            }
-
-            return Ok(new { simulated = result.Simulated, sentAt = invoice.SentAt });
+            var outcome = await TrySendInvoiceAsync(id);
+            return outcome.HttpResult;
         }
 
         [HttpPost("bulk-send")]
@@ -292,78 +228,30 @@ namespace CareHome.Api.Controllers
             var summary = new BulkSendResultDto();
             foreach (var id in request.InvoiceIds.Distinct())
             {
-                var invoice = await dbContext.Invoices
-                    .Include(x => x.Lines)
-                    .Include(x => x.InvoiceTemplate)
-                    .Include(x => x.CareHome)
-                    .Include(x => x.Tenant)
-                    .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
-                if (invoice is null || !await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, invoice.CareHomeId))
+                var outcome = await TrySendInvoiceAsync(id, forBulk: true);
+                summary.Items.Add(new BulkSendItemDto
                 {
-                    summary.Skipped++;
-                    summary.Items.Add(new BulkSendItemDto { InvoiceId = id, Outcome = "Skipped", Reason = "Not found." });
-                    continue;
-                }
-
-                if (invoice.Status == "Void" || string.IsNullOrWhiteSpace(invoice.RecipientEmail))
-                {
-                    summary.Skipped++;
-                    summary.Items.Add(new BulkSendItemDto
-                    {
-                        InvoiceId = id,
-                        InvoiceNumber = invoice.InvoiceNumber,
-                        Outcome = "Skipped",
-                        Reason = invoice.Status == "Void" ? "Void." : "No recipient email."
-                    });
-                    continue;
-                }
-
-                var pdf = await pdfs.GetOrCreateInvoicePdfAsync(invoice, await TenantPublicIdAsync());
-                var result = await email.SendAsync(
-                    invoice.RecipientEmail,
-                    $"Invoice {invoice.InvoiceNumber}",
-                    $"Please find invoice {invoice.InvoiceNumber} attached.",
-                    $"invoice-{invoice.InvoiceNumber}.pdf",
-                    pdf);
-
-                dbContext.EmailSendLogs.Add(new EmailSendLog
-                {
-                    TenantId = tenantContext.TenantId,
-                    AttemptedAt = DateTimeOffset.UtcNow,
-                    DocumentType = "Invoice",
-                    DocumentId = invoice.Id,
-                    Recipient = invoice.RecipientEmail,
-                    Success = result.Success,
-                    Simulated = result.Simulated,
-                    ErrorMessage = result.ErrorMessage
+                    InvoiceId = id,
+                    InvoiceNumber = outcome.InvoiceNumber ?? string.Empty,
+                    Outcome = outcome.BulkOutcome,
+                    Reason = outcome.Reason
                 });
 
-                if (result.Success)
+                switch (outcome.BulkOutcome)
                 {
-                    invoice.SentAt = DateTimeOffset.UtcNow;
-                    invoice.Status = "Sent";
-                    summary.Succeeded++;
-                    summary.Items.Add(new BulkSendItemDto
-                    {
-                        InvoiceId = id,
-                        InvoiceNumber = invoice.InvoiceNumber,
-                        Outcome = result.Simulated ? "Simulated" : "Succeeded"
-                    });
-                }
-                else
-                {
-                    summary.Failed++;
-                    summary.Items.Add(new BulkSendItemDto
-                    {
-                        InvoiceId = id,
-                        InvoiceNumber = invoice.InvoiceNumber,
-                        Outcome = "Failed",
-                        Reason = result.ErrorMessage
-                    });
+                    case "Succeeded":
+                    case "Simulated":
+                        summary.Succeeded++;
+                        break;
+                    case "Failed":
+                        summary.Failed++;
+                        break;
+                    default:
+                        summary.Skipped++;
+                        break;
                 }
             }
 
-            await dbContext.SaveChangesAsync();
             return Ok(summary);
         }
 
@@ -428,7 +316,9 @@ namespace CareHome.Api.Controllers
         [HttpPost("{id:int}/void")]
         public async Task<IActionResult> Void(int id)
         {
-            var invoice = await dbContext.Invoices.Include(x => x.Lines)
+            var invoice = await dbContext.Invoices
+                .Include(x => x.Lines)
+                .Include(x => x.CreditNotes)
                 .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
             if (invoice is null)
             {
@@ -440,17 +330,27 @@ namespace CareHome.Api.Controllers
                 return NotFound();
             }
 
-            if (invoice.Status == "Void")
+            var voidError = InvoiceVoidRules.ValidateCanVoid(
+                invoice.Status,
+                invoice.PaymentStatus,
+                invoice.CreditNotes.Count > 0);
+            if (voidError is not null)
             {
-                return BadRequest(new { message = "Invoice is already void." });
+                return BadRequest(new { message = voidError });
             }
 
             invoice.Status = "Void";
-            foreach (var line in invoice.Lines.Where(x => x.MiscChargeId.HasValue))
+            var miscIds = invoice.Lines
+                .Where(x => x.MiscChargeId.HasValue)
+                .Select(x => x.MiscChargeId!.Value)
+                .Distinct()
+                .ToList();
+            if (miscIds.Count > 0)
             {
-                var charge = await dbContext.MiscCharges
-                    .FirstOrDefaultAsync(x => x.Id == line.MiscChargeId && x.TenantId == tenantContext.TenantId);
-                if (charge is not null)
+                var charges = await dbContext.MiscCharges
+                    .Where(x => x.TenantId == tenantContext.TenantId && miscIds.Contains(x.Id))
+                    .ToListAsync();
+                foreach (var charge in charges)
                 {
                     charge.IsInvoiced = false;
                 }
@@ -461,12 +361,166 @@ namespace CareHome.Api.Controllers
             return Ok(new { invoice.Id, invoice.Status });
         }
 
+        private async Task<SendInvoiceOutcome> TrySendInvoiceAsync(int id, bool forBulk = false)
+        {
+            var invoice = await dbContext.Invoices
+                .Include(x => x.Lines)
+                .Include(x => x.InvoiceTemplate)
+                .Include(x => x.CareHome)
+                .Include(x => x.Tenant)
+                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
+
+            if (invoice is null || !await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, invoice.CareHomeId))
+            {
+                return SendInvoiceOutcome.NotFound(id, forBulk);
+            }
+
+            if (invoice.Status == "Void")
+            {
+                return SendInvoiceOutcome.Skipped(id, invoice.InvoiceNumber, "A void invoice cannot be emailed.", forBulk, "Void.");
+            }
+
+            if (string.IsNullOrWhiteSpace(invoice.RecipientEmail))
+            {
+                return SendInvoiceOutcome.Skipped(id, invoice.InvoiceNumber, "This invoice has no recipient email.", forBulk, "No recipient email.");
+            }
+
+            var tenantPublicId = await TenantPublicIdAsync();
+            var pdf = await pdfs.GetOrCreateInvoicePdfAsync(invoice, tenantPublicId);
+            var result = await email.SendAsync(
+                invoice.RecipientEmail,
+                $"Invoice {invoice.InvoiceNumber}",
+                $"Please find invoice {invoice.InvoiceNumber} attached.",
+                $"invoice-{invoice.InvoiceNumber}.pdf",
+                pdf);
+
+            var sentAt = DateTimeOffset.UtcNow;
+            var statusUpdated = false;
+            string? statusNote = null;
+
+            if (result.Success)
+            {
+                // Do not resurrect a concurrently voided invoice.
+                var updated = await dbContext.Invoices
+                    .Where(x => x.Id == invoice.Id
+                        && x.TenantId == tenantContext.TenantId
+                        && x.Status != "Void")
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(x => x.Status, "Sent")
+                        .SetProperty(x => x.SentAt, sentAt)
+                        .SetProperty(x => x.PdfPath, invoice.PdfPath));
+                statusUpdated = updated > 0;
+                if (!statusUpdated)
+                {
+                    statusNote = "Email was sent but invoice status was not updated because the invoice is now void.";
+                }
+            }
+
+            dbContext.EmailSendLogs.Add(new EmailSendLog
+            {
+                TenantId = tenantContext.TenantId,
+                AttemptedAt = DateTimeOffset.UtcNow,
+                DocumentType = "Invoice",
+                DocumentId = invoice.Id,
+                Recipient = invoice.RecipientEmail,
+                Success = result.Success,
+                Simulated = result.Simulated,
+                ErrorMessage = result.ErrorMessage ?? statusNote
+            });
+            await dbContext.SaveChangesAsync();
+
+            await audit.LogAsync(
+                "Invoice",
+                invoice.Id.ToString(),
+                "Send",
+                null,
+                new { invoice.InvoiceNumber, result.Success, result.Simulated, statusUpdated },
+                result.Success
+                    ? (statusUpdated
+                        ? $"Sent invoice {invoice.InvoiceNumber}."
+                        : $"Sent invoice {invoice.InvoiceNumber} but status was not updated (voided concurrently).")
+                    : $"Failed to send invoice {invoice.InvoiceNumber}.");
+
+            if (!result.Success)
+            {
+                return SendInvoiceOutcome.Failed(id, invoice.InvoiceNumber, result.ErrorMessage ?? "Email failed.", forBulk);
+            }
+
+            return SendInvoiceOutcome.Succeeded(
+                id,
+                invoice.InvoiceNumber,
+                result.Simulated,
+                statusUpdated ? sentAt : null,
+                forBulk,
+                statusNote);
+        }
+
         private async Task<Guid> TenantPublicIdAsync()
         {
             return await dbContext.Tenants
                 .Where(x => x.Id == tenantContext.TenantId)
                 .Select(x => x.PublicId)
                 .FirstAsync();
+        }
+
+        private sealed class SendInvoiceOutcome
+        {
+            public required IActionResult HttpResult { get; init; }
+            public string? InvoiceNumber { get; init; }
+            public required string BulkOutcome { get; init; }
+            public string? Reason { get; init; }
+
+            public static SendInvoiceOutcome NotFound(int id, bool forBulk) => new()
+            {
+                HttpResult = new NotFoundResult(),
+                BulkOutcome = "Skipped",
+                Reason = "Not found."
+            };
+
+            public static SendInvoiceOutcome Skipped(
+                int id,
+                string invoiceNumber,
+                string message,
+                bool forBulk,
+                string bulkReason) => new()
+            {
+                HttpResult = new BadRequestObjectResult(new { message }),
+                InvoiceNumber = invoiceNumber,
+                BulkOutcome = "Skipped",
+                Reason = bulkReason
+            };
+
+            public static SendInvoiceOutcome Failed(
+                int id,
+                string invoiceNumber,
+                string message,
+                bool forBulk) => new()
+            {
+                HttpResult = new BadRequestObjectResult(new { message }),
+                InvoiceNumber = invoiceNumber,
+                BulkOutcome = "Failed",
+                Reason = message
+            };
+
+            public static SendInvoiceOutcome Succeeded(
+                int id,
+                string invoiceNumber,
+                bool simulated,
+                DateTimeOffset? sentAt,
+                bool forBulk,
+                string? statusNote) => new()
+            {
+                HttpResult = new OkObjectResult(new
+                {
+                    simulated,
+                    sentAt,
+                    statusUpdated = sentAt.HasValue,
+                    warning = statusNote
+                }),
+                InvoiceNumber = invoiceNumber,
+                BulkOutcome = simulated ? "Simulated" : "Succeeded",
+                Reason = statusNote
+            };
         }
     }
 }
