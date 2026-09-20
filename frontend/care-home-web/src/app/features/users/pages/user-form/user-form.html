@@ -1,0 +1,59 @@
+<div class="page">
+  <app-page-header title="Create user" subtitle="Roles are enforced in the API, not only by hiding buttons.">
+    <a mat-stroked-button routerLink="/users">Cancel</a>
+  </app-page-header>
+
+  <app-api-error [message]="errorMessage()" />
+
+  <form method="post" [formGroup]="form" (ngSubmit)="create($event)" class="panel max-w-4xl">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Email address</mat-label>
+        <input matInput type="email" formControlName="email" required />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Display name</mat-label>
+        <input matInput formControlName="displayName" required />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Password</mat-label>
+        <input
+          matInput
+          type="password"
+          formControlName="password"
+          autocomplete="new-password"
+          required
+        />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Role</mat-label>
+        <mat-select formControlName="role">
+          <mat-option value="TenantAdmin">TenantAdmin</mat-option>
+          <mat-option value="Administrator">Administrator</mat-option>
+          <mat-option value="LocationManager">LocationManager</mat-option>
+          <mat-option value="ReadOnly">ReadOnly</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <div class="md:col-span-2">
+        <p class="mb-2 text-sm text-[var(--app-text-muted)]">
+          Care home access (optional — Location Managers)
+        </p>
+        @for (home of homes(); track home.id) {
+          <mat-checkbox (change)="toggleHome(home.id, $any($event).checked)">{{
+            home.name
+          }}</mat-checkbox>
+        }
+      </div>
+    </div>
+    <div class="form-actions">
+      <a mat-stroked-button routerLink="/users">Cancel</a>
+      <button mat-flat-button color="primary" type="submit" [disabled]="isSaving()">
+        @if (isSaving()) {
+          Creating...
+        } @else {
+          Create user
+        }
+      </button>
+    </div>
+  </form>
+</div>

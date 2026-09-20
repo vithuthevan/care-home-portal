@@ -250,9 +250,9 @@ export class CareHomeForm implements OnInit {
         }),
       )
       .subscribe({
-        next: () => {
+        next: (careHome) => {
           this.toast.success('Care home created successfully.');
-          this.router.navigate(['/care-homes']);
+          void this.router.navigate(['/care-homes', careHome.id, 'dashboard']);
         },
 
         error: (error) => {

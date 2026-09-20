@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
+import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 
 interface TenantRow {
   id: number;
@@ -25,6 +26,7 @@ interface TenantRow {
     PageHeaderComponent,
     ApiErrorComponent,
     StatusBadgeComponent,
+    IconActionButtonComponent,
   ],
   templateUrl: './platform-tenant-list.html',
 })

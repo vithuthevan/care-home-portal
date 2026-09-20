@@ -1,10 +1,10 @@
 <div class="page">
   <app-page-header
-    title="Clients"
+    title="Residents"
     subtitle="Residents across your care homes — open a row to see funding and billing."
   >
     @if (auth.canWrite()) {
-      <a mat-flat-button color="primary" routerLink="/clients/new">Add client</a>
+      <a mat-flat-button color="primary" routerLink="/clients/new">Add resident</a>
     }
   </app-page-header>
 
@@ -43,16 +43,16 @@
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
-    <app-loading-state label="Loading clients..." />
+    <app-loading-state label="Loading residents..." />
   }
 
   @if (!isLoading() && clients().length === 0) {
     <app-empty-state
-      title="No clients yet"
-      message="Add your first client to begin managing residents, funding, and billing."
+      title="No residents yet"
+      message="Add your first resident to begin managing funding and billing."
     >
       @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/clients/new">Add client</a>
+        <a mat-flat-button color="primary" routerLink="/clients/new">Add resident</a>
       }
     </app-empty-state>
   }
@@ -63,12 +63,12 @@
         <thead>
           <tr>
             <th>Resident</th>
-            <th>Reference</th>
+            <th class="col-ref">Reference</th>
             <th>Care home</th>
             <th class="col-hide-sm">Care type</th>
-            <th>Status</th>
-            <th class="col-hide-sm">Admission</th>
-            <th>Actions</th>
+            <th class="col-status">Status</th>
+            <th class="col-hide-sm col-date">Admission</th>
+            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -91,21 +91,29 @@
                 }
               </td>
               <td class="col-hide-sm">{{ client.admissionDate | displayDate }}</td>
-              <td (click)="$event.stopPropagation()" class="actions-cell">
-                <a mat-stroked-button [routerLink]="['/clients', client.id]">Open</a>
-                @if (auth.canWrite()) {
-                  <a mat-stroked-button [routerLink]="['/clients', client.id, 'edit']">Edit</a>
-                  @if (!client.isArchived && client.status !== 'Current') {
-                    <button
-                      mat-stroked-button
-                      color="warn"
-                      type="button"
-                      (click)="archiveClient(client)"
-                    >
-                      Archive
-                    </button>
+              <td (click)="$event.stopPropagation()" class="actions-cell col-actions">
+                <span class="table-actions">
+                  <app-icon-action
+                    icon="visibility"
+                    ariaLabel="Open resident profile"
+                    [routerLink]="['/clients', client.id]"
+                  />
+                  @if (auth.canWrite()) {
+                    <app-icon-action
+                      icon="edit"
+                      ariaLabel="Edit resident"
+                      [routerLink]="['/clients', client.id, 'edit']"
+                    />
+                    @if (!client.isArchived && client.status !== 'Current') {
+                      <app-icon-action
+                        icon="archive"
+                        ariaLabel="Archive resident"
+                        [warn]="true"
+                        (action)="archiveClient(client)"
+                      />
+                    }
                   }
-                }
+                </span>
               </td>
             </tr>
           }
@@ -127,5 +135,14 @@
         </a>
       }
     </div>
+
+    <app-table-pagination
+      [page]="page"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount()"
+      [disabled]="isLoading()"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)"
+    />
   }
 </div>

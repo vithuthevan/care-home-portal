@@ -45,7 +45,7 @@
             <th>When</th>
             <th>File</th>
             <th class="num">Records</th>
-            <th></th>
+            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -54,15 +54,24 @@
               <td>{{ batch.exportedAt }}</td>
               <td>{{ batch.fileName }}</td>
               <td class="num">{{ batch.recordCount }}</td>
-              <td>
-                <button mat-stroked-button type="button" (click)="download(batch.id)">
-                  Download
-                </button>
+              <td class="actions-cell col-actions">
+                <app-icon-action
+                  icon="download"
+                  ariaLabel="Download Sage export file"
+                  (action)="download(batch.id)"
+                />
               </td>
             </tr>
           }
         </tbody>
       </table>
     </div>
+    <app-table-pagination
+      [page]="page"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount()"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)"
+    />
   </section>
 </div>

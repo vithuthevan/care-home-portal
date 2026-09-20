@@ -1,7 +1,7 @@
 <div class="page">
   <app-page-header
     title="Miscellaneous Charges"
-    subtitle="CSV columns: ClientReference, UsedDate, Description, Amount, NominalCode"
+    subtitle="CSV columns: ClientReference (resident reference), UsedDate, Description, Amount, NominalCode"
   />
   <app-api-error [message]="errorMessage()" />
   @if (info()) {
@@ -23,7 +23,7 @@
             <tr>
               <th>Row</th>
               <th>Status</th>
-              <th>Client</th>
+              <th>Resident</th>
               <th>Error</th>
             </tr>
           </thead>
@@ -54,7 +54,7 @@
   }
   <section class="panel">
     <h2 class="mt-0 text-lg font-semibold">Import batches</h2>
-    <div class="table-container">
+    <div class="table-container panel panel--flat">
       <table class="data-table">
         <thead>
           <tr>
@@ -74,5 +74,12 @@
         </tbody>
       </table>
     </div>
+    <app-table-pagination
+      [page]="page"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount()"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)"
+    />
   </section>
 </div>

@@ -13,9 +13,13 @@
           matInput
           [ngModel]="searchText()"
           (ngModelChange)="searchText.set($event)"
+          (keyup.enter)="applySearch()"
           placeholder="Company name"
         />
       </mat-form-field>
+    </div>
+    <div filterActions>
+      <button mat-flat-button color="primary" type="button" (click)="applySearch()">Search</button>
     </div>
   </app-filter-bar>
 
@@ -25,7 +29,7 @@
     <app-loading-state label="Loading companies..." />
   }
 
-  @if (!isLoading() && companies().length === 0) {
+  @if (!isLoading() && companies().length === 0 && !searchText().trim() && totalCount() === 0) {
     <app-empty-state
       title="No companies yet"
       message="Add a company to group care homes for billing and reporting."
@@ -36,55 +40,58 @@
     </app-empty-state>
   }
 
-  @if (!isLoading() && companies().length && filteredCompanies().length === 0) {
+  @if (!isLoading() && companies().length === 0 && searchText().trim()) {
     <app-empty-state
       title="No companies found"
       message="There are no companies matching your search."
     />
   }
 
-  @if (!isLoading() && filteredCompanies().length) {
+  @if (!isLoading() && companies().length) {
     <div class="table-container panel panel--flat list-view-table--from-md">
       <table class="data-table data-table--responsive-hide-sm">
         <thead>
           <tr>
             <th>Company</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th class="col-status">Status</th>
+            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
-          @for (company of filteredCompanies(); track company.id) {
+          @for (company of companies(); track company.id) {
             <tr [class.inactive-row]="!company.isActive">
               <td class="font-medium">
                 <a
                   class="font-medium"
-                  [routerLink]="['/care-homes']"
-                  [queryParams]="{ companyId: company.id }"
+                  [routerLink]="['/companies', company.id]"
                   >{{ company.name }}</a
                 >
               </td>
-              <td><app-status-badge [value]="company.isActive ? 'Active' : 'Inactive'" /></td>
-              <td class="actions-cell">
-                <a
-                  mat-stroked-button
-                  [routerLink]="['/care-homes']"
-                  [queryParams]="{ companyId: company.id }"
-                  >Care homes</a
-                >
-                @if (auth.canWrite()) {
-                  <a mat-stroked-button [routerLink]="['/companies', company.id, 'edit']">Edit</a>
-                  @if (company.isActive) {
-                    <button
-                      mat-stroked-button
-                      color="warn"
-                      type="button"
-                      (click)="deactivateCompany(company)"
-                    >
-                      Deactivate
-                    </button>
+              <td class="col-status"><app-status-badge [value]="company.isActive ? 'Active' : 'Inactive'" /></td>
+              <td class="actions-cell col-actions">
+                <span class="table-actions">
+                  <app-icon-action
+                    icon="home_work"
+                    ariaLabel="View care homes for company"
+                    [routerLink]="['/care-homes']"
+                    [queryParams]="{ companyId: company.id }"
+                  />
+                  @if (auth.canWrite()) {
+                    <app-icon-action
+                      icon="edit"
+                      ariaLabel="Edit company"
+                      [routerLink]="['/companies', company.id, 'edit']"
+                    />
+                    @if (company.isActive) {
+                      <app-icon-action
+                        icon="block"
+                        ariaLabel="Deactivate company"
+                        [warn]="true"
+                        (action)="deactivateCompany(company)"
+                      />
+                    }
                   }
-                }
+                </span>
               </td>
             </tr>
           }
@@ -93,31 +100,42 @@
     </div>
 
     <div class="mobile-card-list mobile-card-list--breakpoint-md">
-      @for (company of filteredCompanies(); track company.id) {
+      @for (company of companies(); track company.id) {
         <article class="mobile-data-card" [class.inactive-row]="!company.isActive">
-          <a
-            class="text-lg font-semibold no-underline"
-            [routerLink]="['/care-homes']"
-            [queryParams]="{ companyId: company.id }"
-            >{{ company.name }}</a
-          >
+          <a class="text-lg font-semibold no-underline" [routerLink]="['/companies', company.id]">{{
+            company.name
+          }}</a>
           <div class="mt-2">
             <app-status-badge [value]="company.isActive ? 'Active' : 'Inactive'" />
           </div>
           <div class="mobile-data-card__actions">
-            <a
-              mat-flat-button
-              color="primary"
-              [routerLink]="['/care-homes']"
-              [queryParams]="{ companyId: company.id }"
-              >Care homes</a
-            >
-            @if (auth.canWrite()) {
-              <a mat-stroked-button [routerLink]="['/companies', company.id, 'edit']">Edit</a>
-            }
+            <span class="table-actions">
+              <app-icon-action
+                icon="home_work"
+                ariaLabel="View care homes for company"
+                [routerLink]="['/care-homes']"
+                [queryParams]="{ companyId: company.id }"
+              />
+              @if (auth.canWrite()) {
+                <app-icon-action
+                  icon="edit"
+                  ariaLabel="Edit company"
+                  [routerLink]="['/companies', company.id, 'edit']"
+                />
+              }
+            </span>
           </div>
         </article>
       }
     </div>
+
+    <app-table-pagination
+      [page]="page"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount()"
+      [disabled]="isLoading()"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)"
+    />
   }
 </div>

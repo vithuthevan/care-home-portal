@@ -11,7 +11,12 @@
   @if (contextClientName()) {
     <div class="alert-banner alert-banner--info">
       Opened from resident profile: <strong>{{ contextClientName() }}</strong>. Company and care
-      home are preselected. Preview billing to see eligible residents and calculated charges.
+      home are preselected.
+      @if (isSingleResidentScope()) {
+        Preview and generate apply to this resident within the selected scope.
+      } @else {
+        Preview billing to see eligible residents and calculated charges.
+      }
     </div>
   }
 
@@ -86,7 +91,7 @@
   @if (!preview() && !isWorking()) {
     <app-empty-state
       title="Select scope and preview billing"
-      message="Select the billing scope and period, then preview billing to see eligible residents."
+      message="Choose your billing scope and period, then select Preview billing to see eligible residents, charges, and anything that needs attention before invoices are generated."
     />
   }
 
@@ -118,7 +123,12 @@
         {{ previewData.requestedPeriodStart | displayDate }} →
         {{ previewData.requestedPeriodEnd | displayDate }}
       </p>
-      <p class="text-sm font-medium">{{ previewData.lines?.length || 0 }} resident line(s) found</p>
+      <p class="text-sm font-medium">
+        {{ previewEligibleResidents(previewData) }} resident(s) eligible
+        @if (previewAttentionCount(previewData) > 0) {
+          · {{ previewAttentionCount(previewData) }} require attention
+        }
+      </p>
 
       @if (previewData.lines?.length) {
         <div class="table-container mt-3 list-view-table--from-md">
@@ -214,8 +224,19 @@
     <section class="panel mb-4">
       <h2 class="mt-0 text-section">Step 3 — Review</h2>
       @for (item of previewData.exceptions; track item.code + item.message) {
-        <div class="alert-banner alert-banner--warning mb-3">
-          <div class="font-medium">{{ exceptionLabel(item.code, item.message) }}</div>
+        <div
+          class="alert-banner mb-3"
+          [class.alert-banner--warning]="item.severity !== 'Info'"
+          [class.alert-banner--info]="item.severity === 'Info'"
+        >
+          @if (item.clientName) {
+            <div class="font-medium">
+              {{ item.clientName }} — {{ exceptionHeadline(item.code) }}
+            </div>
+            <p class="mt-1 mb-0 text-sm">{{ exceptionLabel(item.code, item.message) }}</p>
+          } @else {
+            <div class="font-medium">{{ exceptionLabel(item.code, item.message) }}</div>
+          }
         </div>
       } @empty {
         <p class="mb-0 text-sm text-[var(--app-text-muted)]">No exceptions for this preview.</p>

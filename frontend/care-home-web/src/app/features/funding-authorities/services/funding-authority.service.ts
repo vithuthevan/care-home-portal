@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import {
@@ -7,6 +7,7 @@ import {
   FundingAuthority,
   UpdateFundingAuthorityRequest,
 } from '../models/funding-authority.model';
+import { PagedResult } from '../../../core/models';
 
 @Injectable({
   providedIn: 'root',
@@ -18,6 +19,11 @@ export class FundingAuthorityService {
 
   getFundingAuthorities(): Observable<FundingAuthority[]> {
     return this.http.get<FundingAuthority[]>(this.apiUrl);
+  }
+
+  getFundingAuthoritiesPaged(page: number, pageSize: number): Observable<PagedResult<FundingAuthority>> {
+    const params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    return this.http.get<PagedResult<FundingAuthority>>(this.apiUrl, { params });
   }
 
   getFundingAuthority(id: number): Observable<FundingAuthority> {

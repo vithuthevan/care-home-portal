@@ -1,13 +1,13 @@
 <div class="page">
   <app-page-header
-    [title]="isEditMode ? 'Edit Client' : 'Add Client'"
+    [title]="isEditMode ? 'Edit resident' : 'Add resident'"
     subtitle="Resident records used for funding, rates, and invoicing."
   />
 
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
-    <app-loading-state label="Loading client..." />
+    <app-loading-state label="Loading resident..." />
   } @else {
     <form [formGroup]="form" (ngSubmit)="save()" class="panel max-w-5xl">
       <h2 class="mt-0 mb-3 text-lg font-semibold">Location</h2>
@@ -31,23 +31,29 @@
         </mat-form-field>
       </div>
 
-      <h2 class="mb-3 text-lg font-semibold">Client identification</h2>
+      <h2 class="mb-3 text-lg font-semibold">Identification</h2>
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Sage ID</mat-label>
-          <input matInput formControlName="sageId" required />
+          <mat-label>Sage ID @if (!isEditMode) { (optional) }</mat-label>
+          <input matInput formControlName="sageId" [required]="isEditMode" />
+          @if (!isEditMode) {
+            <mat-hint>Leave blank to use the resident reference for Sage export.</mat-hint>
+          }
           @if (form.controls.sageId.touched && form.controls.sageId.hasError('required')) {
             <mat-error>Sage ID is required.</mat-error>
           }
         </mat-form-field>
         <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Client reference number</mat-label>
-          <input matInput formControlName="referenceNumber" required />
+          <mat-label>Resident reference @if (!isEditMode) { (optional) }</mat-label>
+          <input matInput formControlName="referenceNumber" [required]="isEditMode" />
+          @if (!isEditMode) {
+            <mat-hint>Automatically generated from the care home code when left blank.</mat-hint>
+          }
           @if (
             form.controls.referenceNumber.touched &&
             form.controls.referenceNumber.hasError('required')
           ) {
-            <mat-error>Client Reference Number is required.</mat-error>
+            <mat-error>Resident reference is required.</mat-error>
           }
         </mat-form-field>
       </div>

@@ -17,7 +17,7 @@
       <h2 class="dashboard-section__title">What should I do next?</h2>
       <div class="panel actions-bar actions-bar--primary-first">
         @if (auth.canWrite()) {
-          <a mat-flat-button color="primary" routerLink="/clients/new">Add client</a>
+          <a mat-flat-button color="primary" routerLink="/clients/new">Add resident</a>
         }
         <a mat-stroked-button routerLink="/billing">Start billing</a>
         <a mat-stroked-button routerLink="/invoices">View invoices</a>
@@ -74,14 +74,14 @@
             </p>
           </div>
         </a>
-        <div class="panel kpi-card">
+        <a routerLink="/invoices" class="panel kpi-card kpi-card--link no-underline">
           <div class="kpi-icon"><mat-icon>receipt_long</mat-icon></div>
           <div>
             <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Generated invoices</h3>
             <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.invoicesGenerated }}</p>
-            <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">Created to date</p>
+            <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">View invoice list</p>
           </div>
-        </div>
+        </a>
         <div class="panel kpi-card">
           <div class="kpi-icon"><mat-icon>event</mat-icon></div>
           <div>

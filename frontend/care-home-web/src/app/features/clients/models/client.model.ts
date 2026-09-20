@@ -3,6 +3,7 @@ export interface Client {
 
   careHomeId: number;
   careHomeName: string;
+  companyId: number;
   companyName: string;
 
   sageId: string;
@@ -34,8 +35,8 @@ export interface Client {
 export interface CreateClientRequest {
   careHomeId: number;
 
-  sageId: string;
-  referenceNumber: string;
+  sageId?: string;
+  referenceNumber?: string;
 
   title?: string;
 

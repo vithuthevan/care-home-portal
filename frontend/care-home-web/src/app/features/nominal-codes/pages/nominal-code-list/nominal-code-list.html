@@ -9,14 +9,14 @@
     <app-loading-state label="Loading nominal codes..." />
   }
   @if (!isLoading()) {
-    <div class="table-container">
+    <div class="table-container panel panel--flat">
       <table class="data-table">
         <thead>
           <tr>
             <th>Code</th>
             <th>Name</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th class="col-status">Status</th>
+            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -24,22 +24,24 @@
             <tr [class.inactive-row]="!nominalCode.isActive">
               <td>{{ nominalCode.code }}</td>
               <td class="font-medium">{{ nominalCode.name }}</td>
-              <td><app-status-badge [value]="nominalCode.isActive ? 'Active' : 'Inactive'" /></td>
-              <td class="flex flex-wrap gap-2">
+              <td class="col-status"><app-status-badge [value]="nominalCode.isActive ? 'Active' : 'Inactive'" /></td>
+              <td class="actions-cell col-actions">
                 @if (auth.canWrite()) {
-                  <a mat-stroked-button [routerLink]="['/nominal-codes', nominalCode.id, 'edit']"
-                    >Edit</a
-                  >
-                  @if (nominalCode.isActive) {
-                    <button
-                      mat-stroked-button
-                      color="warn"
-                      type="button"
-                      (click)="deactivateNominalCode(nominalCode)"
-                    >
-                      Deactivate
-                    </button>
-                  }
+                  <span class="table-actions">
+                    <app-icon-action
+                      icon="edit"
+                      ariaLabel="Edit nominal code"
+                      [routerLink]="['/nominal-codes', nominalCode.id, 'edit']"
+                    />
+                    @if (nominalCode.isActive) {
+                      <app-icon-action
+                        icon="block"
+                        ariaLabel="Deactivate nominal code"
+                        [warn]="true"
+                        (action)="deactivateNominalCode(nominalCode)"
+                      />
+                    }
+                  </span>
                 }
               </td>
             </tr>

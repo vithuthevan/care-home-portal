@@ -22,6 +22,8 @@ import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { PagedResult } from '../../../../core/models';
+import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
+import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 
 @Component({
   selector: 'app-invoice-list',
@@ -42,6 +44,8 @@ import { PagedResult } from '../../../../core/models';
     LabeledStatusComponent,
     StatusBadgeComponent,
     FilterBarComponent,
+    TablePaginationComponent,
+    IconActionButtonComponent,
   ],
   templateUrl: './invoice-list.html',
 })
@@ -56,6 +60,7 @@ export class InvoiceListPage implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly bulkMessage = signal<string | null>(null);
   page = 1;
+  pageSize = 50;
   invoiceNumber = '';
   status = '';
   paymentStatus = '';
@@ -82,6 +87,18 @@ export class InvoiceListPage implements OnInit {
     this.invoiceNumber = '';
     this.status = '';
     this.paymentStatus = '';
+    this.page = 1;
+    this.load();
+  }
+
+  onPageChange(page: number): void {
+    this.page = page;
+    this.load();
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.page = 1;
     this.load();
   }
 
@@ -96,7 +113,7 @@ export class InvoiceListPage implements OnInit {
   load(): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
-    let params = new HttpParams().set('page', this.page).set('pageSize', 50);
+    let params = new HttpParams().set('page', this.page).set('pageSize', this.pageSize);
     if (this.invoiceNumber) params = params.set('invoiceNumber', this.invoiceNumber);
     if (this.status) params = params.set('status', this.status);
     if (this.paymentStatus) params = params.set('paymentStatus', this.paymentStatus);

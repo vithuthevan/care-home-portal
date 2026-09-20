@@ -15,6 +15,7 @@ import { NotFoundPage } from './features/not-found/not-found';
 import { DashboardPage } from './features/dashboard/dashboard';
 import { CompanyList } from './features/companies/pages/company-list/company-list';
 import { CompanyForm } from './features/companies/pages/company-form/company-form';
+import { CompanyDetail } from './features/companies/pages/company-detail/company-detail';
 import { CareHomeList } from './features/care-homes/pages/care-home-list/care-home-list';
 import { CareHomeForm } from './features/care-homes/pages/care-home-form/care-home-form';
 import { CareHomeDashboardPage } from './features/care-homes/pages/care-home-dashboard/care-home-dashboard';
@@ -28,6 +29,7 @@ import { InvoiceCategoryForm } from './features/invoice-categories/pages/invoice
 import { NominalCodeList } from './features/nominal-codes/pages/nominal-code-list/nominal-code-list';
 import { NominalCodeForm } from './features/nominal-codes/pages/nominal-code-form/nominal-code-form';
 import { InvoiceTemplateListPage } from './features/invoice-templates/pages/invoice-template-list/invoice-template-list';
+import { InvoiceTemplateFormPage } from './features/invoice-templates/pages/invoice-template-form/invoice-template-form';
 import { BillingWorkspacePage } from './features/billing/pages/billing-workspace/billing-workspace';
 import { InvoiceListPage } from './features/invoices/pages/invoice-list/invoice-list';
 import { InvoiceDetailPage } from './features/invoices/pages/invoice-detail/invoice-detail';
@@ -36,6 +38,7 @@ import { MiscChargesPage } from './features/misc-charges/pages/misc-charges/misc
 import { ReportsPage } from './features/reports/pages/reports/reports';
 import { SageExportPage } from './features/sage/pages/sage-export/sage-export';
 import { UserListPage } from './features/users/pages/user-list/user-list';
+import { UserFormPage } from './features/users/pages/user-form/user-form';
 import { AuditListPage } from './features/audit/pages/audit-list/audit-list';
 import { PlatformTenantListPage } from './features/platform/pages/platform-tenant-list/platform-tenant-list';
 import { PlatformTenantFormPage } from './features/platform/pages/platform-tenant-form/platform-tenant-form';
@@ -49,6 +52,7 @@ export const routes: Routes = [
   { path: 'dashboard', component: DashboardPage, canActivate: [authGuard] },
   { path: 'companies', component: CompanyList, canActivate: [authGuard] },
   { path: 'companies/new', component: CompanyForm, canActivate: [authGuard] },
+  { path: 'companies/:id', component: CompanyDetail, canActivate: [authGuard] },
   { path: 'companies/:id/edit', component: CompanyForm, canActivate: [authGuard] },
   { path: 'care-homes', component: CareHomeList, canActivate: [authGuard] },
   { path: 'care-homes/new', component: CareHomeForm, canActivate: [authGuard] },
@@ -72,6 +76,7 @@ export const routes: Routes = [
   { path: 'nominal-codes/new', component: NominalCodeForm, canActivate: [authGuard] },
   { path: 'nominal-codes/:id/edit', component: NominalCodeForm, canActivate: [authGuard] },
   { path: 'invoice-templates', component: InvoiceTemplateListPage, canActivate: [authGuard] },
+  { path: 'invoice-templates/new', component: InvoiceTemplateFormPage, canActivate: [authGuard] },
   { path: 'billing', component: BillingWorkspacePage, canActivate: [authGuard] },
   { path: 'invoices', component: InvoiceListPage, canActivate: [authGuard] },
   { path: 'invoices/:id', component: InvoiceDetailPage, canActivate: [authGuard] },
@@ -80,6 +85,7 @@ export const routes: Routes = [
   { path: 'reports', component: ReportsPage, canActivate: [authGuard] },
   { path: 'sage-exports', component: SageExportPage, canActivate: [authGuard] },
   { path: 'users', component: UserListPage, canActivate: [authGuard, adminGuard] },
+  { path: 'users/new', component: UserFormPage, canActivate: [authGuard, adminGuard] },
   { path: 'audit', component: AuditListPage, canActivate: [authGuard, adminGuard] },
   {
     path: 'settings/organisation',

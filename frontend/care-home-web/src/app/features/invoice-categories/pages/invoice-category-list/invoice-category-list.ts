@@ -12,6 +12,7 @@ import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
+import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 
 @Component({
   selector: 'app-invoice-category-list',
@@ -22,6 +23,7 @@ import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.servi
     ApiErrorComponent,
     LoadingStateComponent,
     StatusBadgeComponent,
+    IconActionButtonComponent,
   ],
   templateUrl: './invoice-category-list.html',
 })

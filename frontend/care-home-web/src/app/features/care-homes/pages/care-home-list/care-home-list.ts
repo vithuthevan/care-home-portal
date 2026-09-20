@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,6 +14,8 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
+import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 
 @Component({
   selector: 'app-care-home-list',
@@ -25,28 +27,25 @@ import { ToastService } from '../../../../shared/ui/toast.service';
     LoadingStateComponent,
     EmptyStateComponent,
     StatusBadgeComponent,
+    IconActionButtonComponent,
+    TablePaginationComponent,
   ],
   templateUrl: './care-home-list.html',
 })
 export class CareHomeList implements OnInit {
   private readonly careHomeService = inject(CareHomeService);
   private readonly route = inject(ActivatedRoute);
-  readonly filterCompanyId = signal(0);
   private readonly confirm = inject(ConfirmDialogService);
   private readonly toast = inject(ToastService);
   readonly auth = inject(AuthService);
 
   readonly careHomes = signal<CareHomeLocation[]>([]);
-  readonly visibleCareHomes = computed(() => {
-    const companyId = this.filterCompanyId();
-    const list = this.careHomes();
-    if (!companyId) {
-      return list;
-    }
-    return list.filter((home) => home.companyId === companyId);
-  });
+  readonly totalCount = signal(0);
+  readonly filterCompanyId = signal(0);
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  page = 1;
+  pageSize = 50;
 
   ngOnInit(): void {
     const companyId = Number(this.route.snapshot.queryParamMap.get('companyId') || 0);
@@ -55,7 +54,20 @@ export class CareHomeList implements OnInit {
     }
     this.route.queryParamMap.subscribe((params) => {
       this.filterCompanyId.set(Number(params.get('companyId') || 0));
+      this.page = 1;
+      this.loadCareHomes();
     });
+    this.loadCareHomes();
+  }
+
+  onPageChange(page: number): void {
+    this.page = page;
+    this.loadCareHomes();
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.page = 1;
     this.loadCareHomes();
   }
 
@@ -63,11 +75,15 @@ export class CareHomeList implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
+    const companyId = this.filterCompanyId() || undefined;
     this.careHomeService
-      .getCareHomes()
+      .getCareHomesPaged(this.page, this.pageSize, companyId)
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: (careHomes) => this.careHomes.set(careHomes),
+        next: (page) => {
+          this.careHomes.set(page.items);
+          this.totalCount.set(page.totalCount);
+        },
         error: (error) => {
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to load care homes.'));
         },

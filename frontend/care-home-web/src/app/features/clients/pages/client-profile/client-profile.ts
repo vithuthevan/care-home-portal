@@ -85,6 +85,8 @@ export class ClientProfilePage implements OnInit {
   readonly categories = signal<any[]>([]);
   readonly nominals = signal<any[]>([]);
   readonly isLoading = signal(false);
+  readonly isSavingContract = signal(false);
+  readonly isSavingRate = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly selectedTabIndex = signal(0);
 
@@ -150,14 +152,16 @@ export class ClientProfilePage implements OnInit {
           next: (client) => {
             this.client.set(client);
             this.breadcrumbs.set([
-              { label: 'Clients', routerLink: '/clients' },
-              { label: `${client.firstName} ${client.lastName}`.trim() },
+              { label: 'Residents', routerLink: '/clients' },
+              {
+                label: `${client.firstName} ${client.lastName} — ${client.referenceNumber}`.trim(),
+              },
             ]);
             this.loadContracts();
             this.loadInvoices();
           },
           error: (error) =>
-            this.errorMessage.set(getApiErrorMessage(error, 'Unable to load client.')),
+            this.errorMessage.set(getApiErrorMessage(error, 'Unable to load resident.')),
         });
     });
   }
@@ -191,11 +195,31 @@ export class ClientProfilePage implements OnInit {
   }
 
   billingQueryParams(client: Client): Record<string, string | number> {
+    const period = this.suggestedBillingPeriod();
     return {
       careHomeId: client.careHomeId,
       clientId: client.id,
       clientName: `${client.firstName} ${client.lastName}`.trim(),
+      periodStart: period.start,
+      periodEnd: period.end,
     };
+  }
+
+  private suggestedBillingPeriod(): { start: string; end: string } {
+    const today = new Date();
+    const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const end = new Date(today.getFullYear(), today.getMonth(), 0);
+    return {
+      start: this.toDateInput(start),
+      end: this.toDateInput(end),
+    };
+  }
+
+  private toDateInput(value: Date): string {
+    const year = value.getFullYear();
+    const month = `${value.getMonth() + 1}`.padStart(2, '0');
+    const day = `${value.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   loadContracts(): void {
@@ -218,16 +242,40 @@ export class ClientProfilePage implements OnInit {
     });
   }
 
+  private resetNewContract(): void {
+    this.newContract = {
+      fundingAuthorityId: 0,
+      invoiceCategoryId: 0,
+      nominalCodeId: 0,
+      contractStartDate: '',
+      contractEndDate: '',
+    };
+  }
+
+  private resetNewRate(): void {
+    this.newRate = {
+      contractId: 0,
+      effectiveFrom: '',
+      effectiveTo: '',
+      frequency: 'Weekly',
+      amount: 0,
+      notes: '',
+    };
+  }
+
   saveContract(): void {
     const current = this.client();
-    if (!current) return;
+    if (!current || this.isSavingContract()) return;
+    this.isSavingContract.set(true);
     this.http
       .post(`/api/clients/${current.id}/funding-contracts`, {
         ...this.newContract,
         contractEndDate: this.newContract.contractEndDate || null,
       })
+      .pipe(finalize(() => this.isSavingContract.set(false)))
       .subscribe({
         next: () => {
+          this.resetNewContract();
           this.loadContracts();
           this.openFundingTab();
         },
@@ -246,7 +294,11 @@ export class ClientProfilePage implements OnInit {
       this.errorMessage.set('Rate amount must be greater than zero.');
       return;
     }
+    if (this.isSavingRate()) {
+      return;
+    }
 
+    this.isSavingRate.set(true);
     this.http
       .post(`/api/funding-contracts/${this.newRate.contractId}/rates`, {
         effectiveFrom: this.newRate.effectiveFrom,
@@ -256,8 +308,10 @@ export class ClientProfilePage implements OnInit {
         notes: this.newRate.notes,
         closePreviousOpenEnded: true,
       })
+      .pipe(finalize(() => this.isSavingRate.set(false)))
       .subscribe({
         next: () => {
+          this.resetNewRate();
           this.loadContracts();
           this.openFundingTab();
         },

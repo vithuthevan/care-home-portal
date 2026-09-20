@@ -12,14 +12,14 @@
     <app-loading-state label="Loading invoice categories..." />
   }
   @if (!isLoading()) {
-    <div class="table-container">
+    <div class="table-container panel panel--flat">
       <table class="data-table">
         <thead>
           <tr>
             <th>Code</th>
             <th>Name</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th class="col-status">Status</th>
+            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -27,22 +27,24 @@
             <tr [class.inactive-row]="!category.isActive">
               <td>{{ category.code }}</td>
               <td class="font-medium">{{ category.name }}</td>
-              <td><app-status-badge [value]="category.isActive ? 'Active' : 'Inactive'" /></td>
-              <td class="flex flex-wrap gap-2">
+              <td class="col-status"><app-status-badge [value]="category.isActive ? 'Active' : 'Inactive'" /></td>
+              <td class="actions-cell col-actions">
                 @if (auth.canWrite()) {
-                  <a mat-stroked-button [routerLink]="['/invoice-categories', category.id, 'edit']"
-                    >Edit</a
-                  >
-                  @if (category.isActive) {
-                    <button
-                      mat-stroked-button
-                      color="warn"
-                      type="button"
-                      (click)="deactivateInvoiceCategory(category)"
-                    >
-                      Deactivate
-                    </button>
-                  }
+                  <span class="table-actions">
+                    <app-icon-action
+                      icon="edit"
+                      ariaLabel="Edit invoice category"
+                      [routerLink]="['/invoice-categories', category.id, 'edit']"
+                    />
+                    @if (category.isActive) {
+                      <app-icon-action
+                        icon="block"
+                        ariaLabel="Deactivate invoice category"
+                        [warn]="true"
+                        (action)="deactivateInvoiceCategory(category)"
+                      />
+                    }
+                  </span>
                 }
               </td>
             </tr>

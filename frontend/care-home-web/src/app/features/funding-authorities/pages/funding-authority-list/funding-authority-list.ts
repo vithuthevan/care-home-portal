@@ -13,6 +13,8 @@ import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
+import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
+import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 
 @Component({
   selector: 'app-funding-authority-list',
@@ -24,6 +26,8 @@ import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.servi
     LoadingStateComponent,
     StatusBadgeComponent,
     EmptyStateComponent,
+    IconActionButtonComponent,
+    TablePaginationComponent,
   ],
   templateUrl: './funding-authority-list.html',
 })
@@ -33,11 +37,24 @@ export class FundingAuthorityList implements OnInit {
   readonly auth = inject(AuthService);
 
   readonly fundingAuthorities = signal<FundingAuthority[]>([]);
-
+  readonly totalCount = signal(0);
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  page = 1;
+  pageSize = 50;
 
   ngOnInit(): void {
+    this.loadFundingAuthorities();
+  }
+
+  onPageChange(page: number): void {
+    this.page = page;
+    this.loadFundingAuthorities();
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.page = 1;
     this.loadFundingAuthorities();
   }
 
@@ -46,10 +63,13 @@ export class FundingAuthorityList implements OnInit {
     this.errorMessage.set(null);
 
     this.fundingAuthorityService
-      .getFundingAuthorities()
+      .getFundingAuthoritiesPaged(this.page, this.pageSize)
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: (fundingAuthorities) => this.fundingAuthorities.set(fundingAuthorities),
+        next: (page) => {
+          this.fundingAuthorities.set(page.items);
+          this.totalCount.set(page.totalCount);
+        },
 
         error: (error) => {
           logApiFailure(error);

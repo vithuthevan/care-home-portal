@@ -1,0 +1,64 @@
+<div class="page">
+  <app-api-error [message]="errorMessage()" />
+
+  @if (isLoading()) {
+    <app-loading-state label="Loading company..." />
+  }
+
+  @if (company(); as co) {
+    <app-page-header [title]="co.name" subtitle="Operating company within your organisation.">
+      <a mat-stroked-button routerLink="/companies">Back to companies</a>
+      @if (auth.canWrite()) {
+        <a mat-flat-button color="primary" [routerLink]="['/companies', co.id, 'edit']">Edit company</a>
+      }
+    </app-page-header>
+
+    <div class="profile-hero">
+      <section class="panel">
+        <h2 class="mt-0 text-section">Overview</h2>
+        <dl class="dl-grid">
+          <div>
+            <dt>Company name</dt>
+            <dd>{{ co.name }}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd><app-status-badge [value]="co.isActive ? 'Active' : 'Inactive'" /></dd>
+          </div>
+          <div>
+            <dt>Care homes</dt>
+            <dd>{{ co.activeCareHomeCount ?? 0 }} active · {{ co.careHomeCount ?? 0 }} total</dd>
+          </div>
+          <div>
+            <dt>Residents</dt>
+            <dd>{{ co.residentCount ?? 0 }} on record (not archived)</dd>
+          </div>
+        </dl>
+      </section>
+
+      <section class="panel">
+        <h2 class="mt-0 text-section">Related</h2>
+        <p class="text-supporting m-0 mb-3">
+          Organisation → Company → Care homes → Residents → Billing
+        </p>
+        <div class="actions-bar">
+          <a
+            mat-flat-button
+            color="primary"
+            [routerLink]="['/care-homes']"
+            [queryParams]="{ companyId: co.id }"
+          >
+            View care homes
+          </a>
+          <a
+            mat-stroked-button
+            [routerLink]="['/clients']"
+            [queryParams]="{ companyId: co.id }"
+          >
+            View residents
+          </a>
+        </div>
+      </section>
+    </div>
+  }
+</div>

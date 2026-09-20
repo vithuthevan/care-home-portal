@@ -15,6 +15,7 @@ import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { DisplayDateTimePipe } from '../../../../shared/format/display-date-time.pipe';
 import { PagedResult } from '../../../../core/models';
+import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 
 @Component({
   selector: 'app-audit-list',
@@ -30,6 +31,7 @@ import { PagedResult } from '../../../../core/models';
     FilterBarComponent,
     EmptyStateComponent,
     DisplayDateTimePipe,
+    TablePaginationComponent,
   ],
   templateUrl: './audit-list.html',
 })
@@ -40,8 +42,19 @@ export class AuditListPage implements OnInit {
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   entityType = '';
-  readonly entityTypeOptions = ['Client', 'Invoice', 'FundingContract', 'CareHome', 'Company', 'User'];
+  readonly entityTypeOptions: { value: string; label: string }[] = [
+    { value: 'Client', label: 'Resident' },
+    { value: 'Invoice', label: 'Invoice' },
+    { value: 'ClientFundingContract', label: 'Funding contract' },
+    { value: 'FundingRate', label: 'Funding rate' },
+    { value: 'CreditNote', label: 'Credit note' },
+    { value: 'CareHome', label: 'Care home' },
+    { value: 'Company', label: 'Company' },
+    { value: 'FundingAuthority', label: 'Funding authority' },
+    { value: 'User', label: 'User' },
+  ];
   page = 1;
+  pageSize = 50;
 
   ngOnInit(): void {
     this.load();
@@ -61,7 +74,7 @@ export class AuditListPage implements OnInit {
   load(): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
-    let params = new HttpParams().set('page', this.page).set('pageSize', 50);
+    let params = new HttpParams().set('page', this.page).set('pageSize', this.pageSize);
     if (this.entityType) params = params.set('entityType', this.entityType);
     this.http
       .get<PagedResult<any>>('/api/audit', { params })
@@ -74,5 +87,16 @@ export class AuditListPage implements OnInit {
         error: (error) =>
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to load audit log.')),
       });
+  }
+
+  onPageChange(page: number): void {
+    this.page = page;
+    this.load();
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.page = 1;
+    this.load();
   }
 }

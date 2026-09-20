@@ -9,6 +9,7 @@ import { MatMenuModule } from '@angular/material/menu';
 
 import { AuthService } from './core/auth.service';
 import { BreadcrumbService } from './shared/ui/breadcrumb.service';
+import { APP_THEME_OPTIONS, AppThemeId, ThemeService } from './shared/ui/theme.service';
 
 @Component({
   selector: 'app-root',
@@ -31,6 +32,8 @@ export class App {
   readonly isMobile = signal(false);
   readonly menuOpen = signal(false);
   readonly breadcrumbs = inject(BreadcrumbService);
+  private readonly themeService = inject(ThemeService);
+  readonly themeOptions = APP_THEME_OPTIONS;
   readonly operationsOpen = signal(true);
   readonly billingSetupOpen = signal(true);
   readonly billingOpen = signal(true);
@@ -38,6 +41,7 @@ export class App {
   readonly adminOpen = signal(true);
 
   constructor() {
+    this.themeService.init();
     if (typeof window !== 'undefined') {
       const query = window.matchMedia('(max-width: 1024px)');
       this.isMobile.set(query.matches);
@@ -75,5 +79,13 @@ export class App {
 
   roleLabel(): string {
     return this.auth.currentUser()?.roles?.[0] || 'User';
+  }
+
+  setTheme(themeId: AppThemeId): void {
+    this.themeService.apply(themeId);
+  }
+
+  activeTheme(): AppThemeId {
+    return this.themeService.activeTheme();
   }
 }

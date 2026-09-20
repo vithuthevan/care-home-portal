@@ -1,4 +1,4 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -18,6 +18,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
+import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 
 @Component({
   selector: 'app-company-list',
@@ -33,6 +35,8 @@ import { ToastService } from '../../../../shared/ui/toast.service';
     EmptyStateComponent,
     StatusBadgeComponent,
     FilterBarComponent,
+    IconActionButtonComponent,
+    TablePaginationComponent,
   ],
   templateUrl: './company-list.html',
 })
@@ -43,19 +47,30 @@ export class CompanyList implements OnInit {
   readonly auth = inject(AuthService);
 
   readonly companies = signal<Company[]>([]);
+  readonly totalCount = signal(0);
   readonly searchText = signal('');
-  readonly filteredCompanies = computed(() => {
-    const q = this.searchText().trim().toLowerCase();
-    const list = this.companies();
-    if (!q) {
-      return list;
-    }
-    return list.filter((company) => company.name.toLowerCase().includes(q));
-  });
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  page = 1;
+  pageSize = 50;
 
   ngOnInit(): void {
+    this.loadCompanies();
+  }
+
+  applySearch(): void {
+    this.page = 1;
+    this.loadCompanies();
+  }
+
+  onPageChange(page: number): void {
+    this.page = page;
+    this.loadCompanies();
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.page = 1;
     this.loadCompanies();
   }
 
@@ -64,10 +79,13 @@ export class CompanyList implements OnInit {
     this.errorMessage.set(null);
 
     this.companyService
-      .getCompanies()
+      .getCompaniesPaged(this.page, this.pageSize, this.searchText())
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: (companies) => this.companies.set(companies),
+        next: (page) => {
+          this.companies.set(page.items);
+          this.totalCount.set(page.totalCount);
+        },
         error: (error) => {
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to load companies.'));
         },

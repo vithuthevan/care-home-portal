@@ -2,7 +2,7 @@
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
-    <app-loading-state label="Loading client..." />
+    <app-loading-state label="Loading resident..." />
   }
 
   @if (client(); as client) {
@@ -10,7 +10,7 @@
       [title]="client.firstName + ' ' + client.lastName"
       [subtitle]="client.referenceNumber + ' · ' + client.sageId"
     >
-      <a mat-stroked-button routerLink="/clients">Back to clients</a>
+      <a mat-stroked-button routerLink="/clients">Back to residents</a>
       @if (auth.canWrite()) {
         <a mat-stroked-button [routerLink]="['/clients', client.id, 'edit']">Edit details</a>
         <a
@@ -36,7 +36,11 @@
           <a [routerLink]="['/care-homes', client.careHomeId, 'dashboard']">{{ client.careHomeName }}</a>
         </p>
         <p class="mt-1 mb-0 text-sm text-[var(--app-text-muted)]">
-          <a routerLink="/companies">{{ client.companyName }}</a>
+          @if (client.companyId) {
+            <a [routerLink]="['/companies', client.companyId]">{{ client.companyName }}</a>
+          } @else {
+            {{ client.companyName }}
+          }
         </p>
         @if (primaryContract(); as contract) {
           <div class="funding-chain mt-4">
@@ -130,7 +134,7 @@
                 <dd>{{ client.dateOfBirth | displayDate }}</dd>
               </div>
               <div>
-                <dt>Client reference</dt>
+                <dt>Resident reference</dt>
                 <dd>{{ client.referenceNumber }}</dd>
               </div>
               <div>
@@ -159,7 +163,13 @@
               </div>
               <div>
                 <dt>Company</dt>
-                <dd><a routerLink="/companies">{{ client.companyName }}</a></dd>
+                <dd>
+                  @if (client.companyId) {
+                    <a [routerLink]="['/companies', client.companyId]">{{ client.companyName }}</a>
+                  } @else {
+                    {{ client.companyName }}
+                  }
+                </dd>
               </div>
             </dl>
           </section>
@@ -252,7 +262,7 @@
               <app-section-header title="Add contract" />
               <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>Funding authority</mat-label>
+                  <mat-label>Funding authority *</mat-label>
                   <mat-select [(ngModel)]="newContract.fundingAuthorityId">
                     <mat-option [value]="0" disabled>Select authority</mat-option>
                     @for (item of authorities(); track item.id) {
@@ -261,7 +271,7 @@
                   </mat-select>
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>Invoice category</mat-label>
+                  <mat-label>Invoice category *</mat-label>
                   <mat-select [(ngModel)]="newContract.invoiceCategoryId">
                     <mat-option [value]="0" disabled>Select category</mat-option>
                     @for (item of categories(); track item.id) {
@@ -270,7 +280,7 @@
                   </mat-select>
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>Nominal code</mat-label>
+                  <mat-label>Nominal code *</mat-label>
                   <mat-select [(ngModel)]="newContract.nominalCodeId">
                     <mat-option [value]="0" disabled>Select nominal</mat-option>
                     @for (item of nominals(); track item.id) {
@@ -279,17 +289,27 @@
                   </mat-select>
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>Start date</mat-label>
+                  <mat-label>Start date *</mat-label>
                   <input matInput type="date" [(ngModel)]="newContract.contractStartDate" />
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>End date</mat-label>
+                  <mat-label>End date (optional)</mat-label>
                   <input matInput type="date" [(ngModel)]="newContract.contractEndDate" />
                   <mat-hint>Leave blank for an open-ended contract</mat-hint>
                 </mat-form-field>
               </div>
-              <button mat-flat-button color="primary" type="button" (click)="saveContract()">
-                Save contract
+              <button
+                mat-flat-button
+                color="primary"
+                type="button"
+                (click)="saveContract()"
+                [disabled]="isSavingContract()"
+              >
+                @if (isSavingContract()) {
+                  Saving...
+                } @else {
+                  Save contract
+                }
               </button>
             </section>
 
@@ -297,7 +317,7 @@
               <app-section-header title="Add rate" />
               <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>Contract</mat-label>
+                  <mat-label>Contract *</mat-label>
                   <mat-select [(ngModel)]="newRate.contractId">
                     <mat-option [value]="0" disabled>Select contract</mat-option>
                     @for (contract of contracts(); track contract.id) {
@@ -308,16 +328,16 @@
                   </mat-select>
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>Effective from</mat-label>
+                  <mat-label>Effective from *</mat-label>
                   <input matInput type="date" [(ngModel)]="newRate.effectiveFrom" />
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>Effective to</mat-label>
+                  <mat-label>Effective to (optional)</mat-label>
                   <input matInput type="date" [(ngModel)]="newRate.effectiveTo" />
                   <mat-hint>Leave blank while the rate is current</mat-hint>
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>Frequency</mat-label>
+                  <mat-label>Frequency *</mat-label>
                   <mat-select [(ngModel)]="newRate.frequency">
                     <mat-option value="Daily">Daily</mat-option>
                     <mat-option value="Weekly">Weekly</mat-option>
@@ -325,7 +345,7 @@
                   </mat-select>
                 </mat-form-field>
                 <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>Amount</mat-label>
+                  <mat-label>Amount *</mat-label>
                   <input
                     matInput
                     type="number"
@@ -335,7 +355,19 @@
                   />
                 </mat-form-field>
               </div>
-              <button mat-flat-button color="primary" type="button" (click)="addRate()">Add rate</button>
+              <button
+                mat-flat-button
+                color="primary"
+                type="button"
+                (click)="addRate()"
+                [disabled]="isSavingRate()"
+              >
+                @if (isSavingRate()) {
+                  Saving...
+                } @else {
+                  Add rate
+                }
+              </button>
             </section>
           }
         </div>

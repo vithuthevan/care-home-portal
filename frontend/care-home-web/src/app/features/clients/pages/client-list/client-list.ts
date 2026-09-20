@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -23,6 +23,10 @@ import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
+import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 @Component({
   selector: 'app-client-list',
@@ -41,12 +45,17 @@ import { ToastService } from '../../../../shared/ui/toast.service';
     DisplayDatePipe,
     StatusBadgeComponent,
     FilterBarComponent,
+    TablePaginationComponent,
+    IconActionButtonComponent,
+    MatIconModule,
+    MatTooltipModule,
   ],
   templateUrl: './client-list.html',
 })
 export class ClientList implements OnInit {
   private readonly clientService = inject(ClientService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly careHomeService = inject(CareHomeService);
   private readonly confirm = inject(ConfirmDialogService);
   private readonly toast = inject(ToastService);
@@ -60,9 +69,16 @@ export class ClientList implements OnInit {
 
   searchText = '';
   selectedCareHomeId = 0;
+  selectedCompanyId = 0;
   showArchived = false;
+  page = 1;
+  pageSize = 50;
 
   ngOnInit(): void {
+    const companyId = Number(this.route.snapshot.queryParamMap.get('companyId') || 0);
+    if (companyId) {
+      this.selectedCompanyId = companyId;
+    }
     this.loadCareHomes();
     this.loadClients();
   }
@@ -82,6 +98,9 @@ export class ClientList implements OnInit {
         this.searchText.trim() || undefined,
         this.selectedCareHomeId || undefined,
         this.showArchived,
+        this.page,
+        this.pageSize,
+        { companyId: this.selectedCompanyId || undefined },
       )
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
@@ -96,12 +115,25 @@ export class ClientList implements OnInit {
   }
 
   search(): void {
+    this.page = 1;
     this.loadClients();
   }
 
   clearFilters(): void {
     this.searchText = '';
     this.selectedCareHomeId = 0;
+    this.page = 1;
+    this.loadClients();
+  }
+
+  onPageChange(page: number): void {
+    this.page = page;
+    this.loadClients();
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.page = 1;
     this.loadClients();
   }
 

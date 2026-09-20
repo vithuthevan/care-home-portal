@@ -18,7 +18,7 @@
     </p>
   }
 
-  @if (!isLoading() && careHomes().length === 0) {
+  @if (!isLoading() && careHomes().length === 0 && !filterCompanyId()) {
     <app-empty-state
       title="No care homes yet"
       message="Add a care home under your company before admitting clients."
@@ -29,7 +29,7 @@
     </app-empty-state>
   }
 
-  @if (!isLoading() && careHomes().length && visibleCareHomes().length === 0) {
+  @if (!isLoading() && careHomes().length === 0 && filterCompanyId()) {
     <app-empty-state
       title="No care homes for this company"
       message="Try another company or show all care homes."
@@ -38,7 +38,7 @@
     </app-empty-state>
   }
 
-  @if (!isLoading() && visibleCareHomes().length) {
+  @if (!isLoading() && careHomes().length) {
     <div class="table-container panel panel--flat list-view-table--from-md">
       <table class="data-table data-table--responsive-hide-sm">
         <thead>
@@ -48,36 +48,42 @@
             <th>Company</th>
             <th class="num">Capacity</th>
             <th class="col-hide-sm">Manager</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th class="col-status">Status</th>
+            <th class="col-actions">Actions</th>
           </tr>
         </thead>
         <tbody>
-          @for (careHome of visibleCareHomes(); track careHome.id) {
+          @for (careHome of careHomes(); track careHome.id) {
             <tr [class.inactive-row]="!careHome.isActive">
               <td>{{ careHome.code }}</td>
               <td class="font-medium">{{ careHome.name }}</td>
               <td>{{ careHome.companyName }}</td>
               <td class="num">{{ careHome.bedCapacity }}</td>
               <td class="col-hide-sm">{{ careHome.managerName || '—' }}</td>
-              <td><app-status-badge [value]="careHome.isActive ? 'Active' : 'Inactive'" /></td>
-              <td class="actions-cell">
-                <a mat-stroked-button [routerLink]="['/care-homes', careHome.id, 'dashboard']"
-                  >Dashboard</a
-                >
-                @if (auth.canWrite()) {
-                  <a mat-stroked-button [routerLink]="['/care-homes', careHome.id, 'edit']">Edit</a>
-                  @if (careHome.isActive) {
-                    <button
-                      mat-stroked-button
-                      color="warn"
-                      type="button"
-                      (click)="deactivateCareHome(careHome)"
-                    >
-                      Deactivate
-                    </button>
+              <td class="col-status"><app-status-badge [value]="careHome.isActive ? 'Active' : 'Inactive'" /></td>
+              <td class="actions-cell col-actions">
+                <span class="table-actions">
+                  <app-icon-action
+                    icon="dashboard"
+                    ariaLabel="Open care home dashboard"
+                    [routerLink]="['/care-homes', careHome.id, 'dashboard']"
+                  />
+                  @if (auth.canWrite()) {
+                    <app-icon-action
+                      icon="edit"
+                      ariaLabel="Edit care home"
+                      [routerLink]="['/care-homes', careHome.id, 'edit']"
+                    />
+                    @if (careHome.isActive) {
+                      <app-icon-action
+                        icon="block"
+                        ariaLabel="Deactivate care home"
+                        [warn]="true"
+                        (action)="deactivateCareHome(careHome)"
+                      />
+                    }
                   }
-                }
+                </span>
               </td>
             </tr>
           }
@@ -86,7 +92,7 @@
     </div>
 
     <div class="mobile-card-list mobile-card-list--breakpoint-md">
-      @for (careHome of visibleCareHomes(); track careHome.id) {
+      @for (careHome of careHomes(); track careHome.id) {
         <div class="entity-card" [class.inactive-row]="!careHome.isActive">
           <div class="font-semibold">{{ careHome.name }}</div>
           <div class="mt-1 text-sm text-[var(--app-text-muted)]">
@@ -95,16 +101,33 @@
           <div class="mt-2">
             <app-status-badge [value]="careHome.isActive ? 'Active' : 'Inactive'" />
           </div>
-          <div class="mt-3 flex flex-wrap gap-2">
-            <a mat-stroked-button [routerLink]="['/care-homes', careHome.id, 'dashboard']"
-              >Dashboard</a
-            >
-            @if (auth.canWrite()) {
-              <a mat-stroked-button [routerLink]="['/care-homes', careHome.id, 'edit']">Edit</a>
-            }
+          <div class="mt-3 mobile-data-card__actions">
+            <span class="table-actions">
+              <app-icon-action
+                icon="dashboard"
+                ariaLabel="Open care home dashboard"
+                [routerLink]="['/care-homes', careHome.id, 'dashboard']"
+              />
+              @if (auth.canWrite()) {
+                <app-icon-action
+                  icon="edit"
+                  ariaLabel="Edit care home"
+                  [routerLink]="['/care-homes', careHome.id, 'edit']"
+                />
+              }
+            </span>
           </div>
         </div>
       }
     </div>
+
+    <app-table-pagination
+      [page]="page"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount()"
+      [disabled]="isLoading()"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)"
+    />
   }
 </div>

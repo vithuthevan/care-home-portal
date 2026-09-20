@@ -2,10 +2,14 @@
   <app-page-header
     title="Invoice Templates"
     subtitle="Most specific matching template is used at generation time."
-  />
+  >
+    @if (auth.canWrite()) {
+      <a mat-flat-button color="primary" routerLink="/invoice-templates/new">Add template</a>
+    }
+  </app-page-header>
   <app-api-error [message]="errorMessage()" />
 
-  <div class="table-container mb-6">
+  <div class="table-container panel panel--flat">
     <table class="data-table">
       <thead>
         <tr>
@@ -13,7 +17,7 @@
           <th>Category</th>
           <th>Authority</th>
           <th>Home</th>
-          <th>Status</th>
+          <th class="col-status">Status</th>
         </tr>
       </thead>
       <tbody>
@@ -23,62 +27,10 @@
             <td>{{ item.invoiceCategoryName }}</td>
             <td>{{ item.fundingAuthorityName || 'Any' }}</td>
             <td>{{ item.careHomeName || 'Any' }}</td>
-            <td><app-status-badge [value]="item.isActive ? 'Active' : 'Inactive'" /></td>
+            <td class="col-status"><app-status-badge [value]="item.isActive ? 'Active' : 'Inactive'" /></td>
           </tr>
         }
       </tbody>
     </table>
   </div>
-
-  @if (auth.canWrite()) {
-    <section class="panel">
-      <h2 class="mt-0 text-lg font-semibold">Add category default template</h2>
-      <form [formGroup]="form" (ngSubmit)="save()" class="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Name</mat-label>
-          <input matInput formControlName="name" required />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Category</mat-label>
-          <mat-select formControlName="invoiceCategoryId">
-            <mat-option [value]="0">Select</mat-option>
-            @for (item of categories(); track item.id) {
-              <mat-option [value]="item.id">{{ item.name }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full md:col-span-2">
-          <mat-label>Header</mat-label>
-          <input matInput formControlName="headerText1" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full md:col-span-2">
-          <mat-label>Footer</mat-label>
-          <input matInput formControlName="footerText" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Bank account</mat-label>
-          <input matInput formControlName="bankAccountName" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Sort code</mat-label>
-          <input matInput formControlName="sortCode" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Account number</mat-label>
-          <input matInput formControlName="accountNumber" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Contact name</mat-label>
-          <input matInput formControlName="contactName" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full md:col-span-2">
-          <mat-label>Contact email</mat-label>
-          <input matInput formControlName="contactEmail" />
-        </mat-form-field>
-        <div>
-          <button mat-flat-button color="primary" type="submit">Save template</button>
-        </div>
-      </form>
-    </section>
-  }
 </div>

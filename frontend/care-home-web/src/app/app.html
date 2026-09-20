@@ -38,14 +38,14 @@
             <mat-icon>{{ operationsOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
           </button>
           @if (operationsOpen()) {
-            <a routerLink="/companies" routerLinkActive="active-link"
+            <a class="nav-link-nested" routerLink="/companies" routerLinkActive="active-link"
               ><mat-icon>business</mat-icon>Companies</a
             >
-            <a routerLink="/care-homes" routerLinkActive="active-link"
+            <a class="nav-link-nested" routerLink="/care-homes" routerLinkActive="active-link"
               ><mat-icon>home_work</mat-icon>Care Homes</a
             >
-            <a routerLink="/clients" routerLinkActive="active-link"
-              ><mat-icon>groups</mat-icon>Clients</a
+            <a class="nav-link-nested" routerLink="/clients" routerLinkActive="active-link"
+              ><mat-icon>groups</mat-icon>Residents</a
             >
           }
 
@@ -58,16 +58,16 @@
             <mat-icon>{{ billingSetupOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
           </button>
           @if (billingSetupOpen()) {
-            <a routerLink="/funding-authorities" routerLinkActive="active-link"
+            <a class="nav-link-nested" routerLink="/funding-authorities" routerLinkActive="active-link"
               ><mat-icon>account_balance</mat-icon>Funding Authorities</a
             >
-            <a routerLink="/nominal-codes" routerLinkActive="active-link"
+            <a class="nav-link-nested" routerLink="/nominal-codes" routerLinkActive="active-link"
               ><mat-icon>tag</mat-icon>Nominal Codes</a
             >
-            <a routerLink="/invoice-categories" routerLinkActive="active-link"
+            <a class="nav-link-nested" routerLink="/invoice-categories" routerLinkActive="active-link"
               ><mat-icon>category</mat-icon>Invoice Categories</a
             >
-            <a routerLink="/invoice-templates" routerLinkActive="active-link"
+            <a class="nav-link-nested" routerLink="/invoice-templates" routerLinkActive="active-link"
               ><mat-icon>description</mat-icon>Invoice Templates</a
             >
           }
@@ -81,16 +81,16 @@
             <mat-icon>{{ billingOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
           </button>
           @if (billingOpen()) {
-            <a routerLink="/billing" routerLinkActive="active-link"
+            <a class="nav-link-nested" routerLink="/billing" routerLinkActive="active-link"
               ><mat-icon>receipt_long</mat-icon>Billing Workspace</a
             >
-            <a routerLink="/invoices" routerLinkActive="active-link"
+            <a class="nav-link-nested" routerLink="/invoices" routerLinkActive="active-link"
               ><mat-icon>request_quote</mat-icon>Invoices</a
             >
-            <a routerLink="/credit-notes" routerLinkActive="active-link"
+            <a class="nav-link-nested" routerLink="/credit-notes" routerLinkActive="active-link"
               ><mat-icon>undo</mat-icon>Credit Notes</a
             >
-            <a routerLink="/misc-charges" routerLinkActive="active-link"
+            <a class="nav-link-nested" routerLink="/misc-charges" routerLinkActive="active-link"
               ><mat-icon>playlist_add</mat-icon>Miscellaneous Charges</a
             >
           }
@@ -104,10 +104,10 @@
             <mat-icon>{{ reportingOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
           </button>
           @if (reportingOpen()) {
-            <a routerLink="/reports" routerLinkActive="active-link"
+            <a class="nav-link-nested" routerLink="/reports" routerLinkActive="active-link"
               ><mat-icon>bar_chart</mat-icon>Reports</a
             >
-            <a routerLink="/sage-exports" routerLinkActive="active-link"
+            <a class="nav-link-nested" routerLink="/sage-exports" routerLinkActive="active-link"
               ><mat-icon>file_download</mat-icon>Sage Export</a
             >
           }
@@ -122,14 +122,14 @@
               <mat-icon>{{ adminOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
             </button>
             @if (adminOpen()) {
-              <a routerLink="/users" routerLinkActive="active-link"
+              <a class="nav-link-nested" routerLink="/users" routerLinkActive="active-link"
                 ><mat-icon>manage_accounts</mat-icon>Users</a
               >
-              <a routerLink="/audit" routerLinkActive="active-link"
+              <a class="nav-link-nested" routerLink="/audit" routerLinkActive="active-link"
                 ><mat-icon>history</mat-icon>Audit</a
               >
               @if (auth.canManageOrganisation()) {
-                <a routerLink="/settings/organisation" routerLinkActive="active-link"
+                <a class="nav-link-nested" routerLink="/settings/organisation" routerLinkActive="active-link"
                   ><mat-icon>settings</mat-icon>Organisation Settings</a
                 >
               }
@@ -185,6 +185,24 @@
               <div class="user-name">{{ auth.currentUser()?.displayName }}</div>
               <div class="user-role">{{ roleLabel() }}</div>
             </div>
+          </div>
+          <div class="user-menu-theme">
+            <span class="user-menu-theme__label">Accent colour</span>
+            @for (theme of themeOptions; track theme.id) {
+              <button
+                mat-menu-item
+                type="button"
+                (click)="setTheme(theme.id)"
+                [attr.aria-current]="activeTheme() === theme.id ? 'true' : null"
+              >
+                @if (activeTheme() === theme.id) {
+                  <mat-icon>check</mat-icon>
+                } @else {
+                  <mat-icon>palette</mat-icon>
+                }
+                <span>{{ theme.label }}</span>
+              </button>
+            }
           </div>
           <button mat-menu-item type="button" class="user-menu-logout" (click)="auth.logout()">
             <mat-icon>logout</mat-icon>

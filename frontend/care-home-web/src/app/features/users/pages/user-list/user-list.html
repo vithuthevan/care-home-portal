@@ -2,7 +2,11 @@
   <app-page-header
     title="Users"
     subtitle="Roles are enforced in the API, not only by hiding buttons."
-  />
+  >
+    @if (auth.canWrite()) {
+      <a mat-flat-button color="primary" routerLink="/users/new">Add user</a>
+    }
+  </app-page-header>
 
   <app-api-error [message]="errorMessage()" />
 
@@ -14,8 +18,8 @@
           <th>Email</th>
           <th>Role</th>
           <th class="col-hide-sm">Assigned Homes</th>
-          <th>Status</th>
-          <th>Actions</th>
+          <th class="col-status">Status</th>
+          <th class="col-actions">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -29,12 +33,15 @@
               }
             </td>
             <td class="col-hide-sm">{{ homeNames(user.careHomeIds) }}</td>
-            <td><app-status-badge [value]="user.isActive ? 'Active' : 'Inactive'" /></td>
-            <td>
+            <td class="col-status"><app-status-badge [value]="user.isActive ? 'Active' : 'Inactive'" /></td>
+            <td class="actions-cell col-actions">
               @if (auth.canWrite() && user.isActive) {
-                <button mat-stroked-button color="warn" type="button" (click)="deactivate(user.id)">
-                  Deactivate
-                </button>
+                <app-icon-action
+                  icon="block"
+                  ariaLabel="Deactivate user"
+                  [warn]="true"
+                  (action)="deactivate(user.id)"
+                />
               }
             </td>
           </tr>
@@ -59,78 +66,11 @@
     }
   </div>
 
-  @if (auth.canWrite()) {
-    <section class="panel mt-6">
-      <h2 class="mt-0 text-lg font-semibold">Create user</h2>
-      <form
-        method="post"
-        [formGroup]="form"
-        (ngSubmit)="create($event)"
-        class="grid grid-cols-1 gap-4 md:grid-cols-2"
-      >
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Email address</mat-label>
-          <input matInput type="email" formControlName="email" required />
-          @if (form.controls.email.touched && form.controls.email.hasError('required')) {
-            <mat-error>Email address is required.</mat-error>
-          }
-          @if (form.controls.email.touched && form.controls.email.hasError('email')) {
-            <mat-error>Please enter a valid email address.</mat-error>
-          }
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Display name</mat-label>
-          <input matInput formControlName="displayName" required />
-          @if (
-            form.controls.displayName.touched && form.controls.displayName.hasError('required')
-          ) {
-            <mat-error>Display name is required.</mat-error>
-          }
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Password</mat-label>
-          <input
-            matInput
-            type="password"
-            [attr.type]="'password'"
-            formControlName="password"
-            autocomplete="new-password"
-            spellcheck="false"
-            required
-          />
-          @if (form.controls.password.touched && form.controls.password.hasError('required')) {
-            <mat-error>Password is required.</mat-error>
-          }
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Role</mat-label>
-          <mat-select formControlName="role">
-            <mat-option value="TenantAdmin">TenantAdmin</mat-option>
-            <mat-option value="Administrator">Administrator</mat-option>
-            <mat-option value="LocationManager">LocationManager</mat-option>
-            <mat-option value="ReadOnly">ReadOnly</mat-option>
-          </mat-select>
-        </mat-form-field>
-        <div class="md:col-span-2">
-          <p class="mb-2 text-sm text-[var(--app-text-muted)]">
-            Care home access (Location Managers)
-          </p>
-          @for (home of homes(); track home.id) {
-            <mat-checkbox (change)="toggleHome(home.id, $any($event).checked)">{{
-              home.name
-            }}</mat-checkbox>
-          }
-        </div>
-        <div>
-          <button mat-flat-button color="primary" type="submit" [disabled]="isSaving()">
-            @if (isSaving()) {
-              Saving...
-            } @else {
-              Create user
-            }
-          </button>
-        </div>
-      </form>
-    </section>
-  }
+  <app-table-pagination
+    [page]="page"
+    [pageSize]="pageSize"
+    [totalCount]="totalCount()"
+    (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)"
+  />
 </div>

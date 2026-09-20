@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
@@ -10,6 +10,8 @@ import { MatButtonModule } from '@angular/material/button';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { PagedResult } from '../../../../core/models';
+import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
+import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 
 @Component({
   selector: 'app-sage-export',
@@ -20,6 +22,8 @@ import { PagedResult } from '../../../../core/models';
     MatButtonModule,
     PageHeaderComponent,
     ApiErrorComponent,
+    IconActionButtonComponent,
+    TablePaginationComponent,
   ],
   templateUrl: './sage-export.html',
 })
@@ -30,13 +34,35 @@ export class SageExportPage implements OnInit {
   dateTo = '';
   readonly preview = signal<any | null>(null);
   readonly batches = signal<any[]>([]);
+  readonly totalCount = signal(0);
   readonly errorMessage = signal<string | null>(null);
+  page = 1;
+  pageSize = 50;
 
   ngOnInit(): void {
-    this.http.get<PagedResult<any>>('/api/sage-exports').subscribe({
-      next: (x) => this.batches.set(x.items),
+    this.loadBatches();
+  }
+
+  loadBatches(): void {
+    const params = new HttpParams().set('page', this.page).set('pageSize', this.pageSize);
+    this.http.get<PagedResult<any>>('/api/sage-exports', { params }).subscribe({
+      next: (x) => {
+        this.batches.set(x.items);
+        this.totalCount.set(x.totalCount);
+      },
       error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Unable to load exports.')),
     });
+  }
+
+  onPageChange(page: number): void {
+    this.page = page;
+    this.loadBatches();
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.page = 1;
+    this.loadBatches();
   }
 
   runPreview(): void {
@@ -54,7 +80,7 @@ export class SageExportPage implements OnInit {
     this.http
       .post<any>('/api/sage-exports', { dateFrom: this.dateFrom, dateTo: this.dateTo })
       .subscribe({
-        next: () => this.ngOnInit(),
+        next: () => this.loadBatches(),
         error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Export failed.')),
       });
   }

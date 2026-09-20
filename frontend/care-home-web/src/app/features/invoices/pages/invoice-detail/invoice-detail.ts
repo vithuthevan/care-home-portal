@@ -1,9 +1,10 @@
 import { DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, inject, isDevMode, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
 import { AuthService } from '../../../../core/auth.service';
@@ -22,6 +23,7 @@ import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
     RouterLink,
     DecimalPipe,
     MatButtonModule,
+    MatIconModule,
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
@@ -44,6 +46,7 @@ export class InvoiceDetailPage implements OnInit {
   readonly isLoading = signal(false);
   readonly isPdfLoading = signal(false);
   readonly isSending = signal(false);
+  readonly isPaying = signal(false);
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
@@ -108,9 +111,16 @@ export class InvoiceDetailPage implements OnInit {
       .pipe(finalize(() => this.isSending.set(false)))
       .subscribe({
         next: (result) => {
-          const message = 'Invoice email processed successfully.';
+          const simulated = result?.simulated === true;
+          const message = simulated
+            ? 'Invoice email workflow completed successfully.'
+            : 'Invoice email processed successfully.';
           this.info.set(message);
-          this.infoHint.set(result?.simulated === true ? 'Delivery is simulated in this environment.' : null);
+          this.infoHint.set(
+            simulated && isDevMode()
+              ? 'Development note: delivery is simulated; the send is recorded and audited.'
+              : null,
+          );
           this.toast.success(message);
         },
         error: (error) =>
@@ -124,12 +134,16 @@ export class InvoiceDetailPage implements OnInit {
       return;
     }
 
-    const label = status === 'Paid' ? 'Mark this invoice as paid?' : 'Mark this invoice as not paid?';
+    const number = current.invoiceNumber || 'this invoice';
+    const label =
+      status === 'Paid'
+        ? `Mark ${number} as paid?`
+        : `Mark ${number} as not paid?`;
     this.confirm
       .confirm({
         title: 'Update payment status',
         message: label,
-        confirmLabel: 'Update',
+        confirmLabel: 'Confirm',
       })
       .subscribe((ok) => {
         if (!ok) {
@@ -145,8 +159,10 @@ export class InvoiceDetailPage implements OnInit {
       return;
     }
 
+    this.isPaying.set(true);
     this.http
       .post(`/api/invoices/${current.id}/payment-status`, { paymentStatus: status })
+      .pipe(finalize(() => this.isPaying.set(false)))
       .subscribe({
         next: () => {
           this.invoice.set({ ...current, paymentStatus: status });

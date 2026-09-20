@@ -2,6 +2,9 @@ export interface Company {
   id: number;
   name: string;
   isActive: boolean;
+  careHomeCount?: number;
+  activeCareHomeCount?: number;
+  residentCount?: number;
 }
 
 export interface CreateCompanyRequest {

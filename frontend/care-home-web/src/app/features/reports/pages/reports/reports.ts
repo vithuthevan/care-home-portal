@@ -101,7 +101,7 @@ export class ReportsPage implements OnInit {
 
   private readonly reportMeta: Record<string, { title: string; description: string }> = {
     'client-census': {
-      title: 'Client census',
+      title: 'Resident census',
       description: 'See who is in care across homes for a point-in-time view.',
     },
     'current-rates': {
@@ -109,7 +109,7 @@ export class ReportsPage implements OnInit {
       description: 'Review the funding rate currently applied to each resident.',
     },
     'invoices-by-client': {
-      title: 'Invoices by client',
+      title: 'Invoices by resident',
       description: 'Review invoices generated for each resident during a selected period.',
     },
     'invoices-by-care-home': {
@@ -162,10 +162,13 @@ export class ReportsPage implements OnInit {
     'invoices-by-client': {
       invoiceNumber: 'Invoice',
       invoiceDate: 'Invoice Date',
+      periodStart: 'Billing period start',
+      periodEnd: 'Billing period end',
       clientName: 'Resident',
       careHomeName: 'Care Home',
       category: 'Category',
-      amount: 'Amount',
+      amount: 'Total amount',
+      totalAmount: 'Total amount',
       paymentStatus: 'Payment status',
       status: 'Status',
     },
@@ -283,6 +286,8 @@ export class ReportsPage implements OnInit {
     return (
       key === 'admissionDate' ||
       key === 'invoiceDate' ||
+      key === 'periodStart' ||
+      key === 'periodEnd' ||
       key === 'effectiveFrom' ||
       key === 'effectiveTo' ||
       key === 'dueDate'

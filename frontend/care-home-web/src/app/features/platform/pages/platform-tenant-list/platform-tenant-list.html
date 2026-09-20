@@ -13,8 +13,8 @@
           <th>Name</th>
           <th>Trading name</th>
           <th>Email</th>
-          <th>Status</th>
-          <th></th>
+          <th class="col-status">Status</th>
+          <th class="col-actions">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -23,8 +23,14 @@
             <td class="font-medium">{{ tenant.name }}</td>
             <td>{{ tenant.tradingName || '—' }}</td>
             <td>{{ tenant.email || '—' }}</td>
-            <td><app-status-badge [value]="tenant.isActive ? 'Active' : 'Inactive'" /></td>
-            <td><a mat-stroked-button [routerLink]="['/platform/tenants', tenant.id]">Edit</a></td>
+            <td class="col-status"><app-status-badge [value]="tenant.isActive ? 'Active' : 'Inactive'" /></td>
+            <td class="actions-cell col-actions">
+              <app-icon-action
+                icon="edit"
+                ariaLabel="Edit organisation"
+                [routerLink]="['/platform/tenants', tenant.id]"
+              />
+            </td>
           </tr>
         }
       </tbody>

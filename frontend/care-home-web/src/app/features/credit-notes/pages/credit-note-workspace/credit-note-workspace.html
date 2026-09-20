@@ -186,21 +186,33 @@
               <th>Original invoice</th>
               <th>Date</th>
               <th>Reason</th>
-              <th>Status</th>
+              <th class="col-status">Status</th>
               <th class="num">Amount</th>
-              <th></th>
+              <th class="col-actions">Actions</th>
             </tr>
           </thead>
           <tbody>
             @for (note of notes(); track note.id) {
               <tr>
                 <td class="font-medium">{{ note.creditNoteNumber }}</td>
-                <td>{{ note.invoiceNumber }}</td>
+                <td>
+                  @if (note.invoiceId) {
+                    <a [routerLink]="['/invoices', note.invoiceId]">{{ note.invoiceNumber }}</a>
+                  } @else {
+                    {{ note.invoiceNumber }}
+                  }
+                </td>
                 <td>{{ note.creditNoteDate | displayDate }}</td>
                 <td>{{ note.reason || '—' }}</td>
-                <td><app-status-badge [value]="note.status" /></td>
+                <td class="col-status"><app-status-badge [value]="note.status" /></td>
                 <td class="num"><app-currency-display [amount]="note.totalAmount" /></td>
-                <td><button mat-stroked-button type="button" (click)="pdf(note.id)">PDF</button></td>
+                <td class="actions-cell col-actions">
+                  <app-icon-action
+                    icon="download"
+                    ariaLabel="Download credit note PDF"
+                    (action)="pdf(note.id)"
+                  />
+                </td>
               </tr>
             }
           </tbody>
@@ -216,11 +228,22 @@
               <app-currency-display [amount]="note.totalAmount" />
             </div>
             <div class="mobile-data-card__actions">
-              <button mat-stroked-button type="button" (click)="pdf(note.id)">PDF</button>
+              <app-icon-action
+                icon="download"
+                ariaLabel="Download credit note PDF"
+                (action)="pdf(note.id)"
+              />
             </div>
           </article>
         }
       </div>
+      <app-table-pagination
+        [page]="notesPage"
+        [pageSize]="notesPageSize"
+        [totalCount]="notesTotalCount()"
+        (pageChange)="onNotesPageChange($event)"
+        (pageSizeChange)="onNotesPageSizeChange($event)"
+      />
     }
   </section>
 </div>

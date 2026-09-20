@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import {
@@ -7,6 +7,7 @@ import {
   CreateCareHomeRequest,
   UpdateCareHomeRequest,
 } from '../models/care-home.model';
+import { PagedResult } from '../../../core/models';
 
 @Injectable({
   providedIn: 'root',
@@ -18,6 +19,18 @@ export class CareHomeService {
 
   getCareHomes(): Observable<CareHomeLocation[]> {
     return this.http.get<CareHomeLocation[]>(this.apiUrl);
+  }
+
+  getCareHomesPaged(
+    page: number,
+    pageSize: number,
+    companyId?: number,
+  ): Observable<PagedResult<CareHomeLocation>> {
+    let params = new HttpParams().set('page', page).set('pageSize', pageSize);
+    if (companyId) {
+      params = params.set('companyId', companyId);
+    }
+    return this.http.get<PagedResult<CareHomeLocation>>(this.apiUrl, { params });
   }
 
   getCareHome(id: number): Observable<CareHomeLocation> {

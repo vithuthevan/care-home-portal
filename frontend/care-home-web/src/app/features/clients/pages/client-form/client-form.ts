@@ -147,6 +147,13 @@ export class ClientForm implements OnInit {
       this.isEditMode = true;
 
       this.loadClient();
+    } else {
+      this.form.controls.sageId.clearValidators();
+      this.form.controls.sageId.setValidators([Validators.maxLength(20)]);
+      this.form.controls.referenceNumber.clearValidators();
+      this.form.controls.referenceNumber.setValidators([Validators.maxLength(20)]);
+      this.form.controls.sageId.updateValueAndValidity();
+      this.form.controls.referenceNumber.updateValueAndValidity();
     }
   }
 
@@ -250,9 +257,9 @@ export class ClientForm implements OnInit {
     const baseRequest = {
       careHomeId: value.careHomeId,
 
-      sageId: value.sageId,
+      sageId: value.sageId.trim(),
 
-      referenceNumber: value.referenceNumber,
+      referenceNumber: value.referenceNumber.trim(),
 
       title: value.title,
 
@@ -315,9 +322,9 @@ export class ClientForm implements OnInit {
         }),
       )
       .subscribe({
-        next: () => {
-          this.toast.success('Client created successfully.');
-          this.router.navigate(['/clients']);
+        next: (client) => {
+          this.toast.success('Resident created successfully.');
+          void this.router.navigate(['/clients', client.id]);
         },
 
         error: (error) => {

@@ -116,9 +116,9 @@ export class CompanyForm implements OnInit {
       .createCompany({ name: formValue.name })
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
-        next: () => {
+        next: (company) => {
           this.toast.success('Company created successfully.');
-          this.router.navigate(['/companies']);
+          void this.router.navigate(['/companies', company.id]);
         },
         error: (error) => {
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to create company.'));

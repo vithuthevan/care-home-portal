@@ -1,5 +1,4 @@
-import { DecimalPipe } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
@@ -21,14 +20,18 @@ import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { CurrencyDisplayComponent } from '../../../../shared/ui/currency-display';
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
+import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
+import { RouterLink } from '@angular/router';
 import { Client } from '../../../clients/models/client.model';
 import { ClientService } from '../../../clients/services/client.service';
+import { PagedResult } from '../../../../core/models';
+import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 
 @Component({
   selector: 'app-credit-note-workspace',
   imports: [
     FormsModule,
-    DecimalPipe,
+    RouterLink,
     MatFormFieldModule,
     MatInputModule,
     MatAutocompleteModule,
@@ -41,6 +44,8 @@ import { ClientService } from '../../../clients/services/client.service';
     StatusBadgeComponent,
     LoadingStateComponent,
     CurrencyDisplayComponent,
+    IconActionButtonComponent,
+    TablePaginationComponent,
   ],
   templateUrl: './credit-note-workspace.html',
 })
@@ -56,6 +61,9 @@ export class CreditNoteWorkspacePage implements OnInit {
   readonly residents = signal<Client[]>([]);
   readonly preview = signal<any | null>(null);
   readonly notes = signal<any[]>([]);
+  readonly notesTotalCount = signal(0);
+  notesPage = 1;
+  notesPageSize = 50;
   readonly errorMessage = signal<string | null>(null);
   readonly isWorking = signal(false);
   readonly sourceInvoiceNumber = signal<string | null>(null);
@@ -122,7 +130,7 @@ export class CreditNoteWorkspacePage implements OnInit {
     if (!name) {
       return null;
     }
-    return ref ? `${name} · ${ref}` : name;
+    return ref ? `${name} — ${ref}` : name;
   }
 
   onResidentSelected(client: Client | null): void {
@@ -139,7 +147,7 @@ export class CreditNoteWorkspacePage implements OnInit {
 
   residentDisplay(client: Client): string {
     const name = this.residentName(client);
-    return client.referenceNumber ? `${name} · ${client.referenceNumber}` : name;
+    return client.referenceNumber ? `${name} — ${client.referenceNumber}` : name;
   }
 
   onResidentQueryChange(value: string | Client | null): void {
@@ -241,13 +249,13 @@ export class CreditNoteWorkspacePage implements OnInit {
           this.sourceClientReference.set(match.referenceNumber);
         }
       } else if (clientName) {
-        const label = clientReference ? `${clientName} · ${clientReference}` : clientName;
+        const label = clientReference ? `${clientName} — ${clientReference}` : clientName;
         this.residentQuery.set(label);
         this.sourceResidentName.set(clientName);
       }
     } else if (clientName) {
       this.sourceResidentName.set(clientName);
-      this.residentQuery.set(clientReference ? `${clientName} · ${clientReference}` : clientName);
+      this.residentQuery.set(clientReference ? `${clientName} — ${clientReference}` : clientName);
     }
   }
 
@@ -259,10 +267,27 @@ export class CreditNoteWorkspacePage implements OnInit {
   }
 
   private loadNotes(): void {
-    this.http.get<any[]>('/api/credit-notes').subscribe({
-      next: (x) => this.notes.set(x),
+    const params = new HttpParams()
+      .set('page', this.notesPage)
+      .set('pageSize', this.notesPageSize);
+    this.http.get<PagedResult<any>>('/api/credit-notes', { params }).subscribe({
+      next: (x) => {
+        this.notes.set(x.items);
+        this.notesTotalCount.set(x.totalCount);
+      },
       error: (error) =>
         this.errorMessage.set(getApiErrorMessage(error, 'Unable to load credit notes.')),
     });
+  }
+
+  onNotesPageChange(page: number): void {
+    this.notesPage = page;
+    this.loadNotes();
+  }
+
+  onNotesPageSizeChange(size: number): void {
+    this.notesPageSize = size;
+    this.notesPage = 1;
+    this.loadNotes();
   }
 }

@@ -34,7 +34,7 @@
       </mat-form-field>
     </div>
     <div filterActions>
-      <button mat-flat-button color="primary" type="button" (click)="load()">Search</button>
+      <button mat-flat-button color="primary" type="button" (click)="page = 1; load()">Search</button>
       @if (auth.canWrite()) {
         <button mat-stroked-button type="button" (click)="bulkSend()">Email selected</button>
         <button mat-stroked-button type="button" (click)="bulkPay('Paid')">Mark paid</button>
@@ -69,7 +69,7 @@
       <table class="data-table data-table--responsive-hide-sm">
         <thead>
           <tr>
-            <th></th>
+            <th scope="col" aria-label="Select invoices"></th>
             <th>Invoice</th>
             <th class="col-hide-sm">Period</th>
             <th class="col-hide-sm">Date</th>
@@ -140,10 +140,23 @@
             </span>
           </div>
           <div class="mobile-data-card__actions">
-            <a mat-flat-button color="primary" [routerLink]="['/invoices', item.id]">Open</a>
+            <app-icon-action
+              icon="visibility"
+              ariaLabel="Open invoice"
+              [routerLink]="['/invoices', item.id]"
+            />
           </div>
         </article>
       }
     </div>
+
+    <app-table-pagination
+      [page]="page"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount()"
+      [disabled]="isLoading()"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)"
+    />
   }
 </div>

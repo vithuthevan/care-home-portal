@@ -21,7 +21,10 @@ import {
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ToastService } from '../../../../shared/ui/toast.service';
-import { billingExceptionLabel } from '../../../../shared/ui/billing-exception';
+import {
+  billingExceptionHeadline,
+  billingExceptionLabel,
+} from '../../../../shared/ui/billing-exception';
 import { Company } from '../../../companies/models/company.model';
 import { CompanyService } from '../../../companies/services/company.service';
 import { CareHomeLocation } from '../../../care-homes/models/care-home.model';
@@ -148,6 +151,27 @@ export class BillingWorkspacePage implements OnInit {
 
   exceptionLabel(code: string, message: string): string {
     return billingExceptionLabel(code, message);
+  }
+
+  exceptionHeadline(code: string): string {
+    return billingExceptionHeadline(code);
+  }
+
+  previewAttentionCount(previewData: { exceptions?: { severity?: string }[] }): number {
+    return (previewData.exceptions ?? []).filter((item) => item.severity !== 'Info').length;
+  }
+
+  previewEligibleResidents(previewData: { lines?: { clientId?: number }[] }): number {
+    const ids = new Set(
+      (previewData.lines ?? [])
+        .map((line) => line.clientId)
+        .filter((id): id is number => typeof id === 'number' && id > 0),
+    );
+    return ids.size || previewData.lines?.length || 0;
+  }
+
+  isSingleResidentScope(): boolean {
+    return this.selectedClientIds.length === 1;
   }
 
   hasFullyBilledException(previewData: { exceptions?: { code: string }[] }): boolean {

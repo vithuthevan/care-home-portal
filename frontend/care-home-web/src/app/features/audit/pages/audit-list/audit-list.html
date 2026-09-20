@@ -10,14 +10,10 @@
         <mat-label>Entity type</mat-label>
         <mat-select [(ngModel)]="entityType" (selectionChange)="load()">
           <mat-option value="">All types</mat-option>
-          @for (type of entityTypeOptions; track type) {
-            <mat-option [value]="type">{{ type }}</mat-option>
+          @for (type of entityTypeOptions; track type.value) {
+            <mat-option [value]="type.value">{{ type.label }}</mat-option>
           }
         </mat-select>
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Custom entity type</mat-label>
-        <input matInput [(ngModel)]="entityType" placeholder="Or type a value" (keyup.enter)="load()" />
       </mat-form-field>
     </div>
     <div filterActions>
@@ -102,4 +98,13 @@
       />
     }
   </div>
+
+  <app-table-pagination
+    [page]="page"
+    [pageSize]="pageSize"
+    [totalCount]="totalCount()"
+    [disabled]="isLoading()"
+    (pageChange)="onPageChange($event)"
+    (pageSizeChange)="onPageSizeChange($event)"
+  />
 </div>

@@ -22,7 +22,6 @@
       <div>
         <div class="flex flex-wrap items-center gap-3">
           <app-labeled-status kind="Invoice" [value]="inv.status" />
-          <app-labeled-status kind="Payment" [value]="inv.paymentStatus" />
         </div>
         @if (inv.lines?.length) {
           <p class="mt-3 mb-0 text-lg font-semibold">
@@ -43,6 +42,44 @@
       </div>
     </section>
 
+    <div class="panel panel--flat mb-4 payment-status-panel">
+      <div class="payment-status-panel__row">
+        <div>
+          <p class="m-0 text-supporting">Payment status</p>
+          <app-labeled-status kind="Payment" [value]="inv.paymentStatus" />
+        </div>
+        @if (auth.canWrite()) {
+          <div class="payment-status-panel__actions">
+            @if (inv.paymentStatus !== 'Paid') {
+              <button
+                mat-flat-button
+                color="primary"
+                type="button"
+                (click)="confirmPay('Paid')"
+                [disabled]="isPaying()"
+              >
+                @if (isPaying()) {
+                  Updating...
+                } @else {
+                  Mark as paid
+                }
+              </button>
+            }
+            @if (inv.paymentStatus !== 'NotPaid') {
+              <button
+                mat-stroked-button
+                type="button"
+                (click)="confirmPay('NotPaid')"
+                [disabled]="isPaying()"
+              >
+                Mark as unpaid
+              </button>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
     <div class="panel panel--flat mb-4 actions-bar actions-bar--primary-first actions-bar--invoice">
       <button
         mat-flat-button
@@ -54,7 +91,10 @@
         @if (isPdfLoading()) {
           Preparing PDF...
         } @else {
-          Download PDF
+          <span class="inline-flex items-center gap-1">
+            <mat-icon class="align-middle">download</mat-icon>
+            Download PDF
+          </span>
         }
       </button>
       @if (auth.canWrite()) {
@@ -62,20 +102,18 @@
           @if (isSending()) {
             Sending...
           } @else {
-            Email
+            <span class="inline-flex items-center gap-1">
+              <mat-icon class="align-middle">mail</mat-icon>
+              Email
+            </span>
           }
         </button>
-        @if (inv.paymentStatus !== 'Paid') {
-          <button mat-stroked-button type="button" (click)="confirmPay('Paid')">Mark paid</button>
-        }
-        @if (inv.paymentStatus !== 'NotPaid') {
-          <button mat-stroked-button type="button" (click)="confirmPay('NotPaid')">Mark unpaid</button>
-        }
-        <a mat-stroked-button routerLink="/credit-notes" [queryParams]="creditNoteQueryParams(inv)"
-          >Credit note</a
-        >
+        <a mat-stroked-button routerLink="/credit-notes" [queryParams]="creditNoteQueryParams(inv)">
+          <mat-icon class="mr-1 align-middle">undo</mat-icon>
+          Credit note
+        </a>
         <button mat-stroked-button color="warn" type="button" class="btn-void" (click)="voidInvoice()">
-          Void
+          Void invoice
         </button>
       }
     </div>

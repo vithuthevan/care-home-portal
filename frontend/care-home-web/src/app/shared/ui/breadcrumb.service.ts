@@ -22,16 +22,16 @@ export class BreadcrumbService {
   private crumbsForUrl(url: string): BreadcrumbItem[] {
     const path = url.split('?')[0];
     if (path.startsWith('/clients/new')) {
-      return [{ label: 'Clients', routerLink: '/clients' }, { label: 'New resident' }];
+      return [{ label: 'Residents', routerLink: '/clients' }, { label: 'New resident' }];
     }
     if (/^\/clients\/\d+\/edit/.test(path)) {
-      return [{ label: 'Clients', routerLink: '/clients' }, { label: 'Edit resident' }];
+      return [{ label: 'Residents', routerLink: '/clients' }, { label: 'Edit resident' }];
     }
     if (/^\/clients\/\d+/.test(path)) {
-      return [{ label: 'Clients', routerLink: '/clients' }, { label: 'Resident' }];
+      return [{ label: 'Residents', routerLink: '/clients' }, { label: 'Resident' }];
     }
     if (path.startsWith('/clients')) {
-      return [{ label: 'Clients' }];
+      return [{ label: 'Residents' }];
     }
     if (/^\/care-homes\/\d+\/dashboard/.test(path)) {
       return [{ label: 'Care Homes', routerLink: '/care-homes' }, { label: 'Care home' }];
@@ -48,8 +48,11 @@ export class BreadcrumbService {
     if (path.startsWith('/companies/new')) {
       return [{ label: 'Companies', routerLink: '/companies' }, { label: 'New company' }];
     }
-    if (/^\/companies\/\d+/.test(path)) {
+    if (/^\/companies\/\d+\/edit/.test(path)) {
       return [{ label: 'Companies', routerLink: '/companies' }, { label: 'Edit company' }];
+    }
+    if (/^\/companies\/\d+$/.test(path)) {
+      return [{ label: 'Companies', routerLink: '/companies' }, { label: 'Company' }];
     }
     if (path.startsWith('/companies')) {
       return [{ label: 'Companies' }];
@@ -82,6 +85,12 @@ export class BreadcrumbService {
     if (path.startsWith('/nominal-codes')) {
       return [{ label: 'Nominal Codes' }];
     }
+    if (path.startsWith('/invoice-templates/new')) {
+      return [
+        { label: 'Invoice Templates', routerLink: '/invoice-templates' },
+        { label: 'New template' },
+      ];
+    }
     if (path.startsWith('/invoice-templates')) {
       return [{ label: 'Invoice Templates' }];
     }
@@ -93,6 +102,9 @@ export class BreadcrumbService {
     }
     if (path.startsWith('/sage-exports')) {
       return [{ label: 'Sage Export' }];
+    }
+    if (path.startsWith('/users/new')) {
+      return [{ label: 'Users', routerLink: '/users' }, { label: 'New user' }];
     }
     if (path.startsWith('/users')) {
       return [{ label: 'Users' }];
