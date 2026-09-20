@@ -11,6 +11,7 @@ import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
+import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 
 @Component({
@@ -22,6 +23,7 @@ import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.servi
     ApiErrorComponent,
     LoadingStateComponent,
     StatusBadgeComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './funding-authority-list.html',
 })

@@ -11,16 +11,27 @@
   @if (isLoading()) {
     <app-loading-state label="Loading funding authorities..." />
   }
-  @if (!isLoading()) {
-    <div class="table-container">
-      <table class="data-table">
+  @if (!isLoading() && fundingAuthorities().length === 0) {
+    <app-empty-state
+      title="No funding authorities yet"
+      message="Add councils, families, or other payers before linking client funding contracts."
+    >
+      @if (auth.canWrite()) {
+        <a mat-flat-button color="primary" routerLink="/funding-authorities/new">Add authority</a>
+      }
+    </app-empty-state>
+  }
+
+  @if (!isLoading() && fundingAuthorities().length) {
+    <div class="table-container panel panel--flat list-view-table--from-lg">
+      <table class="data-table data-table--responsive-hide-sm">
         <thead>
           <tr>
             <th>Code</th>
             <th>Name</th>
             <th>Type</th>
             <th>Billing Frequency</th>
-            <th>Contact</th>
+            <th class="col-hide-sm">Contact</th>
             <th>Status</th>
             <th>Actions</th>
           </tr>
@@ -32,9 +43,9 @@
               <td class="font-medium">{{ authority.name }}</td>
               <td>{{ authority.type }}</td>
               <td>{{ authority.billingFrequency }}</td>
-              <td>{{ authority.contactName || '—' }}</td>
+              <td class="col-hide-sm">{{ authority.contactName || '—' }}</td>
               <td><app-status-badge [value]="authority.isActive ? 'Active' : 'Inactive'" /></td>
-              <td class="flex flex-wrap gap-2">
+              <td class="actions-cell">
                 @if (auth.canWrite()) {
                   <a
                     mat-stroked-button
@@ -54,13 +65,35 @@
                 }
               </td>
             </tr>
-          } @empty {
-            <tr>
-              <td colspan="7">No funding authorities found.</td>
-            </tr>
           }
         </tbody>
       </table>
+    </div>
+
+    <div class="mobile-card-list mobile-card-list--breakpoint-lg">
+      @for (authority of fundingAuthorities(); track authority.id) {
+        <article class="mobile-data-card" [class.inactive-row]="!authority.isActive">
+          <div class="font-semibold">{{ authority.name }}</div>
+          <p class="mt-1 mb-0 text-sm text-[var(--app-text-muted)]">
+            {{ authority.code }} · {{ authority.type }}
+          </p>
+          <div class="mobile-data-card__row">
+            <span class="mobile-data-card__label">Frequency</span>
+            <span>{{ authority.billingFrequency }}</span>
+          </div>
+          <div class="mobile-data-card__row">
+            <span class="mobile-data-card__label">Status</span>
+            <app-status-badge [value]="authority.isActive ? 'Active' : 'Inactive'" />
+          </div>
+          @if (auth.canWrite()) {
+            <div class="mobile-data-card__actions">
+              <a mat-stroked-button [routerLink]="['/funding-authorities', authority.id, 'edit']"
+                >Edit</a
+              >
+            </div>
+          }
+        </article>
+      }
     </div>
   }
 </div>

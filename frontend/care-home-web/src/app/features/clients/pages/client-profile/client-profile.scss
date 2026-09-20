@@ -1,0 +1,36 @@
+.profile-tabs {
+  margin-top: var(--space-2);
+  --mat-tab-header-active-label-text-color: var(--app-primary);
+  --mat-tab-header-active-ripple-color: var(--app-primary);
+  --mat-tab-header-active-focus-indicator-color: var(--app-primary);
+  --mat-tab-header-active-hover-label-text-color: var(--app-primary);
+  --mat-tab-header-inactive-label-text-color: var(--app-text-muted);
+}
+
+.profile-tabs ::ng-deep .mat-mdc-tab-header {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.profile-tabs ::ng-deep .mat-mdc-tab-body-content {
+  overflow: visible;
+}
+
+.profile-card {
+  height: 100%;
+  border-radius: var(--app-radius);
+  box-shadow: var(--app-shadow);
+}
+
+.profile-summary .text-section {
+  font-size: 1.15rem;
+}
+
+.profile-funding-meta {
+  margin-top: 0.5rem;
+}
+
+.funding-summary {
+  display: flex;
+  flex-direction: column;
+}

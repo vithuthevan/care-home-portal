@@ -1,32 +1,44 @@
 <div class="page">
-  <app-page-header title="Clients" subtitle="Manage residents and client records.">
+  <app-page-header
+    title="Clients"
+    subtitle="Residents across your care homes — open a row to see funding and billing."
+  >
     @if (auth.canWrite()) {
-      <a mat-flat-button color="primary" routerLink="/clients/new">Add Client</a>
+      <a mat-flat-button color="primary" routerLink="/clients/new">Add client</a>
     }
   </app-page-header>
 
-  <div class="panel mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
-    <mat-form-field appearance="outline" class="w-full">
-      <mat-label>Search</mat-label>
-      <input matInput [(ngModel)]="searchText" (keyup.enter)="search()" />
-    </mat-form-field>
-    <mat-form-field appearance="outline" class="w-full">
-      <mat-label>Care home</mat-label>
-      <mat-select [(ngModel)]="selectedCareHomeId">
-        <mat-option [value]="0">All care homes</mat-option>
-        @for (careHome of careHomes(); track careHome.id) {
-          <mat-option [value]="careHome.id">{{ careHome.name }}</mat-option>
-        }
-      </mat-select>
-    </mat-form-field>
-    <div class="flex items-center">
-      <mat-checkbox [(ngModel)]="showArchived" (change)="loadClients()">Show archived</mat-checkbox>
+  <app-filter-bar>
+    <div class="filter-bar__fields filter-bar__fields--4">
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Search</mat-label>
+        <input
+          matInput
+          [(ngModel)]="searchText"
+          (keyup.enter)="search()"
+          placeholder="Name, reference, or Sage ID"
+        />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Care home</mat-label>
+        <mat-select [(ngModel)]="selectedCareHomeId">
+          <mat-option [value]="0">All care homes</mat-option>
+          @for (careHome of careHomes(); track careHome.id) {
+            <mat-option [value]="careHome.id">{{ careHome.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <div class="flex min-h-[var(--touch-min)] items-center">
+        <mat-checkbox [(ngModel)]="showArchived" (change)="loadClients()"
+          >Show archived</mat-checkbox
+        >
+      </div>
     </div>
-    <div class="flex flex-wrap items-center gap-2">
+    <div filterActions>
       <button mat-flat-button color="primary" type="button" (click)="search()">Search</button>
-      <button mat-stroked-button type="button" (click)="clearFilters()">Clear</button>
+      <button mat-stroked-button type="button" (click)="clearFilters()">Clear filters</button>
     </div>
-  </div>
+  </app-filter-bar>
 
   <app-api-error [message]="errorMessage()" />
 
@@ -36,48 +48,50 @@
 
   @if (!isLoading() && clients().length === 0) {
     <app-empty-state
-      title="No clients found"
-      message="There are no clients matching the current filters."
+      title="No clients yet"
+      message="Add your first client to begin managing residents, funding, and billing."
     >
       @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/clients/new">Add Client</a>
+        <a mat-flat-button color="primary" routerLink="/clients/new">Add client</a>
       }
     </app-empty-state>
   }
 
   @if (!isLoading() && clients().length) {
-    <div class="table-container hidden md:block">
-      <table class="data-table">
+    <div class="table-container panel panel--flat list-view-table--from-md">
+      <table class="data-table data-table--responsive-hide-sm">
         <thead>
           <tr>
-            <th>Client</th>
+            <th>Resident</th>
             <th>Reference</th>
-            <th>Sage ID</th>
-            <th>Care Home</th>
-            <th>Care Type</th>
+            <th>Care home</th>
+            <th class="col-hide-sm">Care type</th>
             <th>Status</th>
-            <th>Admission Date</th>
+            <th class="col-hide-sm">Admission</th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           @for (client of clients(); track client.id) {
-            <tr>
+            <tr
+              class="row-clickable"
+              [class.inactive-row]="client.isArchived"
+              (click)="openClient(client.id)"
+            >
               <td class="font-semibold">
                 {{ client.title }} {{ client.firstName }} {{ client.lastName }}
               </td>
               <td>{{ client.referenceNumber }}</td>
-              <td>{{ client.sageId }}</td>
               <td>{{ client.careHomeName }}</td>
-              <td>{{ client.careType }}</td>
+              <td class="col-hide-sm">{{ client.careType }}</td>
               <td>
                 <app-status-badge [value]="client.status" />
                 @if (client.isArchived) {
                   <app-status-badge value="Inactive" label="Archived" />
                 }
               </td>
-              <td>{{ client.admissionDate }}</td>
-              <td class="flex flex-wrap gap-2">
+              <td class="col-hide-sm">{{ client.admissionDate | displayDate }}</td>
+              <td (click)="$event.stopPropagation()" class="actions-cell">
                 <a mat-stroked-button [routerLink]="['/clients', client.id]">Open</a>
                 @if (auth.canWrite()) {
                   <a mat-stroked-button [routerLink]="['/clients', client.id, 'edit']">Edit</a>
@@ -99,24 +113,18 @@
       </table>
     </div>
 
-    <div class="grid gap-3 md:hidden">
+    <div class="mobile-card-list mobile-card-list--breakpoint-md">
       @for (client of clients(); track client.id) {
-        <div class="entity-card">
+        <a class="entity-card panel--interactive" [routerLink]="['/clients', client.id]">
           <div class="text-lg font-semibold">{{ client.firstName }} {{ client.lastName }}</div>
           <div class="mt-1 text-sm text-[var(--app-text-muted)]">
-            {{ client.referenceNumber }} · {{ client.sageId }}
+            {{ client.referenceNumber }} · {{ client.careHomeName }}
           </div>
-          <div class="mt-2 text-sm">{{ client.careHomeName }} · {{ client.careType }}</div>
+          <div class="mt-2 text-sm">{{ client.careType }}</div>
           <div class="mt-2 flex flex-wrap gap-2">
             <app-status-badge [value]="client.status" />
           </div>
-          <div class="mt-3 flex flex-wrap gap-2">
-            <a mat-stroked-button [routerLink]="['/clients', client.id]">Open</a>
-            @if (auth.canWrite()) {
-              <a mat-stroked-button [routerLink]="['/clients', client.id, 'edit']">Edit</a>
-            }
-          </div>
-        </div>
+        </a>
       }
     </div>
   }

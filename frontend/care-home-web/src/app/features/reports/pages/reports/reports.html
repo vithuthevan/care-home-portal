@@ -1,48 +1,88 @@
 <div class="page">
   <app-page-header
     title="Reports"
-    subtitle="Operational and financial reports with CSV, Excel and PDF export."
+    subtitle="Financial and operational reports. Export when you need to share results."
   />
   <app-api-error [message]="errorMessage()" />
-  <section class="panel mb-4">
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Report</mat-label>
-        <mat-select [(ngModel)]="report">
-          <mat-option value="client-census">Client census</mat-option>
-          <mat-option value="current-rates">Current rates</mat-option>
-          <mat-option value="invoices-by-client">Invoices by client</mat-option>
-          <mat-option value="invoices-by-care-home">Invoices by care home</mat-option>
-          <mat-option value="income-by-category">Income by category</mat-option>
-          <mat-option value="occupancy">Occupancy / availability</mat-option>
-          <mat-option value="rate-history">Funding rate history</mat-option>
-          <mat-option value="billing-exceptions">Billing exceptions</mat-option>
-          <mat-option value="outstanding">Payment status / outstanding</mat-option>
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>From</mat-label>
-        <input matInput type="date" [(ngModel)]="from" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>To</mat-label>
-        <input matInput type="date" [(ngModel)]="to" />
-      </mat-form-field>
-      <div class="flex flex-wrap items-center gap-2">
-        <button mat-flat-button color="primary" type="button" (click)="load()">Run</button>
-        <button mat-stroked-button type="button" (click)="exportFormat('csv')">CSV</button>
-        <button mat-stroked-button type="button" (click)="exportFormat('xlsx')">Excel</button>
-        <button mat-stroked-button type="button" (click)="exportFormat('pdf')">PDF</button>
+
+  <section class="panel report-layout__filters">
+    <app-section-header [title]="reportTitle()" [subtitle]="reportDescription()" />
+    <app-filter-bar [compact]="true" [embedded]="true">
+      <div class="filter-bar__fields filter-bar__fields--4">
+        <mat-form-field appearance="outline" class="w-full md:col-span-2">
+          <mat-label>Report</mat-label>
+          <mat-select [(ngModel)]="report" (selectionChange)="onReportChange()">
+            <mat-option value="client-census">Client census</mat-option>
+            <mat-option value="current-rates">Current rates</mat-option>
+            <mat-option value="invoices-by-client">Invoices by client</mat-option>
+            <mat-option value="invoices-by-care-home">Invoices by care home</mat-option>
+            <mat-option value="income-by-category">Income by category</mat-option>
+            <mat-option value="occupancy">Occupancy / availability</mat-option>
+            <mat-option value="rate-history">Funding rate history</mat-option>
+            <mat-option value="billing-exceptions">Billing exceptions</mat-option>
+            <mat-option value="outstanding">Payment status / outstanding</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>From</mat-label>
+          <input matInput type="date" [(ngModel)]="from" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>To</mat-label>
+          <input matInput type="date" [(ngModel)]="to" />
+        </mat-form-field>
       </div>
-    </div>
+      <div filterActions>
+        <button
+          mat-flat-button
+          color="primary"
+          type="button"
+          (click)="load()"
+          [disabled]="isLoading()"
+        >
+          @if (isLoading()) {
+            Generating...
+          } @else {
+            Run report
+          }
+        </button>
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="exportFormat('csv')"
+          [disabled]="isLoading()"
+        >
+          CSV
+        </button>
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="exportFormat('xlsx')"
+          [disabled]="isLoading()"
+        >
+          Excel
+        </button>
+        <button
+          mat-stroked-button
+          type="button"
+          (click)="exportFormat('pdf')"
+          [disabled]="isLoading()"
+        >
+          PDF
+        </button>
+      </div>
+    </app-filter-bar>
   </section>
-  @if (rows().length) {
-    <div class="table-container">
+
+  @if (isLoading()) {
+    <app-loading-state label="Generating report..." />
+  } @else if (rows().length) {
+    <section class="report-layout__results table-container panel table-container--sticky">
       <table class="data-table">
         <thead>
           <tr>
             @for (key of keys(); track key) {
-              <th>{{ key }}</th>
+              <th [class.num]="isNumeric(key)">{{ columnLabel(key) }}</th>
             }
           </tr>
         </thead>
@@ -50,12 +90,31 @@
           @for (row of rows(); track $index) {
             <tr>
               @for (key of keys(); track key) {
-                <td>{{ row[key] }}</td>
+                <td [class.num]="isNumeric(key)">
+                  @if (isCurrency(key)) {
+                    <app-currency-display [amount]="toNumber(row[key])" />
+                  } @else if (isDate(key)) {
+                    {{ row[key] | displayDate }}
+                  } @else if (isDateTime(key)) {
+                    {{ row[key] | displayDateTime }}
+                  } @else if (isBoolean(key)) {
+                    {{ formatBoolean(row[key]) }}
+                  } @else if (isPaymentStatus(key)) {
+                    <app-labeled-status kind="Payment" [value]="row[key]" />
+                  } @else {
+                    {{ row[key] ?? '—' }}
+                  }
+                </td>
               }
             </tr>
           }
         </tbody>
       </table>
-    </div>
+    </section>
+  } @else if (hasRun()) {
+    <app-empty-state
+      title="No results"
+      message="No rows matched this report and date range. Try widening the period or choose another report."
+    />
   }
 </div>

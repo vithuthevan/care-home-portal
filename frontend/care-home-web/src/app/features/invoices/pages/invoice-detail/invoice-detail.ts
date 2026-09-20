@@ -10,9 +10,11 @@ import { AuthService } from '../../../../core/auth.service';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
-import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
+import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
+import { LabeledStatusComponent } from '../../../../shared/ui/labeled-status';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
 
 @Component({
   selector: 'app-invoice-detail',
@@ -23,7 +25,8 @@ import { ToastService } from '../../../../shared/ui/toast.service';
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
-    StatusBadgeComponent,
+    DisplayDatePipe,
+    LabeledStatusComponent,
   ],
   templateUrl: './invoice-detail.html',
 })
@@ -32,11 +35,15 @@ export class InvoiceDetailPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly confirm = inject(ConfirmDialogService);
   private readonly toast = inject(ToastService);
+  private readonly breadcrumbs = inject(BreadcrumbService);
   readonly auth = inject(AuthService);
   readonly invoice = signal<any | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly info = signal<string | null>(null);
+  readonly infoHint = signal<string | null>(null);
   readonly isLoading = signal(false);
+  readonly isPdfLoading = signal(false);
+  readonly isSending = signal(false);
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
@@ -49,13 +56,21 @@ export class InvoiceDetailPage implements OnInit {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.info.set(null);
+    this.infoHint.set(null);
     this.invoice.set(null);
 
     this.http
       .get(`/api/invoices/${id}`)
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: (invoice) => this.invoice.set(invoice),
+        next: (invoice: any) => {
+          this.invoice.set(invoice);
+          this.breadcrumbs.set([
+            { label: 'Billing', routerLink: '/billing' },
+            { label: 'Invoices', routerLink: '/invoices' },
+            { label: invoice.invoiceNumber || 'Invoice' },
+          ]);
+        },
         error: (error) =>
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to load invoice.')),
       });
@@ -67,32 +82,64 @@ export class InvoiceDetailPage implements OnInit {
       return;
     }
 
-    this.http.get(`/api/invoices/${current.id}/pdf`, { responseType: 'blob' }).subscribe({
-      next: (blob) => {
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-      },
-      error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Unable to download PDF.')),
-    });
+    this.isPdfLoading.set(true);
+    this.http
+      .get(`/api/invoices/${current.id}/pdf`, { responseType: 'blob' })
+      .pipe(finalize(() => this.isPdfLoading.set(false)))
+      .subscribe({
+        next: (blob) => {
+          const url = URL.createObjectURL(blob);
+          window.open(url, '_blank');
+        },
+        error: (error) =>
+          this.errorMessage.set(getApiErrorMessage(error, 'Unable to download PDF.')),
+      });
   }
 
   send(): void {
     const current = this.invoice();
-    if (!current) {
+    if (!current || this.isSending()) {
       return;
     }
 
-    this.http.post(`/api/invoices/${current.id}/send`, {}).subscribe({
-      next: () => {
-        this.info.set('Send completed (or simulated in development).');
-        this.toast.success('Email queued/sent successfully.');
-      },
-      error: (error) =>
-        this.errorMessage.set(getApiErrorMessage(error, 'Email could not be sent.')),
-    });
+    this.isSending.set(true);
+    this.http
+      .post<{ simulated?: boolean }>(`/api/invoices/${current.id}/send`, {})
+      .pipe(finalize(() => this.isSending.set(false)))
+      .subscribe({
+        next: (result) => {
+          const message = 'Invoice email processed successfully.';
+          this.info.set(message);
+          this.infoHint.set(result?.simulated === true ? 'Delivery is simulated in this environment.' : null);
+          this.toast.success(message);
+        },
+        error: (error) =>
+          this.errorMessage.set(getApiErrorMessage(error, 'Email could not be sent.')),
+      });
   }
 
-  pay(status: string): void {
+  confirmPay(status: string): void {
+    const current = this.invoice();
+    if (!current || current.paymentStatus === status) {
+      return;
+    }
+
+    const label = status === 'Paid' ? 'Mark this invoice as paid?' : 'Mark this invoice as not paid?';
+    this.confirm
+      .confirm({
+        title: 'Update payment status',
+        message: label,
+        confirmLabel: 'Update',
+      })
+      .subscribe((ok) => {
+        if (!ok) {
+          return;
+        }
+        this.pay(status);
+      });
+  }
+
+  private pay(status: string): void {
     const current = this.invoice();
     if (!current) {
       return;
@@ -108,6 +155,50 @@ export class InvoiceDetailPage implements OnInit {
         error: (error) =>
           this.errorMessage.set(getApiErrorMessage(error, 'Payment update failed.')),
       });
+  }
+
+  invoiceSubtitle(inv: { invoiceCategoryName?: string; careHomeName?: string }): string {
+    const parts = [inv.invoiceCategoryName, inv.careHomeName].filter(Boolean);
+    return parts.join(' · ') || 'Invoice document';
+  }
+
+  creditNoteQueryParams(inv: {
+    id: number;
+    invoiceNumber?: string;
+    periodStart?: string;
+    periodEnd?: string;
+    lines?: { clientId?: number; clientName?: string; clientReference?: string }[];
+  }): Record<string, string | number> {
+    const line = inv.lines?.[0];
+    const params: Record<string, string | number> = { invoiceId: inv.id };
+    if (inv.invoiceNumber) {
+      params['invoiceNumber'] = inv.invoiceNumber;
+    }
+    if (line?.clientId) {
+      params['clientId'] = line.clientId;
+    }
+    if (line?.clientName) {
+      params['clientName'] = line.clientName;
+    }
+    if (line?.clientReference) {
+      params['clientReference'] = line.clientReference;
+    }
+    const start = this.toDateParam(inv.periodStart);
+    const end = this.toDateParam(inv.periodEnd);
+    if (start) {
+      params['periodStart'] = start;
+    }
+    if (end) {
+      params['periodEnd'] = end;
+    }
+    return params;
+  }
+
+  private toDateParam(value: string | undefined): string {
+    if (!value) {
+      return '';
+    }
+    return value.length >= 10 ? value.slice(0, 10) : value;
   }
 
   voidInvoice(): void {

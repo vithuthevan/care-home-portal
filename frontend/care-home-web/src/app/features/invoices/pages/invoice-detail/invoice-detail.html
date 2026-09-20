@@ -1,8 +1,11 @@
 <div class="page">
   <app-api-error [message]="errorMessage()" />
   @if (info()) {
-    <div class="mb-4 rounded-md border border-[#c8e6c9] bg-[#e8f5e9] px-4 py-3 text-sm">
+    <div class="alert-banner alert-banner--success">
       {{ info() }}
+      @if (infoHint()) {
+        <p class="mt-1 mb-0 text-sm opacity-90">{{ infoHint() }}</p>
+      }
     </div>
   }
 
@@ -11,56 +14,161 @@
   }
 
   @if (invoice(); as inv) {
-    <app-page-header [title]="inv.invoiceNumber" subtitle="Invoice document">
-      <button mat-stroked-button type="button" (click)="pdf()">Download PDF</button>
-      @if (auth.canWrite()) {
-        <button mat-stroked-button type="button" (click)="send()">Email</button>
-        <button mat-stroked-button type="button" (click)="pay('Paid')">Mark Paid</button>
-        <button mat-stroked-button type="button" (click)="pay('NotPaid')">Mark unpaid</button>
-        <button mat-stroked-button color="warn" type="button" (click)="voidInvoice()">Void</button>
-      }
+    <app-page-header [title]="inv.invoiceNumber" [subtitle]="invoiceSubtitle(inv)">
       <a mat-stroked-button routerLink="/invoices">Back</a>
     </app-page-header>
 
-    <div class="mb-4 flex flex-wrap items-center gap-3">
-      <app-status-badge [value]="inv.status" />
-      <app-status-badge [value]="inv.paymentStatus" />
-      <span class="text-2xl font-semibold">£{{ inv.totalAmount | number: '1.2-2' }}</span>
-    </div>
+    <section class="panel invoice-hero">
+      <div>
+        <div class="flex flex-wrap items-center gap-3">
+          <app-labeled-status kind="Invoice" [value]="inv.status" />
+          <app-labeled-status kind="Payment" [value]="inv.paymentStatus" />
+        </div>
+        @if (inv.lines?.length) {
+          <p class="mt-3 mb-0 text-lg font-semibold">
+            @if (inv.lines[0].clientId) {
+              <a [routerLink]="['/clients', inv.lines[0].clientId]">{{ inv.lines[0].clientName }}</a>
+            } @else {
+              {{ inv.lines[0].clientName }}
+            }
+          </p>
+          <p class="mt-1 mb-0 text-sm text-[var(--app-text-muted)]">
+            {{ inv.periodStart | displayDate }} – {{ inv.periodEnd | displayDate }}
+          </p>
+        }
+      </div>
+      <div class="invoice-hero__amount">
+        <p class="m-0 text-supporting">Total</p>
+        <p class="m-0 amount-hero">£{{ inv.totalAmount | number: '1.2-2' }}</p>
+      </div>
+    </section>
 
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+    <div class="panel panel--flat mb-4 actions-bar actions-bar--primary-first actions-bar--invoice">
+      <button
+        mat-flat-button
+        color="primary"
+        type="button"
+        (click)="pdf()"
+        [disabled]="isPdfLoading()"
+      >
+        @if (isPdfLoading()) {
+          Preparing PDF...
+        } @else {
+          Download PDF
+        }
+      </button>
+      @if (auth.canWrite()) {
+        <button mat-stroked-button type="button" (click)="send()" [disabled]="isSending()">
+          @if (isSending()) {
+            Sending...
+          } @else {
+            Email
+          }
+        </button>
+        @if (inv.paymentStatus !== 'Paid') {
+          <button mat-stroked-button type="button" (click)="confirmPay('Paid')">Mark paid</button>
+        }
+        @if (inv.paymentStatus !== 'NotPaid') {
+          <button mat-stroked-button type="button" (click)="confirmPay('NotPaid')">Mark unpaid</button>
+        }
+        <a mat-stroked-button routerLink="/credit-notes" [queryParams]="creditNoteQueryParams(inv)"
+          >Credit note</a
+        >
+        <button mat-stroked-button color="warn" type="button" class="btn-void" (click)="voidInvoice()">
+          Void
+        </button>
+      }
+    </div>
+    <p class="mb-4 text-sm text-[var(--app-text-muted)]">
+      The PDF reflects this invoice record as stored in the system.
+    </p>
+
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <section class="panel">
-        <h2 class="mt-0 text-lg font-semibold">Invoice information</h2>
-        <p class="mb-1 text-sm">Date {{ inv.invoiceDate }}</p>
-        <p class="mb-0 text-sm">Due {{ inv.dueDate }}</p>
+        <h2 class="mt-0 text-section">Resident</h2>
+        @if (inv.lines?.length) {
+          <dl class="dl-grid">
+            <div>
+              <dt>Name</dt>
+              <dd>
+                @if (inv.lines[0].clientId) {
+                  <a [routerLink]="['/clients', inv.lines[0].clientId]">{{
+                    inv.lines[0].clientName
+                  }}</a>
+                } @else {
+                  {{ inv.lines[0].clientName }}
+                }
+              </dd>
+            </div>
+            <div>
+              <dt>Reference</dt>
+              <dd>{{ inv.lines[0].clientReference }}</dd>
+            </div>
+            <div>
+              <dt>Sage ID</dt>
+              <dd>{{ inv.lines[0].sageId }}</dd>
+            </div>
+          </dl>
+        } @else {
+          <p class="text-sm text-[var(--app-text-muted)]">No line items on this invoice.</p>
+        }
       </section>
       <section class="panel">
-        <h2 class="mt-0 text-lg font-semibold">Billing information</h2>
-        <p class="mb-1 text-sm">{{ inv.companyName }}</p>
-        <p class="mb-1 text-sm">{{ inv.careHomeName }}</p>
-        <p class="mb-0 text-sm">{{ inv.periodStart }} to {{ inv.periodEnd }}</p>
+        <h2 class="mt-0 text-section">Funding</h2>
+        <dl class="dl-grid">
+          <div>
+            <dt>Funding authority</dt>
+            <dd>{{ inv.fundingAuthorityName }}</dd>
+          </div>
+          <div>
+            <dt>Category</dt>
+            <dd>{{ inv.invoiceCategoryName }}</dd>
+          </div>
+          <div>
+            <dt>Care home</dt>
+            <dd>
+              @if (inv.careHomeId) {
+                <a [routerLink]="['/care-homes', inv.careHomeId, 'dashboard']">{{ inv.careHomeName }}</a>
+              } @else {
+                {{ inv.careHomeName }}
+              }
+            </dd>
+          </div>
+          <div>
+            <dt>Company</dt>
+            <dd>{{ inv.companyName }}</dd>
+          </div>
+        </dl>
       </section>
-      <section class="panel">
-        <h2 class="mt-0 text-lg font-semibold">Funding authority</h2>
-        <p class="mb-1 text-sm">{{ inv.fundingAuthorityName }}</p>
-        <p class="mb-0 text-sm">{{ inv.invoiceCategoryName }}</p>
+      <section class="panel md:col-span-2">
+        <h2 class="mt-0 text-section">Billing period & dates</h2>
+        <dl class="dl-grid">
+          <div>
+            <dt>Service period</dt>
+            <dd>{{ inv.periodStart | displayDate }} – {{ inv.periodEnd | displayDate }}</dd>
+          </div>
+          <div>
+            <dt>Invoice date</dt>
+            <dd>{{ inv.invoiceDate | displayDate }}</dd>
+          </div>
+          <div>
+            <dt>Due date</dt>
+            <dd>{{ inv.dueDate | displayDate }}</dd>
+          </div>
+        </dl>
       </section>
     </div>
 
     <section class="panel mt-4">
-      <h2 class="mt-0 text-lg font-semibold">Line items</h2>
+      <h2 class="mt-0 text-section">Invoice lines</h2>
       <div class="table-container">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Client</th>
-              <th>Reference</th>
-              <th>Sage ID</th>
+              <th>Resident</th>
               <th>Description</th>
-              <th>From</th>
-              <th>To</th>
+              <th>Period</th>
               <th class="num">Days</th>
-              <th>Frequency</th>
               <th class="num">Rate</th>
               <th>Nominal</th>
               <th class="num">Amount</th>
@@ -69,15 +177,22 @@
           <tbody>
             @for (line of inv.lines; track line.id) {
               <tr>
-                <td>{{ line.clientName }}</td>
-                <td>{{ line.clientReference }}</td>
-                <td>{{ line.sageId }}</td>
+                <td>
+                  @if (line.clientId) {
+                    <a [routerLink]="['/clients', line.clientId]">{{ line.clientName }}</a>
+                  } @else {
+                    {{ line.clientName }}
+                  }
+                </td>
                 <td>{{ line.description }}</td>
-                <td>{{ line.servicePeriodStart }}</td>
-                <td>{{ line.servicePeriodEnd }}</td>
+                <td>
+                  {{ line.servicePeriodStart | displayDate }} –
+                  {{ line.servicePeriodEnd | displayDate }}
+                </td>
                 <td class="num">{{ line.eligibleDays }}</td>
-                <td>{{ line.rateFrequency }}</td>
-                <td class="num">£{{ line.rateAmount | number: '1.2-2' }}</td>
+                <td class="num">
+                  £{{ line.rateAmount | number: '1.2-2' }} {{ line.rateFrequency }}
+                </td>
                 <td>{{ line.nominalCode }}</td>
                 <td class="num">£{{ line.lineAmount | number: '1.2-2' }}</td>
               </tr>

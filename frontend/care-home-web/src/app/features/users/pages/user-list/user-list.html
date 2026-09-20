@@ -6,14 +6,14 @@
 
   <app-api-error [message]="errorMessage()" />
 
-  <div class="table-container hidden md:block">
-    <table class="data-table">
+  <div class="table-container panel panel--flat list-view-table--from-md">
+    <table class="data-table data-table--responsive-hide-sm">
       <thead>
         <tr>
           <th>Name</th>
           <th>Email</th>
           <th>Role</th>
-          <th>Assigned Homes</th>
+          <th class="col-hide-sm">Assigned Homes</th>
           <th>Status</th>
           <th>Actions</th>
         </tr>
@@ -28,7 +28,7 @@
                 <app-status-badge [value]="role" />
               }
             </td>
-            <td>{{ homeNames(user.careHomeIds) }}</td>
+            <td class="col-hide-sm">{{ homeNames(user.careHomeIds) }}</td>
             <td><app-status-badge [value]="user.isActive ? 'Active' : 'Inactive'" /></td>
             <td>
               @if (auth.canWrite() && user.isActive) {
@@ -43,7 +43,7 @@
     </table>
   </div>
 
-  <div class="grid gap-3 md:hidden">
+  <div class="mobile-card-list mobile-card-list--breakpoint-md">
     @for (user of users(); track user.id) {
       <div class="entity-card" [class.inactive-row]="!user.isActive">
         <div class="font-semibold">{{ user.displayName }}</div>

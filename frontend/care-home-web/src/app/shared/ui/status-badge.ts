@@ -28,7 +28,7 @@ export class StatusBadgeComponent {
     ) {
       return 'badge-success';
     }
-    if (['sent', 'simulated'].includes(key)) {
+    if (['sent', 'simulated', 'draft'].includes(key)) {
       return 'badge-info';
     }
     if (['left', 'due', 'warning'].includes(key)) {

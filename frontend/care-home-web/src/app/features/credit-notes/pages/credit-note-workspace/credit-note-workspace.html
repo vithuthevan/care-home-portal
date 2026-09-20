@@ -1,17 +1,67 @@
 <div class="page">
   <app-page-header
-    title="Credit Notes"
-    subtitle="Credits cannot exceed remaining invoiced amounts."
+    title="Credit notes"
+    subtitle="Adjust invoiced amounts. Each credit note links to an original invoice."
   />
 
   <app-api-error [message]="errorMessage()" />
 
+  @if (sourceInvoiceNumber() || residentContextLabel() || sourcePeriodLabel()) {
+    <div class="alert-banner alert-banner--info">
+      @if (sourceInvoiceNumber()) {
+        <div>
+          <strong>Original invoice:</strong>
+          {{ sourceInvoiceNumber() }}
+        </div>
+      }
+      @if (residentContextLabel(); as residentLabel) {
+        <div>
+          <strong>Resident:</strong>
+          {{ residentLabel }}
+        </div>
+      }
+      @if (sourcePeriodLabel(); as periodLabel) {
+        <div>
+          <strong>Period:</strong>
+          {{ periodLabel }}
+        </div>
+      }
+      <p class="mt-2 mb-0 text-sm">
+        The resident and period are prefilled from the invoice. Preview the credit amount before
+        generating.
+      </p>
+    </div>
+  }
+
   <section class="panel credit-accent mb-4">
-    <div class="mb-3"><app-status-badge value="Sent" label="Credit Note" /></div>
+    <app-section-header
+      title="Create credit note"
+      subtitle="Preview before generating. Credits cannot exceed remaining invoiced amounts."
+    />
     <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Client ID (optional)</mat-label>
-        <input matInput [(ngModel)]="clientId" />
+      <mat-form-field appearance="outline" class="w-full md:col-span-2">
+        <mat-label>Resident</mat-label>
+        <input
+          matInput
+          [ngModel]="residentQuery()"
+          (ngModelChange)="onResidentQueryChange($event)"
+          [matAutocomplete]="residentAuto"
+          placeholder="Search by name or reference"
+        />
+        <mat-autocomplete
+          #residentAuto="matAutocomplete"
+          [displayWith]="displayResident"
+          (optionSelected)="onResidentSelected($event.option.value)"
+        >
+          <mat-option [value]="null">All residents</mat-option>
+          @for (client of filteredResidents(); track client.id) {
+            <mat-option [value]="client">
+              <span class="block">{{ client.firstName }} {{ client.lastName }}</span>
+              <span class="text-xs text-[var(--app-text-muted)]">{{ client.referenceNumber }}</span>
+            </mat-option>
+          }
+        </mat-autocomplete>
+        <mat-hint>Optional. Select a resident or leave blank to match the period only.</mat-hint>
       </mat-form-field>
       <mat-form-field appearance="outline" class="w-full">
         <mat-label>Period start</mat-label>
@@ -21,88 +71,156 @@
         <mat-label>Period end</mat-label>
         <input matInput type="date" [(ngModel)]="periodEnd" />
       </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
+      <mat-form-field appearance="outline" class="w-full md:col-span-4">
         <mat-label>Reason</mat-label>
-        <input matInput [(ngModel)]="reason" />
+        <input matInput [(ngModel)]="reason" placeholder="e.g. Partial period adjustment" />
       </mat-form-field>
     </div>
     <div class="flex flex-wrap gap-2">
-      <button mat-stroked-button type="button" (click)="runPreview()">Preview</button>
+      <button
+        mat-stroked-button
+        type="button"
+        (click)="runPreview()"
+        [disabled]="isWorking()"
+      >
+        @if (isWorking()) {
+          Previewing...
+        } @else {
+          Preview
+        }
+      </button>
       @if (auth.canWrite()) {
         <button
           mat-flat-button
           color="primary"
           type="button"
-          [disabled]="!preview()?.canGenerate"
+          [disabled]="isWorking() || !preview()?.canGenerate"
           (click)="generate()"
         >
-          Generate
+          Generate credit note
         </button>
       }
     </div>
+    @if (isWorking()) {
+      <app-loading-state
+        [label]="preview() ? 'Generating credit note...' : 'Preparing credit note preview...'"
+      />
+    }
+    @if (preview() && !preview()?.canGenerate) {
+      <div class="alert-banner alert-banner--warning mt-4">
+        Preview cannot generate a credit note for the current selection. Check amounts and period.
+      </div>
+    }
   </section>
 
-  @if (preview(); as preview) {
+  @if (preview(); as previewData) {
     <section class="panel mb-4">
-      <h2 class="mt-0 text-lg font-semibold">Preview credit</h2>
-      <div class="table-container">
-        <table class="data-table">
+      <h2 class="mt-0 text-section">Preview credit</h2>
+      <p class="mt-0 mb-3 text-sm text-[var(--app-text-muted)]">
+        The amount below is the credit returned by preview. Generate uses this amount.
+      </p>
+      <div class="rate-highlight mb-4">
+        <p class="rate-highlight__label m-0">Preview amount</p>
+        <app-currency-display [amount]="previewData.totalCredit ?? 0" size="hero" />
+      </div>
+      <div class="table-container list-view-table--from-md">
+        <table class="data-table data-table--responsive-hide-sm">
           <thead>
             <tr>
-              <th>Invoice</th>
-              <th>Client</th>
+              <th>Original invoice</th>
+              <th>Resident</th>
               <th class="num">Remaining</th>
               <th class="num">Credit</th>
             </tr>
           </thead>
           <tbody>
-            @for (line of preview.lines; track line.invoiceLineId) {
+            @for (line of previewData.lines; track line.invoiceLineId) {
               <tr>
-                <td>{{ line.invoiceNumber }}</td>
+                <td class="font-medium">{{ line.invoiceNumber }}</td>
                 <td>{{ line.clientName }}</td>
-                <td class="num">£{{ line.remainingAmount | number: '1.2-2' }}</td>
-                <td class="num">£{{ line.creditAmount | number: '1.2-2' }}</td>
+                <td class="num">
+                  <app-currency-display [amount]="line.remainingAmount" />
+                </td>
+                <td class="num">
+                  <app-currency-display [amount]="line.creditAmount" />
+                </td>
               </tr>
             }
           </tbody>
         </table>
       </div>
+      <div class="mobile-card-list mobile-card-list--breakpoint-md">
+        @for (line of previewData.lines; track line.invoiceLineId) {
+          <article class="mobile-data-card">
+            <div class="font-semibold">{{ line.invoiceNumber }}</div>
+            <div class="mt-1 text-sm">{{ line.clientName }}</div>
+            <div class="mobile-data-card__row">
+              <span class="mobile-data-card__label">Credit</span>
+              <app-currency-display [amount]="line.creditAmount" />
+            </div>
+          </article>
+        }
+      </div>
+      @if (previewData.lines?.length === 1 && previewData.lines[0].creditAmount === previewData.lines[0].remainingAmount) {
+        <p class="mt-3 mb-0 text-sm text-[var(--app-text-muted)]">
+          This preview credits the full remaining balance on the invoice line. Partial credits may
+          require backend support not exposed in this workspace.
+        </p>
+      }
     </section>
   }
 
   <section class="panel">
-    <h2 class="mt-0 text-lg font-semibold">Existing credit notes</h2>
-    <div class="table-container">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Credit Number</th>
-            <th>Original Invoice</th>
-            <th>Date</th>
-            <th>Reason</th>
-            <th>Status</th>
-            <th class="num">Total</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (note of notes(); track note.id) {
+    <app-section-header title="Existing credit notes" />
+    @if (notes().length === 0) {
+      <app-empty-state
+        title="No credit notes yet"
+        message="Credit notes appear here after you generate an adjustment against an invoice."
+      />
+    } @else {
+      <div class="table-container list-view-table--from-md">
+        <table class="data-table data-table--responsive-hide-sm">
+          <thead>
             <tr>
-              <td>{{ note.creditNoteNumber }}</td>
-              <td>{{ note.invoiceNumber }}</td>
-              <td>{{ note.creditNoteDate }}</td>
-              <td>{{ note.reason }}</td>
-              <td><app-status-badge [value]="note.status" /></td>
-              <td class="num">£{{ note.totalAmount | number: '1.2-2' }}</td>
-              <td><button mat-stroked-button type="button" (click)="pdf(note.id)">PDF</button></td>
+              <th>Credit note</th>
+              <th>Original invoice</th>
+              <th>Date</th>
+              <th>Reason</th>
+              <th>Status</th>
+              <th class="num">Amount</th>
+              <th></th>
             </tr>
-          } @empty {
-            <tr>
-              <td colspan="7">No credit notes found.</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            @for (note of notes(); track note.id) {
+              <tr>
+                <td class="font-medium">{{ note.creditNoteNumber }}</td>
+                <td>{{ note.invoiceNumber }}</td>
+                <td>{{ note.creditNoteDate | displayDate }}</td>
+                <td>{{ note.reason || '—' }}</td>
+                <td><app-status-badge [value]="note.status" /></td>
+                <td class="num"><app-currency-display [amount]="note.totalAmount" /></td>
+                <td><button mat-stroked-button type="button" (click)="pdf(note.id)">PDF</button></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="mobile-card-list mobile-card-list--breakpoint-md">
+        @for (note of notes(); track note.id) {
+          <article class="mobile-data-card">
+            <div class="font-semibold">{{ note.creditNoteNumber }}</div>
+            <div class="mt-1 text-sm text-[var(--app-text-muted)]">{{ note.invoiceNumber }}</div>
+            <div class="mobile-data-card__row">
+              <span class="mobile-data-card__label">Amount</span>
+              <app-currency-display [amount]="note.totalAmount" />
+            </div>
+            <div class="mobile-data-card__actions">
+              <button mat-stroked-button type="button" (click)="pdf(note.id)">PDF</button>
+            </div>
+          </article>
+        }
+      </div>
+    }
   </section>
 </div>

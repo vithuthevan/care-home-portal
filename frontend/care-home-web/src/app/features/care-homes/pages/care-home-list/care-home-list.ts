@@ -1,5 +1,5 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 
@@ -30,15 +30,32 @@ import { ToastService } from '../../../../shared/ui/toast.service';
 })
 export class CareHomeList implements OnInit {
   private readonly careHomeService = inject(CareHomeService);
+  private readonly route = inject(ActivatedRoute);
+  readonly filterCompanyId = signal(0);
   private readonly confirm = inject(ConfirmDialogService);
   private readonly toast = inject(ToastService);
   readonly auth = inject(AuthService);
 
   readonly careHomes = signal<CareHomeLocation[]>([]);
+  readonly visibleCareHomes = computed(() => {
+    const companyId = this.filterCompanyId();
+    const list = this.careHomes();
+    if (!companyId) {
+      return list;
+    }
+    return list.filter((home) => home.companyId === companyId);
+  });
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
   ngOnInit(): void {
+    const companyId = Number(this.route.snapshot.queryParamMap.get('companyId') || 0);
+    if (companyId) {
+      this.filterCompanyId.set(companyId);
+    }
+    this.route.queryParamMap.subscribe((params) => {
+      this.filterCompanyId.set(Number(params.get('companyId') || 0));
+    });
     this.loadCareHomes();
   }
 

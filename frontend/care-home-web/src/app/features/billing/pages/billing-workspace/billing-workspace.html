@@ -1,13 +1,25 @@
 <div class="page">
   <app-page-header
     title="Billing Workspace"
-    subtitle="Preview eligible charges, then generate invoices in a single transaction."
+    subtitle="Select scope, preview charges, review exceptions, then generate invoice records."
   />
 
   <app-api-error [message]="errorMessage()" />
 
+  <app-workflow-steps [steps]="workflowSteps" [activeIndex]="workflowActiveIndex()" />
+
+  @if (contextClientName()) {
+    <div class="alert-banner alert-banner--info">
+      Opened from resident profile: <strong>{{ contextClientName() }}</strong>. Company and care
+      home are preselected. Preview billing to see eligible residents and calculated charges.
+    </div>
+  }
+
   <section class="panel mb-4">
-    <h2 class="mt-0 text-lg font-semibold">Step 1 — Select billing scope</h2>
+    <h2 class="mt-0 text-section">Step 1 — Scope</h2>
+    <p class="mt-0 mb-4 text-sm text-[var(--app-text-muted)]">
+      Choose the company, care home, category, and billing period to include in this run.
+    </p>
     <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
       <mat-form-field appearance="outline" class="w-full">
         <mat-label>Company</mat-label>
@@ -22,7 +34,7 @@
         <mat-label>Care home</mat-label>
         <mat-select [(ngModel)]="careHomeId">
           <mat-option [value]="0">All care homes</mat-option>
-          @for (home of careHomes(); track home.id) {
+          @for (home of careHomesForSelect(); track home.id) {
             <mat-option [value]="home.id">{{ home.name }}</mat-option>
           }
         </mat-select>
@@ -45,7 +57,12 @@
         <input matInput type="date" [(ngModel)]="periodEnd" />
       </mat-form-field>
     </div>
-    <div class="mt-2 flex flex-wrap gap-2">
+    @if (periodSummary(); as summary) {
+      <p class="mt-0 mb-0 text-sm text-[var(--app-text-muted)]">
+        Billing period: <strong>{{ summary }}</strong>
+      </p>
+    }
+    <div class="mt-2">
       <button
         mat-flat-button
         color="primary"
@@ -56,31 +73,25 @@
         @if (isWorking()) {
           Previewing...
         } @else {
-          Preview
+          Preview billing
         }
       </button>
-      @if (auth.canWrite()) {
-        <button
-          mat-flat-button
-          color="primary"
-          type="button"
-          (click)="generate()"
-          [disabled]="isWorking() || !preview()?.canGenerate"
-        >
-          @if (isWorking()) {
-            Generating...
-          } @else {
-            Generate
-          }
-        </button>
-      }
     </div>
   </section>
 
+  @if (!preview() && isWorking()) {
+    <app-loading-state label="Previewing billing..." />
+  }
+
+  @if (!preview() && !isWorking()) {
+    <app-empty-state
+      title="Select scope and preview billing"
+      message="Select the billing scope and period, then preview billing to see eligible residents."
+    />
+  }
+
   @if (generateResult(); as generated) {
-    <div
-      class="mb-4 rounded-md border border-[#c8e6c9] bg-[#e8f5e9] px-4 py-3 text-sm text-[var(--app-success)]"
-    >
+    <div class="alert-banner alert-banner--success">
       Generated {{ generated.invoiceCount }} invoice(s). Total £{{
         generated.totalAmount | number: '1.2-2'
       }}.
@@ -89,105 +100,134 @@
 
   @if (preview(); as previewData) {
     @if (previewData.canGenerate) {
-      <div
-        class="mb-4 rounded-md border border-[#c8e6c9] bg-[#e8f5e9] px-4 py-3 text-sm font-semibold text-[var(--app-success)]"
-      >
-        Ready to generate
-      </div>
+      <div class="alert-banner alert-banner--success">Ready to generate — review the lines below.</div>
     } @else {
-      <div
-        class="mb-4 rounded-md border border-[#ffe0a3] bg-[#fff6e5] px-4 py-3 text-sm font-semibold text-[var(--app-warning)]"
-      >
-        Generation blocked
+      <div class="alert-banner alert-banner--warning">
+        @if (hasFullyBilledException(previewData)) {
+          Already fully billed for the selected scope and period. Adjust the period or scope to
+          preview billable residents.
+        } @else {
+          Generation blocked — resolve exceptions before creating invoices.
+        }
       </div>
     }
 
     <section class="panel mb-4">
-      <h2 class="mt-0 text-lg font-semibold">Step 2 — Preview</h2>
+      <h2 class="mt-0 text-section">Step 2 — Preview</h2>
       <p class="text-sm text-[var(--app-text-muted)]">
-        {{ previewData.requestedPeriodStart }} → {{ previewData.requestedPeriodEnd }}
+        {{ previewData.requestedPeriodStart | displayDate }} →
+        {{ previewData.requestedPeriodEnd | displayDate }}
       </p>
-      <p class="text-sm">Skipped already-billed days: {{ previewData.skippedAlreadyBilledDays }}</p>
+      <p class="text-sm font-medium">{{ previewData.lines?.length || 0 }} resident line(s) found</p>
 
-      @if (previewData.coverage?.length) {
-        <div class="table-container">
-          <table class="data-table">
+      @if (previewData.lines?.length) {
+        <div class="table-container mt-3 list-view-table--from-md">
+          <table class="data-table data-table--responsive-hide-sm">
             <thead>
               <tr>
-                <th>Client</th>
-                <th>Already billed</th>
-                <th>Remaining billable</th>
-                <th class="num">Skipped days</th>
+                <th>Resident</th>
+                <th class="num">Amount</th>
               </tr>
             </thead>
             <tbody>
-              @for (
-                item of previewData.coverage;
-                track item.clientId + '-' + item.clientFundingContractId
-              ) {
+              @for (line of previewData.lines; track $index) {
                 <tr>
-                  <td>{{ item.clientName }}</td>
-                  <td>
-                    @for (range of item.alreadyBilledPeriods; track range.start + '-' + range.end) {
-                      <div>{{ range.start }} → {{ range.end }} ({{ range.days }} days)</div>
-                    } @empty {
-                      None
-                    }
-                  </td>
-                  <td>
-                    @for (
-                      range of item.remainingBillablePeriods;
-                      track range.start + '-' + range.end
-                    ) {
-                      <div>{{ range.start }} → {{ range.end }} ({{ range.days }} days)</div>
-                    } @empty {
-                      None
-                    }
-                  </td>
-                  <td class="num">{{ item.skippedAlreadyBilledDays }}</td>
+                  <td>{{ line.clientName }}</td>
+                  <td class="num">£{{ line.amount | number: '1.2-2' }}</td>
                 </tr>
               }
+              <tr>
+                <td class="font-semibold">Total</td>
+                <td class="num font-semibold">£{{ previewData.totalAmount | number: '1.2-2' }}</td>
+              </tr>
             </tbody>
           </table>
         </div>
+        <div class="mobile-card-list mobile-card-list--breakpoint-md">
+          @for (line of previewData.lines; track $index) {
+            <article class="mobile-data-card">
+              <div class="font-semibold">{{ line.clientName }}</div>
+              <div class="mobile-data-card__row">
+                <span class="mobile-data-card__label">Amount</span>
+                <span>£{{ line.amount | number: '1.2-2' }}</span>
+              </div>
+            </article>
+          }
+        </div>
+      }
+
+      @if (previewData.coverage?.length) {
+        <details class="mt-4 text-sm">
+          <summary class="cursor-pointer font-medium text-[var(--app-primary)]">
+            Coverage detail (already billed vs billable)
+          </summary>
+          <div class="table-container mt-3">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Resident</th>
+                  <th>Already billed</th>
+                  <th>Remaining billable</th>
+                  <th class="num">Skipped days</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (
+                  item of previewData.coverage;
+                  track item.clientId + '-' + item.clientFundingContractId
+                ) {
+                  <tr>
+                    <td>{{ item.clientName }}</td>
+                    <td>
+                      @for (range of item.alreadyBilledPeriods; track range.start + '-' + range.end) {
+                        <div>
+                          {{ range.start | displayDate }} → {{ range.end | displayDate }}
+                          ({{ range.days }} days)
+                        </div>
+                      } @empty {
+                        None
+                      }
+                    </td>
+                    <td>
+                      @for (
+                        range of item.remainingBillablePeriods;
+                        track range.start + '-' + range.end
+                      ) {
+                        <div>
+                          {{ range.start | displayDate }} → {{ range.end | displayDate }}
+                          ({{ range.days }} days)
+                        </div>
+                      } @empty {
+                        None
+                      }
+                    </td>
+                    <td class="num">{{ item.skippedAlreadyBilledDays }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </details>
       }
     </section>
 
     <section class="panel mb-4">
-      <h2 class="mt-0 text-lg font-semibold">Step 3 — Review exceptions</h2>
+      <h2 class="mt-0 text-section">Step 3 — Review</h2>
       @for (item of previewData.exceptions; track item.code + item.message) {
-        <div class="mb-3 rounded-md border border-[#ffe0a3] bg-[#fff6e5] px-4 py-3">
+        <div class="alert-banner alert-banner--warning mb-3">
           <div class="font-medium">{{ exceptionLabel(item.code, item.message) }}</div>
-          <div class="mt-1 text-xs text-[var(--app-text-muted)]">
-            {{ item.severity }} · {{ item.code }}
-          </div>
         </div>
       } @empty {
-        <p class="mb-0 text-sm">No exceptions.</p>
+        <p class="mb-0 text-sm text-[var(--app-text-muted)]">No exceptions for this preview.</p>
       }
-    </section>
 
-    <section class="panel">
-      <h2 class="mt-0 text-lg font-semibold">
-        Step 4 — Generate
-        <span class="ml-2 text-base font-normal"
-          >£{{ previewData.totalAmount | number: '1.2-2' }}</span
-        >
-      </h2>
-      <div class="table-container">
+      <div class="table-container mt-4">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Client</th>
-              <th>Reference</th>
-              <th>Sage ID</th>
-              <th>Funding Authority</th>
-              <th>Invoice Category</th>
-              <th>Nominal Code</th>
-              <th>Service Period</th>
-              <th class="num">Eligible Days</th>
+              <th>Resident</th>
+              <th>Period</th>
               <th class="num">Rate</th>
-              <th>Frequency</th>
               <th class="num">Amount</th>
             </tr>
           </thead>
@@ -195,22 +235,41 @@
             @for (line of previewData.lines; track $index) {
               <tr>
                 <td>{{ line.clientName }}</td>
-                <td>{{ line.clientReference }}</td>
-                <td>{{ line.sageId }}</td>
-                <td>{{ line.fundingAuthorityName }}</td>
-                <td>{{ line.invoiceCategoryName }}</td>
-                <td>{{ line.nominalCode }}</td>
-                <td>{{ line.serviceFrom }} → {{ line.serviceTo }}</td>
-                <td class="num">{{ line.eligibleDays }}</td>
-                <td class="num">£{{ line.rate | number: '1.2-2' }}</td>
-                <td>{{ line.frequency }}</td>
+                <td>{{ line.serviceFrom | displayDate }} → {{ line.serviceTo | displayDate }}</td>
+                <td class="num">£{{ line.rate | number: '1.2-2' }} {{ line.frequency }}</td>
                 <td class="num">£{{ line.amount | number: '1.2-2' }}</td>
               </tr>
             }
           </tbody>
         </table>
       </div>
-      <p class="mt-3 mb-0"><a routerLink="/invoices">Open invoices</a></p>
+    </section>
+
+    <section class="panel">
+      <h2 class="mt-0 text-section">Step 4 — Generate</h2>
+      <p class="text-sm text-[var(--app-text-muted)]">
+        This will create invoice records for the lines above. Re-run preview after generation to
+        avoid duplicate billing for the same period.
+      </p>
+      <p class="amount-hero m-0">Total £{{ previewData.totalAmount | number: '1.2-2' }}</p>
+      @if (auth.canWrite()) {
+        <div class="actions-bar mt-4">
+          <button
+            mat-flat-button
+            color="primary"
+            type="button"
+            (click)="generate()"
+            [disabled]="isWorking() || !previewData.canGenerate"
+          >
+            @if (isWorking()) {
+              Generating...
+            } @else {
+              Generate invoices
+            }
+          </button>
+          <a mat-stroked-button routerLink="/invoices">Open invoices</a>
+        </div>
+      }
     </section>
   }
 </div>

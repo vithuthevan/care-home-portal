@@ -9,12 +9,13 @@ import { AuthService } from '../../core/auth.service';
   imports: [RouterLink, MatButtonModule],
   template: `
     <div class="flex min-h-full items-center justify-center p-6">
-      <div class="panel w-full max-w-md">
+      <div class="panel state-panel w-full max-w-md">
+        <div class="state-panel__icon" aria-hidden="true">?</div>
         <h1 class="m-0 text-2xl font-semibold">Page not found</h1>
-        <p class="mt-2 mb-5 text-sm text-[var(--app-text-muted)]">
+        <p class="m-0 text-sm text-[var(--app-text-muted)]">
           This page does not exist or has been moved.
         </p>
-        <a mat-stroked-button [routerLink]="auth.isLoggedIn() ? auth.homePath() : ['/login']">
+        <a mat-flat-button color="primary" [routerLink]="auth.isLoggedIn() ? auth.homePath() : ['/login']">
           {{ auth.isLoggedIn() ? 'Go to home' : 'Sign in' }}
         </a>
       </div>

@@ -5,9 +5,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
   selector: 'app-loading-state',
   imports: [MatProgressSpinnerModule],
   template: `
-    <div class="flex items-center gap-3 py-4 text-sm text-[var(--app-text-muted)]">
-      <mat-progress-spinner diameter="24" mode="indeterminate" />
-      <span>{{ label() }}</span>
+    <div class="panel state-panel state-panel--loading" role="status" [attr.aria-label]="label()">
+      <mat-progress-spinner diameter="32" mode="indeterminate" />
+      <span class="text-sm text-[var(--app-text-muted)]">{{ label() }}</span>
     </div>
   `,
 })

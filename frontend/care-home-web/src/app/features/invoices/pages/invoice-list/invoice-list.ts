@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
@@ -16,7 +16,10 @@ import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
+import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
+import { LabeledStatusComponent } from '../../../../shared/ui/labeled-status';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
+import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { PagedResult } from '../../../../core/models';
 
@@ -35,12 +38,16 @@ import { PagedResult } from '../../../../core/models';
     ApiErrorComponent,
     LoadingStateComponent,
     EmptyStateComponent,
+    DisplayDatePipe,
+    LabeledStatusComponent,
     StatusBadgeComponent,
+    FilterBarComponent,
   ],
   templateUrl: './invoice-list.html',
 })
 export class InvoiceListPage implements OnInit {
   private readonly http = inject(HttpClient);
+  private readonly route = inject(ActivatedRoute);
   readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   readonly items = signal<any[]>([]);
@@ -55,7 +62,35 @@ export class InvoiceListPage implements OnInit {
   selected = new Set<number>();
 
   ngOnInit(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const payment = params.get('paymentStatus');
+    const number = params.get('invoiceNumber');
+    if (payment) {
+      this.paymentStatus = payment;
+    }
+    if (number) {
+      this.invoiceNumber = number;
+    }
     this.load();
+  }
+
+  hasActiveFilters(): boolean {
+    return !!(this.invoiceNumber || this.status || this.paymentStatus);
+  }
+
+  clearFilters(): void {
+    this.invoiceNumber = '';
+    this.status = '';
+    this.paymentStatus = '';
+    this.load();
+  }
+
+  formatPeriod(item: { periodStart?: string; periodEnd?: string }): string {
+    const pipe = new DisplayDatePipe();
+    if (!item.periodStart || !item.periodEnd) {
+      return '—';
+    }
+    return `${pipe.transform(item.periodStart)} – ${pipe.transform(item.periodEnd)}`;
   }
 
   load(): void {

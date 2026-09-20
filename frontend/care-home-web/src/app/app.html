@@ -61,11 +61,11 @@
             <a routerLink="/funding-authorities" routerLinkActive="active-link"
               ><mat-icon>account_balance</mat-icon>Funding Authorities</a
             >
-            <a routerLink="/invoice-categories" routerLinkActive="active-link"
-              ><mat-icon>category</mat-icon>Invoice Categories</a
-            >
             <a routerLink="/nominal-codes" routerLinkActive="active-link"
               ><mat-icon>tag</mat-icon>Nominal Codes</a
+            >
+            <a routerLink="/invoice-categories" routerLinkActive="active-link"
+              ><mat-icon>category</mat-icon>Invoice Categories</a
             >
             <a routerLink="/invoice-templates" routerLinkActive="active-link"
               ><mat-icon>description</mat-icon>Invoice Templates</a
@@ -137,7 +137,7 @@
           }
         }
 
-        @if (auth.isPlatformAdmin()) {
+        @if (auth.isPlatformAdmin() && auth.currentUser()?.tenantPublicId) {
           <div class="nav-section-static">Platform</div>
           <a routerLink="/platform/tenants" routerLinkActive="active-link">
             <mat-icon>apartment</mat-icon>
@@ -158,11 +158,17 @@
         >
           <mat-icon>menu</mat-icon>
         </button>
-        <div class="crumb">
-          <span>Home</span>
-          <mat-icon>chevron_right</mat-icon>
-          <strong>{{ crumb() }}</strong>
-        </div>
+        <nav class="crumb" aria-label="Breadcrumb">
+          <a routerLink="/dashboard">Home</a>
+          @for (item of breadcrumbs.items(); track $index) {
+            <mat-icon>chevron_right</mat-icon>
+            @if (item.routerLink && $index < breadcrumbs.items().length - 1) {
+              <a [routerLink]="item.routerLink">{{ item.label }}</a>
+            } @else {
+              <strong>{{ item.label }}</strong>
+            }
+          }
+        </nav>
         <span class="flex-1"></span>
         <button type="button" class="user-chip" [matMenuTriggerFor]="userMenu">
           <span class="avatar">{{ initials() }}</span>

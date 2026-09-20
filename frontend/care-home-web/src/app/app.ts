@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 
 import { AuthService } from './core/auth.service';
+import { BreadcrumbService } from './shared/ui/breadcrumb.service';
 
 @Component({
   selector: 'app-root',
@@ -29,7 +30,7 @@ export class App {
   private readonly router = inject(Router);
   readonly isMobile = signal(false);
   readonly menuOpen = signal(false);
-  readonly crumb = signal('Dashboard');
+  readonly breadcrumbs = inject(BreadcrumbService);
   readonly operationsOpen = signal(true);
   readonly billingSetupOpen = signal(true);
   readonly billingOpen = signal(true);
@@ -48,9 +49,9 @@ export class App {
     }
 
     this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe(() => {
-      this.crumb.set(this.labelForUrl(this.router.url));
+      this.breadcrumbs.setFromUrl(this.router.url);
     });
-    this.crumb.set(this.labelForUrl(this.router.url));
+    this.breadcrumbs.setFromUrl(this.router.url);
   }
 
   toggleMenu(): void {
@@ -74,29 +75,5 @@ export class App {
 
   roleLabel(): string {
     return this.auth.currentUser()?.roles?.[0] || 'User';
-  }
-
-  private labelForUrl(url: string): string {
-    const path = url.split('?')[0];
-    if (path.startsWith('/clients')) return 'Clients';
-    if (path.startsWith('/care-homes')) return 'Care Homes';
-    if (path.startsWith('/companies')) return 'Companies';
-    if (path.startsWith('/billing')) return 'Billing Workspace';
-    if (path.startsWith('/invoices')) return 'Invoices';
-    if (path.startsWith('/credit-notes')) return 'Credit Notes';
-    if (path.startsWith('/funding-authorities')) return 'Funding Authorities';
-    if (path.startsWith('/invoice-categories')) return 'Invoice Categories';
-    if (path.startsWith('/nominal-codes')) return 'Nominal Codes';
-    if (path.startsWith('/invoice-templates')) return 'Invoice Templates';
-    if (path.startsWith('/misc-charges')) return 'Miscellaneous Charges';
-    if (path.startsWith('/reports')) return 'Reports';
-    if (path.startsWith('/sage-exports')) return 'Sage Export';
-    if (path.startsWith('/users')) return 'Users';
-    if (path.startsWith('/audit')) return 'Audit';
-    if (path.startsWith('/settings')) return 'Organisation Settings';
-    if (path.startsWith('/platform')) return 'Organisations';
-    if (path.startsWith('/dashboard') || path === '/') return 'Dashboard';
-    if (path.startsWith('/forbidden')) return 'Access denied';
-    return 'Page not found';
   }
 }

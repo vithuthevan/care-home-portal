@@ -61,7 +61,7 @@ interface DashboardDto {
 })
 export class DashboardPage implements OnInit {
   private readonly http = inject(HttpClient);
-  private readonly auth = inject(AuthService);
+  readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   readonly dashboard = signal<DashboardDto | null>(null);
   readonly errorMessage = signal<string | null>(null);

@@ -1,4 +1,5 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,19 +13,26 @@ import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
+import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
 
 @Component({
   selector: 'app-company-list',
   imports: [
+    FormsModule,
     RouterLink,
     MatButtonModule,
+    MatFormFieldModule,
+    MatInputModule,
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
     EmptyStateComponent,
     StatusBadgeComponent,
+    FilterBarComponent,
   ],
   templateUrl: './company-list.html',
 })
@@ -35,6 +43,15 @@ export class CompanyList implements OnInit {
   readonly auth = inject(AuthService);
 
   readonly companies = signal<Company[]>([]);
+  readonly searchText = signal('');
+  readonly filteredCompanies = computed(() => {
+    const q = this.searchText().trim().toLowerCase();
+    const list = this.companies();
+    if (!q) {
+      return list;
+    }
+    return list.filter((company) => company.name.toLowerCase().includes(q));
+  });
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
 

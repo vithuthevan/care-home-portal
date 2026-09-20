@@ -1,6 +1,6 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -18,7 +18,9 @@ import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
+import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
+import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
 
@@ -36,12 +38,15 @@ import { ToastService } from '../../../../shared/ui/toast.service';
     ApiErrorComponent,
     LoadingStateComponent,
     EmptyStateComponent,
+    DisplayDatePipe,
     StatusBadgeComponent,
+    FilterBarComponent,
   ],
   templateUrl: './client-list.html',
 })
 export class ClientList implements OnInit {
   private readonly clientService = inject(ClientService);
+  private readonly router = inject(Router);
   private readonly careHomeService = inject(CareHomeService);
   private readonly confirm = inject(ConfirmDialogService);
   private readonly toast = inject(ToastService);
@@ -98,6 +103,10 @@ export class ClientList implements OnInit {
     this.searchText = '';
     this.selectedCareHomeId = 0;
     this.loadClients();
+  }
+
+  openClient(id: number): void {
+    void this.router.navigate(['/clients', id]);
   }
 
   archiveClient(client: Client): void {

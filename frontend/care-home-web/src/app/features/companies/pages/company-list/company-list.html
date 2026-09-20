@@ -5,6 +5,20 @@
     }
   </app-page-header>
 
+  <app-filter-bar>
+    <div class="filter-bar__fields filter-bar__fields--2">
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Search</mat-label>
+        <input
+          matInput
+          [ngModel]="searchText()"
+          (ngModelChange)="searchText.set($event)"
+          placeholder="Company name"
+        />
+      </mat-form-field>
+    </div>
+  </app-filter-bar>
+
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
@@ -12,16 +26,26 @@
   }
 
   @if (!isLoading() && companies().length === 0) {
-    <app-empty-state title="No companies found" message="There are no companies to display.">
+    <app-empty-state
+      title="No companies yet"
+      message="Add a company to group care homes for billing and reporting."
+    >
       @if (auth.canWrite()) {
         <a mat-flat-button color="primary" routerLink="/companies/new">Add Company</a>
       }
     </app-empty-state>
   }
 
-  @if (!isLoading() && companies().length) {
-    <div class="table-container hidden md:block">
-      <table class="data-table">
+  @if (!isLoading() && companies().length && filteredCompanies().length === 0) {
+    <app-empty-state
+      title="No companies found"
+      message="There are no companies matching your search."
+    />
+  }
+
+  @if (!isLoading() && filteredCompanies().length) {
+    <div class="table-container panel panel--flat list-view-table--from-md">
+      <table class="data-table data-table--responsive-hide-sm">
         <thead>
           <tr>
             <th>Company</th>
@@ -30,11 +54,24 @@
           </tr>
         </thead>
         <tbody>
-          @for (company of companies(); track company.id) {
+          @for (company of filteredCompanies(); track company.id) {
             <tr [class.inactive-row]="!company.isActive">
-              <td class="font-medium">{{ company.name }}</td>
+              <td class="font-medium">
+                <a
+                  class="font-medium"
+                  [routerLink]="['/care-homes']"
+                  [queryParams]="{ companyId: company.id }"
+                  >{{ company.name }}</a
+                >
+              </td>
               <td><app-status-badge [value]="company.isActive ? 'Active' : 'Inactive'" /></td>
-              <td class="flex flex-wrap gap-2">
+              <td class="actions-cell">
+                <a
+                  mat-stroked-button
+                  [routerLink]="['/care-homes']"
+                  [queryParams]="{ companyId: company.id }"
+                  >Care homes</a
+                >
                 @if (auth.canWrite()) {
                   <a mat-stroked-button [routerLink]="['/companies', company.id, 'edit']">Edit</a>
                   @if (company.isActive) {
@@ -55,29 +92,31 @@
       </table>
     </div>
 
-    <div class="grid gap-3 md:hidden">
-      @for (company of companies(); track company.id) {
-        <div class="entity-card" [class.inactive-row]="!company.isActive">
-          <div class="font-semibold">{{ company.name }}</div>
+    <div class="mobile-card-list mobile-card-list--breakpoint-md">
+      @for (company of filteredCompanies(); track company.id) {
+        <article class="mobile-data-card" [class.inactive-row]="!company.isActive">
+          <a
+            class="text-lg font-semibold no-underline"
+            [routerLink]="['/care-homes']"
+            [queryParams]="{ companyId: company.id }"
+            >{{ company.name }}</a
+          >
           <div class="mt-2">
             <app-status-badge [value]="company.isActive ? 'Active' : 'Inactive'" />
           </div>
-          @if (auth.canWrite()) {
-            <div class="mt-3 flex flex-wrap gap-2">
+          <div class="mobile-data-card__actions">
+            <a
+              mat-flat-button
+              color="primary"
+              [routerLink]="['/care-homes']"
+              [queryParams]="{ companyId: company.id }"
+              >Care homes</a
+            >
+            @if (auth.canWrite()) {
               <a mat-stroked-button [routerLink]="['/companies', company.id, 'edit']">Edit</a>
-              @if (company.isActive) {
-                <button
-                  mat-stroked-button
-                  color="warn"
-                  type="button"
-                  (click)="deactivateCompany(company)"
-                >
-                  Deactivate
-                </button>
-              }
-            </div>
-          }
-        </div>
+            }
+          </div>
+        </article>
       }
     </div>
   }
