@@ -86,7 +86,17 @@ Then create the real organisation with `POST /api/platform/tenants` (or the Orga
 
 ## Database backup (before every release)
 
-See `docs/BACKUP_RESTORE.md`. Take a full backup of the target database **and** copy the document storage root.
+**Mandatory** before every EF migration. See `operations/BACKUP_AND_RECOVERY_RUNBOOK.md` and `docs/BACKUP_RESTORE.md`.
+
+**Azure:**
+
+```powershell
+.\scripts\Backup-CareHome.ps1 -Target Azure -ResourceGroup <rg> -SqlServerName <server> -SqlDatabaseName CareHome -Purpose PreMigration
+```
+
+Or deploy with `.\scripts\Deploy-Azure.ps1 -PreMigrationBackup`.
+
+**On-premises:** full SQL `BACKUP ... WITH CHECKSUM` **and** `robocopy` of the document storage root.
 
 ## Migration (do not auto-apply at startup)
 
@@ -107,8 +117,7 @@ Confirm `__EFMigrationsHistory` contains the latest migration. Then start/restar
 
 ## Application deployment sequence
 
-1. Backup database
-2. Backup document storage
+1. Backup database and document storage (`scripts/Backup-CareHome.ps1` or `Deploy-Azure.ps1 -PreMigrationBackup`)
 3. Deploy the new API package and Angular static files (keep the previous package)
 4. Apply reviewed EF migrations
 5. Verify migration (`__EFMigrationsHistory`, smoke query)

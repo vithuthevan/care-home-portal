@@ -1,5 +1,7 @@
 # Backup and restore
 
+**Production runbook:** See `operations/BACKUP_AND_RECOVERY_RUNBOOK.md` for automated backup strategy, Azure SQL PITR, document storage backup, responsibilities, and the full verification checklist.
+
 A restore was **verified** on 29 August 2026 against disposable LocalDB databases `CareHomeHardeningDb` → backup → `CareHomeHardeningRestoreDb`. `CareHomeDb` was not used and was not wiped.
 
 Verified after restore (API pointed at the restored database):
@@ -23,7 +25,27 @@ This proves the backup format and application compatibility. It is **not** a sub
 
 A database-only backup leaves PDFs and Sage files unrestorable. Invoice rows store a relative `PdfPath`; if the file is missing the API regenerates from **snapshots**, but Sage batch files and any logo files are not in SQL.
 
-## Backup procedure (SQL Server)
+## Azure SQL (production host)
+
+Azure SQL automated backups are platform-managed. IaC configures **35-day PITR** and long-term retention on Standard S0+ (`infra/azure/main.bicep`).
+
+**Before every migration:**
+
+```powershell
+.\scripts\Backup-CareHome.ps1 -Target Azure -ResourceGroup <rg> -SqlServerName <server> -SqlDatabaseName CareHome -Purpose PreMigration
+```
+
+Or use `.\scripts\Deploy-Azure.ps1 -PreMigrationBackup`.
+
+**Point-in-time restore** (to a different database name):
+
+```powershell
+az sql db restore --dest-name CareHomeRestoreCheck --name CareHome --resource-group <rg> --server <server> --time "<utc-timestamp>"
+```
+
+Full procedure: `operations/BACKUP_AND_RECOVERY_RUNBOOK.md` sections 5.1–5.5.
+
+## Backup procedure (on-premises SQL Server)
 
 Take this **before every migration/release**. Example (replace names):
 
@@ -81,18 +103,17 @@ After pointing the API at the restored database:
 
 Do not claim a Production instance is recoverable until this has been done on **that** SQL Server with **that** backup tool.
 
-## Recommended schedule (deployment-specific)
+## Recommended schedule
 
-Mark as policy to agree with the operator. A reasonable starting point, not a legal retention rule:
+Agreed defaults are documented in `operations/BACKUP_AND_RECOVERY_RUNBOOK.md` section 2. Summary:
 
-| Item | Suggestion to review |
-|---|---|
-| Full database backup | Daily, plus immediately before migrations |
-| Transaction-log backup | If the database is FULL recovery: hourly during business hours |
-| Document storage | Daily copy or volume snapshot with the database job |
-| Off-site copy | Yes |
-| Restore test | At least once before pilot go-live, then periodically |
-| Retention | Operator/legal decision — do not hard-code |
+| Item | Azure (production) | On-premises |
+|---|---|---|
+| SQL backup | Platform-managed continuous PITR (35 days) | Daily full + hourly log; before migrations |
+| Document storage | Daily Azure Files backup (02:00 UTC) + pre-migration snapshot | Daily `robocopy` with SQL job |
+| Off-site copy | Azure geo-redundant backup storage | Operator-managed secondary site |
+| Restore test | P0-4 drill on production-tier SQL | Same checklist |
+| Retention | 35 days PITR + LTR (IaC); legal sign-off required | Operator/legal decision |
 
 ## Rollback after a failed release
 

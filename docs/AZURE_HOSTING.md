@@ -34,16 +34,16 @@ az login
 
 The deploy script will:
 
-1. Create resource group + Bicep stack ([infra/azure/main.bicep](../infra/azure/main.bicep)): Linux App Service (B1), Azure SQL Basic, Storage account + Azure Files share
+1. Create resource group + Bicep stack ([infra/azure/main.bicep](../infra/azure/main.bicep)): Linux App Service (B1), Azure SQL **Standard S0** (35-day PITR), **Azure Key Vault**, Storage account + Azure Files share, **Recovery Services Vault** + daily file backup policy
 2. Open a temporary SQL firewall rule for your client IP
 3. Run `dotnet ef database update` against Azure SQL
 4. Build Angular into API `wwwroot` and publish (`scripts/Publish-CareHome.ps1`)
-5. Set Production app settings (`ConnectionStrings__DefaultConnection`, `Jwt__Key`, document path, simulated email)
+5. Write secrets to Key Vault and set App Service **Key Vault references** (not plain-text values)
 6. ZIP-deploy to App Service and restart
 7. Wait for `/health/live` and `/health/ready`
-8. Remove `Seed__AdminEmail` / `Seed__AdminPassword` after first boot
+8. Remove `Seed__AdminEmail` / `Seed__AdminPassword` from app settings and delete bootstrap secret from Key Vault
 
-Generated SQL password, JWT key, and PlatformAdmin password are printed **once** — store them in a password manager / Key Vault.
+Generated SQL password, JWT key, and PlatformAdmin password are printed **once** — store them in a password manager. See [PRODUCTION_SECRETS_SETUP.md](operations/PRODUCTION_SECRETS_SETUP.md).
 
 ## Publish only (no Azure)
 
@@ -56,13 +56,13 @@ Generated SQL password, JWT key, and PlatformAdmin password are printed **once**
 
 See [PRODUCTION_CONFIGURATION.md](PRODUCTION_CONFIGURATION.md). Same-origin: leave `Cors__AllowedOrigins` empty.
 
-Minimum App Settings:
+Minimum App Settings (Azure uses Key Vault references for secrets):
 
 | Setting | Value |
 |---|---|
 | `ASPNETCORE_ENVIRONMENT` | `Production` |
-| `ConnectionStrings__DefaultConnection` | Azure SQL connection string |
-| `Jwt__Key` | ≥32 mixed characters |
+| `ConnectionStrings__DefaultConnection` | Key Vault reference → `ConnectionStrings-DefaultConnection` |
+| `Jwt__Key` | Key Vault reference → `Jwt-Key` (≥32 mixed characters) |
 | `DocumentStorage__RootPath` | `/home/carehome-documents` |
 | `Email__Mode` | `Development` (simulated) or `Smtp` + SMTP settings |
 
@@ -79,10 +79,22 @@ Minimum App Settings:
 - Deploy script adds a temporary rule for your public IP so migrations can run from your machine
 - Tighten firewall for production pilots (remove broad rules; prefer private endpoints later)
 
+## Backup and recovery
+
+After first deploy, enable Azure Files backup (one-time):
+
+```powershell
+.\scripts\Enable-AzureFileBackup.ps1 -ResourceGroup rg-carehome -RecoveryVaultName <rsv> -StorageAccountName <storage>
+```
+
+Verify daily: `.\scripts\Verify-BackupReadiness.ps1`. Full runbook: [BACKUP_AND_RECOVERY_RUNBOOK.md](operations/BACKUP_AND_RECOVERY_RUNBOOK.md).
+
+Pre-migration backup: `.\scripts\Deploy-Azure.ps1 ... -PreMigrationBackup` or `.\scripts\Backup-CareHome.ps1 -Target Azure ...`.
+
 ## Cost (starting point)
 
-App Service B1 + Azure SQL Basic + Storage LRS — suitable for Dev/Test and small pilots. Scale SKUs in Bicep parameters as needed.
+App Service B1 + Azure SQL Standard S0 + Storage LRS + Recovery Services Vault — suitable for controlled pilots with production backup readiness. Scale SKUs in Bicep parameters as needed.
 
 ## Rollback
 
-Redeploy the previous ZIP (`az webapp deploy`). If a migration was applied, restore the Azure SQL backup — do not run EF `Down()` on live financial data. See [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) and [BACKUP_RESTORE.md](BACKUP_RESTORE.md).
+Redeploy the previous ZIP (`az webapp deploy`). If a migration was applied, restore Azure SQL via point-in-time restore — do not run EF `Down()` on live financial data. See [BACKUP_AND_RECOVERY_RUNBOOK.md](operations/BACKUP_AND_RECOVERY_RUNBOOK.md) and [BACKUP_RESTORE.md](BACKUP_RESTORE.md).

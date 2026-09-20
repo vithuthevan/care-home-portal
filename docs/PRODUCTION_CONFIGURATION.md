@@ -20,7 +20,8 @@ Array indexes use `__0`, `__1`, …
 | `Jwt__ClockSkewMinutes` | No (default `2`, max `5`) | No | `2` | JWT lifetime clock skew. |
 | `Cors__AllowedOrigins__0` | Same-origin: no. Split SPA: **yes** | No | `https://app.example.com` | Trusted Angular origins. Do not use `*`. Do not include localhost in Production. Additional origins: `__1`, `__2`. |
 | `Https__Redirect` | No (default `true` outside Development) | No | `true` | Enables HTTPS redirection and HSTS. Set `false` only for a local Production-config experiment on HTTP. |
-| `Email__Mode` | Recommended | No | `Smtp` | `Smtp` sends mail. Any other value **simulates** send. Simulation in Production logs a prominent warning. |
+| `Email__Mode` | **Yes in Production** | No | `Smtp` | `Smtp` sends mail via SMTP. Any other value simulates in Development only. Production **refuses to start** unless `Email__Mode=Smtp` or `Email__AllowSimulationInProduction=true`. |
+| `Email__AllowSimulationInProduction` | Path B interim only | No | `false` | When `true`, API starts without SMTP but sends **fail visibly** (invoice not marked Sent). Requires business sign-off. See [PRODUCTION_EMAIL_SETUP.md](operations/PRODUCTION_EMAIL_SETUP.md). |
 | `Email__FromAddress` | **Yes if Mode=Smtp** | No | `billing@example.org` | Envelope/from address. |
 | `Email__FromName` | No | No | `Care Home Billing` | From display name. |
 | `Email__Smtp__Host` | **Yes if Mode=Smtp** | No | `smtp.example.org` | SMTP host. Missing host in Smtp mode fails fast in Production. |
@@ -44,6 +45,17 @@ dotnet user-secrets set "Jwt:Key" "<value>" --project backend/CareHome.Api
 ```
 
 A deployment secret manager (Azure Key Vault, Windows DPAPI, Kubernetes Secret, etc.) is preferred. The repository must never contain a production key.
+
+### Azure Key Vault (production deploy)
+
+Azure deployments store secrets in Key Vault and reference them from App Service app settings:
+
+```text
+ConnectionStrings__DefaultConnection=@Microsoft.KeyVault(SecretUri=https://<vault>.vault.azure.net/secrets/ConnectionStrings-DefaultConnection/)
+Jwt__Key=@Microsoft.KeyVault(SecretUri=https://<vault>.vault.azure.net/secrets/Jwt-Key/)
+```
+
+Key Vault secret names use hyphens (not `__`). See [PRODUCTION_SECRETS_SETUP.md](operations/PRODUCTION_SECRETS_SETUP.md) for the full inventory, deploy flow, and rotation steps.
 
 ## CORS
 

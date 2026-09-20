@@ -14,12 +14,16 @@ Vendor-neutral. Use whatever monitors the host already has (IIS/Windows, nginx, 
 | Email failures | Funders do not receive invoices | `EmailSendLogs` where `Success = 0`; SMTP logs |
 | Billing exceptions | Missing rates/nominals/templates | `BillingExceptionLogs`; generate 400s |
 | Sage export failures | Finance cannot post | Export 400s; batch `Status`; file present |
-| Backup success | Cannot restore | SQL backup job; document-copy job |
+| Backup success | Cannot restore | `scripts/Verify-BackupReadiness.ps1`; Azure SQL PITR window; Recovery Services Vault last backup |
 | Certificate expiry | Browsers block the app | TLS cert not-after date (30/14/7 day warnings) |
+
+## Daily backup verification
+
+Run `scripts/Verify-BackupReadiness.ps1` (Azure) or confirm on-prem SQL Agent / Task Scheduler jobs succeeded in the last 24 hours. See `operations/BACKUP_AND_RECOVERY_RUNBOOK.md`.
 
 ## After each release
 
-Follow `docs/PRODUCTION_SMOKE_TEST.md`. Confirm `dotnet ef migrations has-pending-model-changes` was clean on the build that shipped.
+Follow `docs/PRODUCTION_SMOKE_TEST.md`. Confirm `dotnet ef migrations has-pending-model-changes` was clean on the build that shipped. Confirm pre-migration backup was taken (`scripts/Backup-CareHome.ps1` manifest or deploy log).
 
 ## Financial days
 

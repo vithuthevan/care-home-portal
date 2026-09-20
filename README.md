@@ -14,12 +14,37 @@ MVP for companies, care homes, clients, funding contracts, effective-dated rates
 ```
 backend/CareHome.Api/     API, EF models, migrations, billing/email/export
 frontend/care-home-web/   Angular SPA
-docs/                     Architecture and learning notes
+docs/                     Architecture, operations, demo, and pilot documentation (see docs/README.md)
 ```
 
 ## Prerequisites
 
 .NET 10 SDK, SQL Server LocalDB (or SQL Server), Node.js.
+
+**Or** Docker Desktop, to run the full stack with one command.
+
+## Run with Docker
+
+From the repository root:
+
+```powershell
+docker compose up -d --build
+```
+
+- Frontend: http://localhost:4200
+- API: http://localhost:5092
+- Health: http://localhost:5092/health/live and http://localhost:5092/health/ready
+- SQL Server: `localhost,14333` / database `CareHomeDb` / user `sa` (password in `.env.example`)
+
+Development login after first start: `admin@localhost` / `DevAdmin!12345`.
+
+Optional: copy `.env.example` to `.env` to change the SQL password. Email stays simulated (`Email:Mode=Development`). SMTP is not required locally.
+
+```powershell
+docker compose logs -f
+docker compose stop
+docker compose down
+```
 
 ## Host on Azure
 
@@ -61,7 +86,16 @@ npm install
 npm start
 ```
 
-http://localhost:4200
+http://localhost:4200 — `npm start` runs `ng serve --hmr` with automatic rebuild and browser refresh on file changes.
+
+For Docker UI development with bind-mounted sources (Windows-friendly polling):
+
+```powershell
+docker compose up -d sql api
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up web
+```
+
+The default `docker compose up` **web** image bakes sources at build time; use the dev compose file above or run `npm start` on the host for hot reload.
 
 ## Development login
 
@@ -103,7 +137,9 @@ CSV files under the document store. Mapping is provisional — see `docs/SAGE50_
 
 New product users: start with **[docs/USER_GUIDE.md](docs/USER_GUIDE.md)** (A–Z section walkthrough).
 
-Engineers: start learning with **[docs/LEARNING_GUIDE.md](docs/LEARNING_GUIDE.md)**.
+Client demo presenters: **[docs/demo/CLIENT_DEMO_A_TO_Z_WALKTHROUGH.md](docs/demo/CLIENT_DEMO_A_TO_Z_WALKTHROUGH.md)** and **[docs/demo/CLIENT_DEMO_OPERATOR_RUNBOOK.md](docs/demo/CLIENT_DEMO_OPERATOR_RUNBOOK.md)**.
+
+Engineers: start learning with **[docs/LEARNING_GUIDE.md](docs/LEARNING_GUIDE.md)**. Full doc index: **[docs/README.md](docs/README.md)**.
 
 Deep-dive notes from architecture review:
 

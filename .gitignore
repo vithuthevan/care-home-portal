@@ -15,6 +15,26 @@
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# IDE (machine-specific; shared workspace config is tracked under .vscode/)
+.idea/
+*.iml
+
+# Local environment (templates .env.example / .env.demo.example are tracked)
+.env
+.env.demo
+!.env.example
+!.env.demo.example
+
+# Generated deploy secrets inventory (never commit)
+/secrets-inventory/
+*.secrets.json
+
+# Logs and local diagnostics
+*.log
+compose-up*.log
+tmp_*.sql
 
 # Publish / Azure deploy artifacts
 /artifacts/
