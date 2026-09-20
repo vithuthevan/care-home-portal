@@ -1,8 +1,20 @@
-@param location = 'uksouth'
-@param appName
-@param sqlServerName
-@param sqlAdminLogin
-@param sqlAdminPassword
-@param sqlDatabaseName = 'CareHome'
-@param appServiceSku = 'B1'
-@param appServiceSkuTier = 'Basic'
+using '../azure/main.bicep'
+
+param location = 'uksouth'
+param appName
+param sqlServerName
+param sqlAdminLogin
+param sqlAdminPassword
+param sqlDatabaseName = 'CareHome'
+param appServiceSku = 'B1'
+param appServiceSkuTier = 'Basic'
+// Production backup readiness: Standard S0+ for 35-day PITR and long-term retention
+param sqlDatabaseSku = 'S0'
+param sqlDatabaseSkuTier = 'Standard'
+param sqlBackupRetentionDays = 35
+param enableLongTermRetention = true
+param ltrWeeklyRetentionWeeks = 4
+param enableDocumentBackup = true
+param documentBackupRetentionDays = 30
+// az ad signed-in-user show --query id -o tsv
+param deployerObjectId = ''
