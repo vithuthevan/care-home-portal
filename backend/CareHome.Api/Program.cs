@@ -185,6 +185,7 @@ builder.Services.AddScoped<BillingService>();
 builder.Services.AddScoped<CreditNoteService>();
 builder.Services.AddScoped<InvoicePdfService>();
 builder.Services.AddScoped<IDocumentStore, LocalDocumentStore>();
+builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
 builder.Services.AddScoped<IEmailSender, ConfigurableEmailSender>();
 builder.Services.AddScoped<Sage50ColumnMap>();
 builder.Services.AddScoped<SageExportService>();
@@ -257,6 +258,12 @@ using (var scope = app.Services.CreateScope())
 {
     var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
         .CreateLogger("Startup");
+
+    if (app.Configuration.GetValue("Database:ApplyMigrations", false))
+    {
+        var db = scope.ServiceProvider.GetRequiredService<CareHomeDbContext>();
+        await db.Database.MigrateAsync();
+    }
 
     try
     {

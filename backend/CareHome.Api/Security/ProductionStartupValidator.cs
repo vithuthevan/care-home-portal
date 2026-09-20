@@ -1,3 +1,5 @@
+using CareHome.Api.Email;
+
 namespace CareHome.Api.Security;
 
 public static class ProductionStartupValidator
@@ -33,29 +35,43 @@ public static class ProductionStartupValidator
 
     public static void ValidateEmail(IConfiguration configuration, ILogger logger)
     {
-        var mode = configuration["Email:Mode"] ?? "";
-        if (string.Equals(mode, "Smtp", StringComparison.OrdinalIgnoreCase))
+        var options = configuration.GetSection(EmailOptions.SectionName).Get<EmailOptions>() ?? new EmailOptions();
+
+        if (options.IsSmtpMode)
         {
-            var host = configuration["Email:Smtp:Host"];
-            var from = configuration["Email:FromAddress"];
-            if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(from))
+            if (string.IsNullOrWhiteSpace(options.Smtp.Host) || string.IsNullOrWhiteSpace(options.FromAddress))
             {
                 throw new InvalidOperationException(
-                    "Email:Mode is Smtp but Email:Smtp:Host or Email:FromAddress is missing. Set Email__Smtp__Host and Email__FromAddress, or change Email__Mode.");
+                    "Email:Mode is Smtp but Email:Smtp:Host or Email:FromAddress is missing. Set Email__Smtp__Host and Email__FromAddress.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(options.Smtp.User) && string.IsNullOrWhiteSpace(options.Smtp.Password))
+            {
+                throw new InvalidOperationException(
+                    "Email:Mode is Smtp and Email:Smtp:User is set but Email:Smtp:Password is missing. Store the password in Key Vault as Email-Smtp-Password and reference it from Email__Smtp__Password.");
             }
 
             logger.LogInformation(
-                "Email mode is Smtp. Host={Host} Port={Port} From={From} Ssl={Ssl}",
-                host,
-                configuration["Email:Smtp:Port"] ?? "587",
-                from,
-                configuration["Email:Smtp:EnableSsl"] ?? "true");
+                "Email mode is Smtp. Host={Host} Port={Port} From={From} Ssl={Ssl} Auth={Auth}",
+                options.Smtp.Host,
+                options.Smtp.Port > 0 ? options.Smtp.Port : 587,
+                options.FromAddress,
+                options.Smtp.EnableSsl,
+                string.IsNullOrWhiteSpace(options.Smtp.User) ? "anonymous" : "username");
             return;
         }
 
-        logger.LogWarning(
-            "PRODUCTION EMAIL IS SIMULATED. Email:Mode={Mode}. No messages will be delivered to real mailboxes. Set Email__Mode=Smtp with SMTP secrets for live email.",
-            string.IsNullOrWhiteSpace(mode) ? "(empty)" : mode);
+        if (options.AllowSimulationInProduction)
+        {
+            logger.LogWarning(
+                "PRODUCTION EMAIL SIMULATION EXPLICITLY ALLOWED (Email:AllowSimulationInProduction=true). Email:Mode={Mode}. Sends will fail visibly; use the manual-send workflow. Configure Email__Mode=Smtp for live delivery.",
+                string.IsNullOrWhiteSpace(options.Mode) ? "(empty)" : options.Mode);
+            return;
+        }
+
+        throw new InvalidOperationException(
+            "Production requires Email:Mode=Smtp for live email delivery. Set Email__Mode=Smtp with Email__Smtp__Host, Email__FromAddress, and Email__Smtp__Password (Key Vault reference). " +
+            "For an interim manual-send workflow only, set Email__AllowSimulationInProduction=true with business sign-off (see docs/operations/PRODUCTION_EMAIL_SETUP.md).");
     }
 
     public static void ValidateCors(IConfiguration configuration, IHostEnvironment environment)

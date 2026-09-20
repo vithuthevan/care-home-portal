@@ -54,13 +54,16 @@ namespace CareHome.Api.Billing
                 return (null, "Billing period end cannot be before start.");
             }
 
-            logger.LogInformation(
-                "Billing generate started. TenantId={TenantId} CompanyId={CompanyId} CareHomeId={CareHomeId} Period={PeriodStart:yyyy-MM-dd}/{PeriodEnd:yyyy-MM-dd}",
-                tenantId,
-                request.CompanyId,
-                request.CareHomeId,
-                request.PeriodStart,
-                request.PeriodEnd);
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation(
+                    "Billing generate started. TenantId={TenantId} CompanyId={CompanyId} CareHomeId={CareHomeId} Period={PeriodStart:yyyy-MM-dd}/{PeriodEnd:yyyy-MM-dd}",
+                    tenantId,
+                    request.CompanyId,
+                    request.CareHomeId,
+                    request.PeriodStart,
+                    request.PeriodEnd);
+            }
 
             await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
             await AcquireBillingLockAsync(tenantId, cancellationToken);
