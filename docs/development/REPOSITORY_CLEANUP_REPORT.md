@@ -17,6 +17,17 @@
 - `dotnet build` on `backend/CareHome.Api`
 - `npm run build` on `frontend/care-home-web` (see commit session output)
 
-## Commits
+## Commits (this session)
 
-See `git log` on `main` after this cleanup session for hashes and messages.
+| Hash | Message |
+|------|---------|
+| `4b0d47f` | chore(repo): organize documentation and tighten ignore rules |
+| `db71d78` | feat(docker): add Compose stack for local and demo environments |
+| `52202ed` | feat(email): harden production SMTP configuration and startup checks |
+| `1b7b237` | feat(azure): extend deployment IaC and backup operational scripts |
+| `aa12f83` | feat(ui): improve demo-ready workspace layout and shared components |
+
+## Validation results
+
+- `dotnet build backend/CareHome.Api/CareHome.Api.csproj` — succeeded (0 warnings)
+- `npm run build` in `frontend/care-home-web` — succeeded (Angular budget warning only)
