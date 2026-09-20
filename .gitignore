@@ -36,6 +36,10 @@ desktop.ini
 compose-up*.log
 tmp_*.sql
 
+# Local dotnet publish output used for manual build/UAT verification
+backend/_build_verify/
+backend/_build_verify_tests/
+
 # Publish / Azure deploy artifacts
 /artifacts/
 backend/CareHome.Api/wwwroot/*
