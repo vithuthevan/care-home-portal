@@ -19,16 +19,37 @@ namespace CareHome.Api.Controllers
         AuditService audit) : ControllerBase
     {
         [HttpGet]
-        public async Task<ActionResult<List<CareHomeDto>>> GetCareHomes()
+        public async Task<ActionResult> GetCareHomes(
+            int? companyId = null,
+            int? page = null,
+            int? pageSize = null)
         {
             var homes = await userAccess.GetScopedCareHomeIdsAsync(tenantContext.TenantId);
-            var careHomes = await ProjectToDto(
-                    dbContext.CareHomes.AsNoTracking()
-                        .Where(x => x.TenantId == tenantContext.TenantId && homes.Contains(x.Id)))
-                .OrderBy(x => x.Name)
-                .ToListAsync();
+            var baseQuery = dbContext.CareHomes.AsNoTracking()
+                .Where(x => x.TenantId == tenantContext.TenantId && homes.Contains(x.Id));
 
-            return Ok(careHomes);
+            if (companyId.HasValue)
+            {
+                baseQuery = baseQuery.Where(x => x.CompanyId == companyId.Value);
+            }
+
+            var query = ProjectToDto(baseQuery).OrderBy(x => x.Name);
+
+            if (!Pagination.IsRequested(page, pageSize))
+            {
+                return Ok(await query.ToListAsync());
+            }
+
+            var (p, ps) = Pagination.Normalize(page, pageSize);
+            var total = await query.CountAsync();
+            var items = await query.Skip((p - 1) * ps).Take(ps).ToListAsync();
+            return Ok(new PagedResult<CareHomeDto>
+            {
+                Items = items,
+                TotalCount = total,
+                Page = p,
+                PageSize = ps
+            });
         }
 
         [HttpGet("{id:int}")]

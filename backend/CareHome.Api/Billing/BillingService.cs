@@ -368,13 +368,10 @@ namespace CareHome.Api.Billing
 
                 if (contracts.Count == 0)
                 {
-                    if (request.InvoiceCategoryId.HasValue || request.ClientIds is { Count: > 0 })
-                    {
-                        exceptions.Add(Error(
-                            "MISSING_CONTRACT",
-                            $"No active funding contract covers {client.FirstName} {client.LastName} for this period.",
-                            client));
-                    }
+                    exceptions.Add(Error(
+                        "MISSING_CONTRACT",
+                        $"No active funding contract covers {client.FirstName} {client.LastName} for this period.",
+                        client));
 
                     continue;
                 }

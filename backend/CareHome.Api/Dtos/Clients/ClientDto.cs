@@ -6,6 +6,8 @@ namespace CareHome.Api.Dtos.Clients
 
         public int CareHomeId { get; set; }
 
+        public int CompanyId { get; set; }
+
         public string CareHomeName { get; set; } = string.Empty;
 
         public string CompanyName { get; set; } = string.Empty;

@@ -7,13 +7,11 @@ namespace CareHome.Api.Dtos.Clients
         [Range(1, int.MaxValue)]
         public int CareHomeId { get; set; }
 
-        [Required]
         [MaxLength(20)]
-        public string SageId { get; set; } = string.Empty;
+        public string? SageId { get; set; }
 
-        [Required]
         [MaxLength(20)]
-        public string ReferenceNumber { get; set; } = string.Empty;
+        public string? ReferenceNumber { get; set; }
 
         [MaxLength(10)]
         public string? Title { get; set; }

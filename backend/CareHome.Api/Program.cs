@@ -179,6 +179,7 @@ builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<UserAccessService>();
 builder.Services.AddScoped<TenantProvisioningService>();
 builder.Services.AddScoped<DocumentSequenceService>();
+builder.Services.AddScoped<ClientIdentifierService>();
 builder.Services.AddScoped<RateCalculator>();
 builder.Services.AddScoped<InvoiceTemplateResolver>();
 builder.Services.AddScoped<BillingService>();

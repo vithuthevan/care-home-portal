@@ -4,6 +4,7 @@ using CareHome.Api.Data;
 using CareHome.Api.Dtos.Clients;
 using CareHome.Api.Models;
 using CareHome.Api.Security;
+using CareHome.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,7 +17,8 @@ namespace CareHome.Api.Controllers
         CareHomeDbContext dbContext,
         ITenantContext tenantContext,
         UserAccessService userAccess,
-        AuditService audit) : ControllerBase
+        AuditService audit,
+        ClientIdentifierService clientIdentifiers) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<PagedResult<ClientDto>>> GetClients(
@@ -130,9 +132,11 @@ namespace CareHome.Api.Controllers
                 return careHomeError;
             }
 
-            var sageId = request.SageId.Trim();
-            var referenceNumber =
-                request.ReferenceNumber.Trim();
+            var (referenceNumber, sageId) = await clientIdentifiers.ResolveCreateIdentifiersAsync(
+                tenantContext.TenantId,
+                request.CareHomeId,
+                request.ReferenceNumber,
+                request.SageId);
 
             if (await dbContext.Clients.AnyAsync(
                     x => x.TenantId == tenantContext.TenantId && x.SageId == sageId))
@@ -431,6 +435,7 @@ namespace CareHome.Api.Controllers
             {
                 Id = x.Id,
                 CareHomeId = x.CareHomeId,
+                CompanyId = x.CareHome.CompanyId,
                 CareHomeName = x.CareHome.Name,
                 CompanyName = x.CareHome.Company.Name,
                 SageId = x.SageId,

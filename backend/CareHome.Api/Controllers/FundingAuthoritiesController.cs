@@ -35,8 +35,10 @@ namespace CareHome.Api.Controllers
         ];
 
         [HttpGet]
-        public async Task<ActionResult<List<FundingAuthorityDto>>> GetFundingAuthorities(
-            bool activeOnly = false)
+        public async Task<ActionResult> GetFundingAuthorities(
+            bool activeOnly = false,
+            int? page = null,
+            int? pageSize = null)
         {
             var query = dbContext.FundingAuthorities.AsNoTracking()
                 .ForTenant(tenantContext.TenantId);
@@ -46,7 +48,7 @@ namespace CareHome.Api.Controllers
                 query = query.Where(x => x.IsActive);
             }
 
-            var authorities = await query
+            var projected = query
                 .OrderBy(x => x.Name)
                 .Select(x => new FundingAuthorityDto
                 {
@@ -61,10 +63,23 @@ namespace CareHome.Api.Controllers
                     BillingFrequency = x.BillingFrequency,
                     BillingIntervalDays = x.BillingIntervalDays,
                     IsActive = x.IsActive
-                })
-                .ToListAsync();
+                });
 
-            return Ok(authorities);
+            if (!Pagination.IsRequested(page, pageSize))
+            {
+                return Ok(await projected.ToListAsync());
+            }
+
+            var (p, ps) = Pagination.Normalize(page, pageSize);
+            var total = await projected.CountAsync();
+            var items = await projected.Skip((p - 1) * ps).Take(ps).ToListAsync();
+            return Ok(new PagedResult<FundingAuthorityDto>
+            {
+                Items = items,
+                TotalCount = total,
+                Page = p,
+                PageSize = ps
+            });
         }
 
         [HttpGet("{id:int}")]

@@ -24,10 +24,10 @@ namespace CareHome.Api.Controllers
         AuditService audit) : ControllerBase
     {
         [HttpGet]
-        public async Task<ActionResult<List<CreditNoteDto>>> List()
+        public async Task<ActionResult> List(int? page = null, int? pageSize = null)
         {
             var homes = await userAccess.GetScopedCareHomeIdsAsync(tenantContext.TenantId);
-            var notes = await dbContext.CreditNotes.AsNoTracking()
+            var query = dbContext.CreditNotes.AsNoTracking()
                 .Where(x => x.TenantId == tenantContext.TenantId && homes.Contains(x.Invoice.CareHomeId))
                 .OrderByDescending(x => x.CreditNoteDate)
                 .Select(x => new CreditNoteDto
@@ -43,10 +43,23 @@ namespace CareHome.Api.Controllers
                     Status = x.Status,
                     TotalAmount = x.TotalAmount,
                     SentAt = x.SentAt
-                })
-                .ToListAsync();
+                });
 
-            return Ok(notes);
+            if (!Pagination.IsRequested(page, pageSize))
+            {
+                return Ok(await query.ToListAsync());
+            }
+
+            var (p, ps) = Pagination.Normalize(page, pageSize);
+            var total = await query.CountAsync();
+            var items = await query.Skip((p - 1) * ps).Take(ps).ToListAsync();
+            return Ok(new PagedResult<CreditNoteDto>
+            {
+                Items = items,
+                TotalCount = total,
+                Page = p,
+                PageSize = ps
+            });
         }
 
         [HttpGet("{id:int}")]

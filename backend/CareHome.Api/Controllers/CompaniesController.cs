@@ -18,22 +18,46 @@ namespace CareHome.Api.Controllers
         AuditService audit) : ControllerBase
     {
         [HttpGet]
-        public async Task<ActionResult<List<CompanyDto>>> GetCompanies()
+        public async Task<ActionResult> GetCompanies(
+            string? search = null,
+            int? page = null,
+            int? pageSize = null)
         {
             var tenantId = tenantContext.TenantId;
-            var companies = await dbContext.Companies
+            var query = dbContext.Companies
                 .AsNoTracking()
-                .ForTenant(tenantId)
+                .ForTenant(tenantId);
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var value = search.Trim();
+                query = query.Where(company => company.Name.Contains(value));
+            }
+
+            var projected = query
                 .OrderBy(company => company.Name)
                 .Select(company => new CompanyDto
                 {
                     Id = company.Id,
                     Name = company.Name,
                     IsActive = company.IsActive
-                })
-                .ToListAsync();
+                });
 
-            return Ok(companies);
+            if (!Pagination.IsRequested(page, pageSize))
+            {
+                return Ok(await projected.ToListAsync());
+            }
+
+            var (p, ps) = Pagination.Normalize(page, pageSize);
+            var total = await projected.CountAsync();
+            var items = await projected.Skip((p - 1) * ps).Take(ps).ToListAsync();
+            return Ok(new PagedResult<CompanyDto>
+            {
+                Items = items,
+                TotalCount = total,
+                Page = p,
+                PageSize = ps
+            });
         }
 
         [HttpGet("{id:int}")]
@@ -47,7 +71,10 @@ namespace CareHome.Api.Controllers
                 {
                     Id = company.Id,
                     Name = company.Name,
-                    IsActive = company.IsActive
+                    IsActive = company.IsActive,
+                    CareHomeCount = company.CareHomes.Count,
+                    ActiveCareHomeCount = company.CareHomes.Count(x => x.IsActive),
+                    ResidentCount = company.CareHomes.SelectMany(x => x.Clients).Count(x => !x.IsArchived),
                 })
                 .FirstOrDefaultAsync();
 

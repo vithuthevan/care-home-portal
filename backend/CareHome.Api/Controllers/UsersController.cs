@@ -31,22 +31,42 @@ namespace CareHome.Api.Controllers
         ];
 
         [HttpGet]
-        public async Task<ActionResult<List<UserDto>>> List()
+        public async Task<ActionResult> List(int? page = null, int? pageSize = null)
         {
             var tenantId = tenantContext.TenantId;
-            var users = await userManager.Users
+            var query = userManager.Users
                 .Include(x => x.CareHomeAccess)
                 .Where(x => x.TenantId == tenantId)
-                .OrderBy(x => x.Email)
-                .ToListAsync();
+                .OrderBy(x => x.Email);
 
-            var result = new List<UserDto>();
-            foreach (var user in users)
+            if (!Pagination.IsRequested(page, pageSize))
             {
-                result.Add(await ToDto(user));
+                var allUsers = await query.ToListAsync();
+                var allDtos = new List<UserDto>();
+                foreach (var user in allUsers)
+                {
+                    allDtos.Add(await ToDto(user));
+                }
+
+                return Ok(allDtos);
             }
 
-            return Ok(result);
+            var (p, ps) = Pagination.Normalize(page, pageSize);
+            var total = await query.CountAsync();
+            var pageUsers = await query.Skip((p - 1) * ps).Take(ps).ToListAsync();
+            var items = new List<UserDto>();
+            foreach (var user in pageUsers)
+            {
+                items.Add(await ToDto(user));
+            }
+
+            return Ok(new PagedResult<UserDto>
+            {
+                Items = items,
+                TotalCount = total,
+                Page = p,
+                PageSize = ps
+            });
         }
 
         [HttpGet("{id}")]
