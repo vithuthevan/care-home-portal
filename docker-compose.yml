@@ -1,0 +1,66 @@
+name: carehome
+
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: carehome-sql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:-CareHomeDevSql2022@}"
+    ports:
+      - "14333:1433"
+    volumes:
+      - carehome-sql-data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -C -b || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -b",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/CareHome.Api/Dockerfile
+    container_name: carehome-api
+    depends_on:
+      sql:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: "Server=sql,1433;Database=CareHomeDb;User Id=sa;Password=${MSSQL_SA_PASSWORD:-CareHomeDevSql2022@};Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True"
+      Database__ApplyMigrations: "true"
+      DocumentStorage__RootPath: /app/App_Data/documents
+      App__PublicUrl: http://localhost:4200
+    ports:
+      - "5092:8080"
+    volumes:
+      - carehome-documents:/app/App_Data/documents
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    restart: on-failure
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/care-home-web/Dockerfile
+    container_name: carehome-web
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "4200:4200"
+
+volumes:
+  carehome-sql-data:
+  carehome-documents:

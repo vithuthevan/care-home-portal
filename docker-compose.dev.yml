@@ -1,0 +1,38 @@
+# Local frontend development with live reload (use with SQL/API from the main compose file).
+#
+#   docker compose up -d sql api
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up web
+#
+# Or run the API stack in Docker and the UI on the host:
+#   cd frontend/care-home-web && npm start
+
+name: carehome
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: frontend/care-home-web/Dockerfile
+    volumes:
+      - ./frontend/care-home-web:/app
+      - carehome-web-node-modules:/app/node_modules
+    environment:
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+    command:
+      [
+        "npx",
+        "ng",
+        "serve",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "4200",
+        "--poll",
+        "2000",
+        "--proxy-config",
+        "proxy.conf.docker.json",
+      ]
+
+volumes:
+  carehome-web-node-modules:
