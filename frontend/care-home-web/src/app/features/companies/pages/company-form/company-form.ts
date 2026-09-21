@@ -38,7 +38,7 @@ export class CompanyForm implements OnInit {
   private readonly toast = inject(ToastService);
   readonly auth = inject(AuthService);
 
-  companyId: number | null = null;
+  companyRouteKey: string | null = null;
   isEditMode = false;
   readonly isLoading = signal(false);
   readonly isSaving = signal(false);
@@ -52,14 +52,14 @@ export class CompanyForm implements OnInit {
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
-      this.companyId = Number(id);
+      this.companyRouteKey = id;
       this.isEditMode = true;
       this.loadCompany();
     }
   }
 
   private loadCompany(): void {
-    if (this.companyId === null) {
+    if (this.companyRouteKey === null) {
       return;
     }
 
@@ -67,7 +67,7 @@ export class CompanyForm implements OnInit {
     this.errorMessage.set(null);
 
     this.companyService
-      .getCompany(this.companyId)
+      .getCompany(this.companyRouteKey)
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: (company) => {
@@ -93,9 +93,9 @@ export class CompanyForm implements OnInit {
     this.isSaving.set(true);
     const formValue = this.form.getRawValue();
 
-    if (this.isEditMode && this.companyId !== null) {
+    if (this.isEditMode && this.companyRouteKey !== null) {
       this.companyService
-        .updateCompany(this.companyId, {
+        .updateCompany(this.companyRouteKey, {
           name: formValue.name,
           isActive: formValue.isActive,
         })
@@ -116,9 +116,9 @@ export class CompanyForm implements OnInit {
       .createCompany({ name: formValue.name })
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
-        next: (company) => {
+        next: () => {
           this.toast.success('Company created successfully.');
-          void this.router.navigate(['/companies', company.id]);
+          void this.router.navigate(['/companies']);
         },
         error: (error) => {
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to create company.'));

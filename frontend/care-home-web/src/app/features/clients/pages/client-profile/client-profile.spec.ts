@@ -17,6 +17,7 @@ describe('ClientProfilePage', () => {
     id: 1,
     careHomeId: 1,
     careHomeName: 'Green Valley',
+    companyId: 1,
     companyName: 'Green Valley Ltd',
     sageId: 'SAGE001',
     referenceNumber: 'CLIENT001',

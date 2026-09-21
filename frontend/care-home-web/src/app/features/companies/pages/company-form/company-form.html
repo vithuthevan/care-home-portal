@@ -1,4 +1,4 @@
-<div class="page">
+<div class="page page--narrow">
   <app-page-header
     [title]="isEditMode ? 'Edit Company' : 'Add Company'"
     subtitle="Company records are used across care homes and billing."
@@ -14,7 +14,7 @@
     <form [formGroup]="form" (ngSubmit)="save()" class="panel max-w-3xl">
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <mat-form-field appearance="outline" class="w-full md:col-span-2">
-          <mat-label>Company name</mat-label>
+          <mat-label>Company name *</mat-label>
           <input matInput id="name" type="text" formControlName="name" required />
           @if (form.controls.name.touched && form.controls.name.hasError('required')) {
             <mat-error>Company name is required.</mat-error>
@@ -29,7 +29,7 @@
         }
       </div>
 
-      <div class="mt-4 flex flex-wrap gap-2">
+      <div class="form-actions">
         <a mat-stroked-button routerLink="/companies">Cancel</a>
         <button
           mat-flat-button

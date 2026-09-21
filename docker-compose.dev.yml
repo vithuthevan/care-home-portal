@@ -1,14 +1,24 @@
-# Local frontend development with live reload (use with SQL/API from the main compose file).
+# Local development with live reload (bind-mounted sources + watch).
 #
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up sql api web
+#
+# Or API/SQL in Docker and UI on the host:
 #   docker compose up -d sql api
-#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up web
-#
-# Or run the API stack in Docker and the UI on the host:
 #   cd frontend/care-home-web && npm start
 
 name: carehome
 
 services:
+  api:
+    build:
+      context: .
+      dockerfile: backend/CareHome.Api/Dockerfile.dev
+    volumes:
+      - ./backend/CareHome.Api:/src/CareHome.Api
+      - carehome-api-nuget:/root/.nuget/packages
+    healthcheck:
+      start_period: 120s
+
   web:
     build:
       context: .
@@ -36,3 +46,4 @@ services:
 
 volumes:
   carehome-web-node-modules:
+  carehome-api-nuget:

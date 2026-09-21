@@ -1,3 +1,4 @@
+using CareHome.Api.Abstractions;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using Microsoft.AspNetCore.Identity;
@@ -8,7 +9,7 @@ namespace CareHome.Api.Security
     public class UserAccessService(
         IHttpContextAccessor httpContextAccessor,
         UserManager<ApplicationUser> userManager,
-        CareHomeDbContext dbContext)
+        CareHomeDbContext dbContext) : ICareHomeAccessScope
     {
         public bool IsPlatformOperator
         {

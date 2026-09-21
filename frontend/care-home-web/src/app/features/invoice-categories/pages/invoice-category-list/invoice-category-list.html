@@ -11,8 +11,17 @@
   @if (isLoading()) {
     <app-loading-state label="Loading invoice categories..." />
   }
-  @if (!isLoading()) {
-    <div class="table-container panel panel--flat">
+  @if (!isLoading() && invoiceCategories().length) {
+    <div class="table-shell">
+      <app-filter-bar [toolbar]="true">
+        <p class="m-0 text-sm text-[var(--app-text-muted)]">Group invoice lines for reporting.</p>
+        <div filterActions>
+          @if (auth.canWrite()) {
+            <a mat-flat-button color="primary" routerLink="/invoice-categories/new">Add category</a>
+          }
+        </div>
+      </app-filter-bar>
+      <div class="table-container">
       <table class="data-table">
         <thead>
           <tr>
@@ -48,13 +57,21 @@
                 }
               </td>
             </tr>
-          } @empty {
-            <tr>
-              <td colspan="4">No invoice categories found.</td>
-            </tr>
           }
         </tbody>
       </table>
+      </div>
     </div>
+  }
+
+  @if (!isLoading() && invoiceCategories().length === 0) {
+    <app-empty-state
+      title="No invoice categories yet"
+      message="Add categories before generating invoices or running category reports."
+    >
+      @if (auth.canWrite()) {
+        <a mat-flat-button color="primary" routerLink="/invoice-categories/new">Add category</a>
+      }
+    </app-empty-state>
   }
 </div>

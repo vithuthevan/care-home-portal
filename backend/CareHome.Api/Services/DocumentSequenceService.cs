@@ -1,9 +1,10 @@
+using CareHome.Api.Abstractions;
 using CareHome.Api.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace CareHome.Api.Services
 {
-    public class DocumentSequenceService(CareHomeDbContext dbContext)
+    public class DocumentSequenceService(CareHomeDbContext dbContext) : IDocumentSequence
     {
         public async Task<string> NextAsync(
             int tenantId,

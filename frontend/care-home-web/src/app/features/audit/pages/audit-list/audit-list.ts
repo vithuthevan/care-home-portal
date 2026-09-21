@@ -54,14 +54,23 @@ export class AuditListPage implements OnInit {
     { value: 'User', label: 'User' },
   ];
   page = 1;
-  pageSize = 50;
+  pageSize = 20;
 
   ngOnInit(): void {
     this.load();
   }
 
-  actorLabel(item: { userId?: string | null }): string {
-    return item.userId?.trim() || 'System';
+  actorLabel(item: { userDisplayName?: string | null; userId?: string | null }): string {
+    return item.userDisplayName?.trim() || 'System';
+  }
+
+  entityLabel(item: { description?: string | null; entityId?: string | null }): string {
+    return item.description?.trim() || '';
+  }
+
+  entityTypeLabel(entityType: string): string {
+    const match = this.entityTypeOptions.find((option) => option.value === entityType);
+    return match?.label || entityType.replace(/([a-z])([A-Z])/g, '$1 $2');
   }
 
   humanAction(action: string): string {

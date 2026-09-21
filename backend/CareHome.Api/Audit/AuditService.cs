@@ -1,4 +1,5 @@
 using System.Text.Json;
+using CareHome.Api.Abstractions;
 using CareHome.Api.Data;
 using CareHome.Api.Models;
 
@@ -7,7 +8,7 @@ namespace CareHome.Api.Audit
     public class AuditService(
         CareHomeDbContext dbContext,
         IHttpContextAccessor httpContextAccessor,
-        ITenantContext tenantContext)
+        ITenantContext tenantContext) : IAuditWriter
     {
         private static readonly JsonSerializerOptions JsonOptions = new()
         {

@@ -2,6 +2,7 @@ using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.Audit;
 using CareHome.Api.Security;
+using CareHome.Api.Security.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,7 @@ namespace CareHome.Api.Controllers
     [ApiController]
     [Route("api/audit")]
     [RequireTenant]
-    [Authorize(Roles = $"{AppRoles.TenantAdmin},{AppRoles.Administrator}")]
+    [Authorize(Policy = CareHomePolicies.CanViewAudit)]
     public class AuditController(CareHomeDbContext dbContext, ITenantContext tenantContext) : ControllerBase
     {
         [HttpGet]
@@ -45,6 +46,10 @@ namespace CareHome.Api.Controllers
                 {
                     Id = x.Id,
                     UserId = x.UserId,
+                    UserDisplayName = dbContext.Users
+                        .Where(user => user.Id == x.UserId)
+                        .Select(user => user.DisplayName)
+                        .FirstOrDefault(),
                     LoggedAt = x.LoggedAt,
                     EntityType = x.EntityType,
                     EntityId = x.EntityId,

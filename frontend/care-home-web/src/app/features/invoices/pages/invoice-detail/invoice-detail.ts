@@ -5,6 +5,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
 import { AuthService } from '../../../../core/auth.service';
@@ -24,6 +26,8 @@ import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
     DecimalPipe,
     MatButtonModule,
     MatIconModule,
+    MatMenuModule,
+    MatTooltipModule,
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
@@ -48,14 +52,24 @@ export class InvoiceDetailPage implements OnInit {
   readonly isSending = signal(false);
   readonly isPaying = signal(false);
 
+  /** Legacy manual flag only — hidden when real payment allocations drive collection status. */
+  showLegacyPaymentStatusActions(): boolean {
+    const inv = this.invoice();
+    if (!inv || !this.auth.canWrite()) {
+      return false;
+    }
+    const paid = inv.paidAmount ?? 0;
+    return paid <= 0 && inv.paymentStatus !== 'Paid';
+  }
+
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
-      const id = Number(params.get('id'));
-      this.loadInvoice(id);
+      const key = params.get('id') ?? '';
+      this.loadInvoice(key);
     });
   }
 
-  private loadInvoice(id: number): void {
+  private loadInvoice(key: string): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.info.set(null);
@@ -63,7 +77,7 @@ export class InvoiceDetailPage implements OnInit {
     this.invoice.set(null);
 
     this.http
-      .get(`/api/invoices/${id}`)
+      .get(`/api/invoices/${key}`)
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: (invoice: any) => {

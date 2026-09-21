@@ -9,6 +9,8 @@ import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { PagedResult } from '../../../../core/models';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
+import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
+import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 
 @Component({
   selector: 'app-misc-charges',
@@ -18,6 +20,8 @@ import { TablePaginationComponent } from '../../../../shared/ui/table-pagination
     ApiErrorComponent,
     StatusBadgeComponent,
     TablePaginationComponent,
+    FilterBarComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './misc-charges.html',
 })
@@ -30,7 +34,7 @@ export class MiscChargesPage implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly info = signal<string | null>(null);
   page = 1;
-  pageSize = 50;
+  pageSize = 20;
 
   ngOnInit(): void {
     this.loadBatches();

@@ -24,6 +24,8 @@ import { ToastService } from '../../../../shared/ui/toast.service';
 import { PagedResult } from '../../../../core/models';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
+import { MatIconModule } from '@angular/material/icon';
+import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 @Component({
   selector: 'app-invoice-list',
@@ -46,10 +48,12 @@ import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-but
     FilterBarComponent,
     TablePaginationComponent,
     IconActionButtonComponent,
+    MatIconModule,
   ],
   templateUrl: './invoice-list.html',
 })
 export class InvoiceListPage implements OnInit {
+  readonly entityRouteKey = entityRouteKey;
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
   readonly auth = inject(AuthService);
@@ -60,11 +64,12 @@ export class InvoiceListPage implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly bulkMessage = signal<string | null>(null);
   page = 1;
-  pageSize = 50;
+  pageSize = 20;
   invoiceNumber = '';
   status = '';
   paymentStatus = '';
   selected = new Set<number>();
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     const params = this.route.snapshot.queryParamMap;
@@ -77,6 +82,30 @@ export class InvoiceListPage implements OnInit {
       this.invoiceNumber = number;
     }
     this.load();
+  }
+
+  onSearchChange(): void {
+    if (this.searchTimer) {
+      clearTimeout(this.searchTimer);
+    }
+    this.searchTimer = setTimeout(() => {
+      this.page = 1;
+      this.load();
+    }, 300);
+  }
+
+  selectedItems(): any[] {
+    return this.items().filter((item) => this.selected.has(item.id));
+  }
+
+  canMarkPaid(): boolean {
+    const selected = this.selectedItems();
+    return selected.length > 0 && selected.some((item) => item.paymentStatus !== 'Paid');
+  }
+
+  canMarkUnpaid(): boolean {
+    const selected = this.selectedItems();
+    return selected.length > 0 && selected.some((item) => item.paymentStatus !== 'NotPaid');
   }
 
   hasActiveFilters(): boolean {

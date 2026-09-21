@@ -4,6 +4,8 @@ namespace CareHome.Api.Dtos.CareHomes
     {
         public int Id { get; set; }
 
+        public Guid PublicId { get; set; }
+
         public int CompanyId { get; set; }
 
         public string CompanyName { get; set; } = string.Empty;
@@ -29,5 +31,7 @@ namespace CareHome.Api.Dtos.CareHomes
         public string? LogoPath { get; set; }
 
         public bool IsActive { get; set; }
+
+        public string? PortalAccentTheme { get; set; }
     }
 }

@@ -27,6 +27,7 @@ import { TablePaginationComponent } from '../../../../shared/ui/table-pagination
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 @Component({
   selector: 'app-client-list',
@@ -53,6 +54,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
   templateUrl: './client-list.html',
 })
 export class ClientList implements OnInit {
+  readonly entityRouteKey = entityRouteKey;
   private readonly clientService = inject(ClientService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -72,12 +74,17 @@ export class ClientList implements OnInit {
   selectedCompanyId = 0;
   showArchived = false;
   page = 1;
-  pageSize = 50;
+  pageSize = 20;
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     const companyId = Number(this.route.snapshot.queryParamMap.get('companyId') || 0);
+    const careHomeId = Number(this.route.snapshot.queryParamMap.get('careHomeId') || 0);
     if (companyId) {
       this.selectedCompanyId = companyId;
+    }
+    if (careHomeId) {
+      this.selectedCareHomeId = careHomeId;
     }
     this.loadCareHomes();
     this.loadClients();
@@ -109,9 +116,20 @@ export class ClientList implements OnInit {
           this.totalCount.set(page.totalCount);
         },
         error: (error) => {
-          this.errorMessage.set(getApiErrorMessage(error, 'Unable to load clients.'));
+          this.errorMessage.set(getApiErrorMessage(error, 'Unable to load residents.'));
         },
       });
+  }
+
+  onSearchChange(_value: string): void {
+    if (this.searchTimer) {
+      clearTimeout(this.searchTimer);
+    }
+    this.searchTimer = setTimeout(() => this.search(), 300);
+  }
+
+  hasActiveFilters(): boolean {
+    return !!(this.searchText.trim() || this.selectedCareHomeId || this.selectedCompanyId || this.showArchived);
   }
 
   search(): void {
@@ -137,14 +155,14 @@ export class ClientList implements OnInit {
     this.loadClients();
   }
 
-  openClient(id: number): void {
-    void this.router.navigate(['/clients', id]);
+  openClient(client: Client): void {
+    void this.router.navigate(['/clients', entityRouteKey(client)]);
   }
 
   archiveClient(client: Client): void {
     this.confirm
       .confirm({
-        title: 'Archive client',
+        title: 'Archive resident',
         message: `Archive ${client.firstName} ${client.lastName}? The record is retained but hidden from the default list.`,
         confirmLabel: 'Archive',
       })
@@ -154,7 +172,7 @@ export class ClientList implements OnInit {
         }
         this.clientService.archiveClient(client.id).subscribe({
           next: () => {
-            this.toast.success('Client archived successfully.');
+            this.toast.success('Resident archived successfully.');
             this.loadClients();
           },
           error: (error) => {

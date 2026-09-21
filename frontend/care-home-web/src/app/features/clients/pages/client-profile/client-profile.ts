@@ -25,6 +25,11 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { Client } from '../../models/client.model';
 import { ClientService } from '../../services/client.service';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
+import {
+  EntitySummaryItem,
+  EntitySummaryStripComponent,
+} from '../../../../shared/ui/entity-summary-strip';
+import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 interface FundingContractView {
   id: number;
@@ -66,11 +71,13 @@ interface FundingRateView {
     SectionHeaderComponent,
     LabeledStatusComponent,
     EmptyStateComponent,
+    EntitySummaryStripComponent,
   ],
   templateUrl: './client-profile.html',
   styleUrl: './client-profile.scss',
 })
 export class ClientProfilePage implements OnInit {
+  readonly entityRouteKey = entityRouteKey;
   private readonly route = inject(ActivatedRoute);
   private readonly clients = inject(ClientService);
   private readonly displayDate = new DisplayDatePipe();
@@ -104,6 +111,51 @@ export class ClientProfilePage implements OnInit {
       a.effectiveFrom < b.effectiveFrom ? 1 : a.effectiveFrom > b.effectiveFrom ? -1 : 0,
     );
     return sorted.find((r) => !r.effectiveTo) ?? sorted[0];
+  });
+
+  readonly outstandingAmount = computed(() =>
+    this.invoices()
+      .filter((inv) => inv.status !== 'Void')
+      .reduce((sum, inv) => {
+        const outstanding =
+          inv.outstandingAmount !== undefined && inv.outstandingAmount !== null
+            ? Number(inv.outstandingAmount)
+            : inv.paymentStatus === 'NotPaid'
+              ? Number(inv.totalAmount) || 0
+              : 0;
+        return sum + outstanding;
+      }, 0),
+  );
+
+  readonly summaryStrip = computed((): EntitySummaryItem[] => {
+    const contract = this.primaryContract();
+    const rate = this.currentRate();
+    const outstanding = this.outstandingAmount();
+    const period = this.billingPeriodLabel();
+    return [
+      {
+        label: 'Funding',
+        value: contract?.fundingAuthorityName ?? 'Not set',
+        hint: contract?.invoiceCategoryName,
+        tone: 'finance',
+      },
+      {
+        label: 'Weekly rate',
+        value: rate ? `£${rate.amount.toFixed(2)}` : '—',
+        hint: rate ? this.rateSuffix(rate.frequency).replace(/^\s*/, '') : 'Add a rate to bill',
+      },
+      {
+        label: 'Current period',
+        value: period,
+        hint: 'Suggested billing month',
+      },
+      {
+        label: 'Outstanding',
+        value: `£${outstanding.toFixed(2)}`,
+        tone: outstanding > 0 ? 'attention' : 'success',
+        hint: outstanding > 0 ? 'Unpaid invoices' : 'All clear',
+      },
+    ];
   });
 
   newContract = {
@@ -140,13 +192,13 @@ export class ClientProfilePage implements OnInit {
     });
 
     this.route.paramMap.subscribe((params) => {
-      const id = Number(params.get('id'));
+      const key = params.get('id') ?? '';
       this.selectedTabIndex.set(0);
       this.isLoading.set(true);
       this.errorMessage.set(null);
       this.client.set(null);
       this.clients
-        .getClient(id)
+        .getClient(key)
         .pipe(finalize(() => this.isLoading.set(false)))
         .subscribe({
           next: (client) => {
@@ -203,6 +255,11 @@ export class ClientProfilePage implements OnInit {
       periodStart: period.start,
       periodEnd: period.end,
     };
+  }
+
+  billingPeriodLabel(): string {
+    const start = new Date(this.suggestedBillingPeriod().start);
+    return start.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
   }
 
   private suggestedBillingPeriod(): { start: string; end: string } {

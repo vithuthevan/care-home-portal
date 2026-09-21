@@ -6,6 +6,8 @@ using CareHome.Api.Dtos.CreditNotes;
 using CareHome.Api.Email;
 using CareHome.Api.Models;
 using CareHome.Api.Security;
+using CareHome.Api.Security.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,6 +16,7 @@ namespace CareHome.Api.Controllers
     [ApiController]
     [Route("api/credit-notes")]
     [RequireTenant]
+    [Authorize(Policy = CareHomePolicies.CanViewFinancialReports)]
     public class CreditNotesController(
         CareHomeDbContext dbContext,
         CreditNoteService creditNotes,
@@ -84,12 +87,14 @@ namespace CareHome.Api.Controllers
         }
 
         [HttpPost("preview")]
+        [Authorize(Policy = CareHomePolicies.CanManageBilling)]
         public async Task<ActionResult<CreditNotePreviewResponse>> Preview(CreditNotePreviewRequest request)
         {
             return Ok(await creditNotes.PreviewAsync(tenantContext.TenantId, request));
         }
 
         [HttpPost("generate")]
+        [Authorize(Policy = CareHomePolicies.CanManageBilling)]
         public async Task<ActionResult<CreditNoteDto>> Generate(CreditNotePreviewRequest request)
         {
             var (note, error) = await creditNotes.GenerateAsync(tenantContext.TenantId, request);
@@ -126,6 +131,7 @@ namespace CareHome.Api.Controllers
         }
 
         [HttpPost("{id:int}/send")]
+        [Authorize(Policy = CareHomePolicies.CanManageBilling)]
         public async Task<IActionResult> Send(int id)
         {
             var note = await LoadNote(id);

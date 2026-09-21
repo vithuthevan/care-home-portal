@@ -23,7 +23,20 @@
   }
 
   @if (!isLoading() && fundingAuthorities().length) {
-    <div class="table-container panel panel--flat list-view-table--from-lg">
+    <div class="table-shell list-view-table--from-lg">
+      <app-filter-bar [toolbar]="true">
+        <p class="m-0 text-sm text-[var(--app-text-muted)]">
+          Payers linked to resident funding contracts.
+        </p>
+        <div filterActions>
+          @if (auth.canWrite()) {
+            <a mat-flat-button color="primary" routerLink="/funding-authorities/new"
+              >Add authority</a
+            >
+          }
+        </div>
+      </app-filter-bar>
+      <div class="table-container">
       <table class="data-table data-table--responsive-hide-sm">
         <thead>
           <tr>
@@ -68,6 +81,7 @@
           }
         </tbody>
       </table>
+      </div>
     </div>
 
     <div class="mobile-card-list mobile-card-list--breakpoint-lg">

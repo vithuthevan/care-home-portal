@@ -1,5 +1,7 @@
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.Reports;
+using CareHome.Api.Receivables.Contracts;
+using CareHome.Api.Receivables.Dtos;
 using CareHome.Api.Security;
 using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +11,10 @@ using QuestPDF.Infrastructure;
 
 namespace CareHome.Api.Services
 {
-    public class ReportService(CareHomeDbContext dbContext, UserAccessService userAccess)
+    public class ReportService(
+        CareHomeDbContext dbContext,
+        UserAccessService userAccess,
+        IReceivablesService receivables)
     {
         public async Task<List<CensusRowDto>> ClientCensusAsync(
             int tenantId, int? companyId, int? careHomeId, CancellationToken cancellationToken)
@@ -209,21 +214,21 @@ namespace CareHome.Api.Services
 
         public async Task<List<OutstandingInvoiceRowDto>> OutstandingAsync(int tenantId, CancellationToken cancellationToken)
         {
-            var homes = await AllowedHomes(tenantId, null, null, cancellationToken);
-            return await dbContext.Invoices.AsNoTracking()
-                .Where(x => x.TenantId == tenantId && homes.Contains(x.CareHomeId) && x.Status != "Void" && x.PaymentStatus != "Paid")
+            var query = new ReceivableInvoiceQuery { OpenReceivablesOnly = true, Page = 1, PageSize = 10_000 };
+            var (items, _) = await receivables.ListInvoicesAsync(tenantId, query, cancellationToken);
+            return items
                 .OrderBy(x => x.DueDate)
                 .Select(x => new OutstandingInvoiceRowDto
                 {
                     InvoiceNumber = x.InvoiceNumber,
                     InvoiceDate = x.InvoiceDate,
                     DueDate = x.DueDate,
-                    CareHomeName = x.SnapshotCareHomeName,
-                    Amount = x.TotalAmount,
+                    CareHomeName = x.CareHomeName,
+                    Amount = x.OutstandingAmount,
                     PaymentStatus = x.PaymentStatus,
-                    IsDue = x.DueDate < DateOnly.FromDateTime(DateTime.UtcNow.Date)
+                    IsDue = x.DaysOverdue > 0
                 })
-                .ToListAsync(cancellationToken);
+                .ToList();
         }
 
         public byte[] ToCsv<T>(IEnumerable<T> rows)
@@ -273,7 +278,6 @@ namespace CareHome.Api.Services
 
         public byte[] ToPdf(string title, IEnumerable<string> lines)
         {
-            QuestPDF.Settings.License = LicenseType.Community;
             return Document.Create(container =>
             {
                 container.Page(page =>

@@ -1,0 +1,197 @@
+<app-page-header title="Banking" subtitle="Import statements and reconcile receipts to invoices" />
+
+@if (errorMessage()) {
+  <app-api-error [message]="errorMessage()!" />
+}
+
+<mat-tab-group [(selectedIndex)]="tabIndex">
+  <mat-tab label="Accounts" />
+  <mat-tab label="Import statement" />
+  <mat-tab label="Reconciliation" />
+</mat-tab-group>
+
+@if (tabIndex === 0) {
+  <section class="panel panel--flat mt-4">
+    <button mat-flat-button color="primary" type="button" (click)="createAccount()">Add bank account</button>
+    <ul class="mt-3">
+      @for (acct of accounts(); track acct.publicId) {
+        <li>{{ acct.name }} ({{ acct.currency }})</li>
+      }
+    </ul>
+  </section>
+}
+
+@if (tabIndex === 1) {
+  <section class="panel panel--flat mt-4">
+    <mat-form-field appearance="outline">
+      <mat-label>Bank account</mat-label>
+      <mat-select [(ngModel)]="selectedAccountId" (selectionChange)="loadMappingTemplates()">
+        @for (acct of accounts(); track acct.publicId) {
+          <mat-option [value]="acct.publicId">{{ acct.name }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+    @if (mappingTemplates().length > 0) {
+      <div class="mt-2">
+        <span class="text-sm">Templates:</span>
+        @for (t of mappingTemplates(); track t.publicId) {
+          <button mat-button type="button" (click)="applyTemplate(t)">{{ t.name }}</button>
+        }
+      </div>
+    }
+    @if (preview(); as p) {
+      <div class="grid gap-2 mt-3" style="grid-template-columns: repeat(auto-fill, minmax(160px, 1fr))">
+        @for (field of ['date', 'valueDate', 'amount', 'debit', 'credit', 'reference', 'description', 'counterparty', 'externalId']; track field) {
+          <mat-form-field appearance="outline">
+            <mat-label>{{ field }}</mat-label>
+            <mat-select [(ngModel)]="columnMapping[field]">
+              <mat-option [value]="undefined">—</mat-option>
+              @for (h of p.headers; track h) {
+                <mat-option [value]="h">{{ h }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+      </div>
+      <button mat-button type="button" (click)="saveMappingTemplate()">Save mapping template</button>
+    }
+    <div class="mt-2">
+      <input type="file" accept=".csv,text/csv" (change)="onFileSelected($event)" />
+    </div>
+    @if (importLoading()) {
+      <app-loading-state label="Processing file..." />
+    }
+    @if (preview(); as p) {
+      <p class="mt-3">
+        Valid: {{ p.validCount }} · Invalid: {{ p.invalidCount }} · Duplicates: {{ p.duplicateCount }}
+        @if (p.fileAlreadyImported) {
+          <strong> — File already imported</strong>
+        }
+      </p>
+      <button
+        mat-flat-button
+        color="primary"
+        type="button"
+        (click)="commitImport()"
+        [disabled]="p.fileAlreadyImported || p.validCount === 0"
+      >
+        Import valid rows
+      </button>
+    }
+  </section>
+}
+
+@if (tabIndex === 2) {
+  @if (workspaceLoading()) {
+    <app-loading-state label="Loading reconciliation..." />
+  } @else if (workspace(); as w) {
+    <section class="panel panel--flat mt-4">
+      <p class="m-0">
+        Unreconciled {{ w.unreconciled }} · Suggested {{ w.suggested }} · High confidence
+        {{ w.highConfidence }} · Needs review {{ w.needsReview }}
+      </p>
+    </section>
+    @if (editorTxn(); as edit) {
+      <section class="panel panel--flat mt-4">
+        <h3 class="mt-0">Manual reconciliation — £{{ edit.amount | number: '1.2-2' }}</h3>
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Search invoices</mat-label>
+          <input matInput [(ngModel)]="invoiceSearch" (keyup.enter)="searchInvoices()" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Funder ID (optional)</mat-label>
+          <input matInput type="number" [(ngModel)]="searchFundingAuthorityId" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Care home ID (optional)</mat-label>
+          <input matInput type="number" [(ngModel)]="searchCareHomeId" />
+        </mat-form-field>
+        <button mat-flat-button type="button" (click)="searchInvoices()">Search</button>
+        <div class="table-wrap mt-3">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Invoice</th>
+                <th>Outstanding</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (inv of invoiceResults(); track inv.invoicePublicId) {
+                <tr>
+                  <td>{{ inv.invoiceNumber }} — {{ inv.funderName }}</td>
+                  <td>£{{ inv.outstandingAmount | number: '1.2-2' }}</td>
+                  <td><button mat-button type="button" (click)="addAllocation(inv)">Add</button></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <h4>Allocations ({{ allocationTotal() | number: '1.2-2' }} / {{ edit.amount | number: '1.2-2' }})</h4>
+        <ul>
+          @for (a of manualAllocations(); track a.invoicePublicId) {
+            <li>
+              {{ a.invoiceNumber }} — £{{ a.amount | number: '1.2-2' }}
+              <button mat-button type="button" (click)="removeAllocation(a.invoicePublicId)">Remove</button>
+            </li>
+          }
+        </ul>
+        <button mat-flat-button color="primary" type="button" (click)="confirmManual()">Confirm allocations</button>
+        <button mat-button type="button" (click)="closeManualEditor()">Cancel</button>
+      </section>
+    }
+    <div class="table-wrap mt-4">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Reference</th>
+            <th>Suggestion</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (txn of w.transactions; track txn.publicId) {
+            <tr>
+              <td>{{ txn.transactionDate | displayDate }}</td>
+              <td>£{{ txn.amount | number: '1.2-2' }}</td>
+              <td>{{ txn.reference || txn.description || '—' }}</td>
+              <td>
+                @if (txn.topSuggestion; as s) {
+                  <div>
+                    Score {{ s.totalScore }} ({{ s.confidenceBand }})
+                    @for (line of s.lines; track line.invoicePublicId) {
+                      <div class="text-sm">{{ line.invoiceNumber }} £{{ line.suggestedAmount | number: '1.2-2' }}</div>
+                    }
+                    <button mat-button type="button" (click)="toggleExplain(txn.publicId)">Why?</button>
+                    @if (expandedTxn() === txn.publicId) {
+                      <ul class="text-sm">
+                        @for (f of s.factors; track f.label) {
+                          <li>{{ f.label }} — {{ f.detail }} (+{{ f.points }})</li>
+                        }
+                      </ul>
+                    }
+                  </div>
+                } @else {
+                  —
+                }
+              </td>
+              <td>
+                @if (txn.topSuggestion) {
+                  <button mat-flat-button color="primary" type="button" (click)="confirmMatch(txn)">Confirm</button>
+                }
+                <button mat-button type="button" (click)="openManualEditor(txn)">Manual match</button>
+                <button mat-button type="button" (click)="createUnapplied(txn)">Unapplied cash</button>
+                <button mat-button type="button" (click)="ignore(txn)">Ignore</button>
+                @if (txn.status === 'Reconciled') {
+                  <button mat-button type="button" (click)="reverseReconciliation(txn)">Reverse</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}

@@ -7,10 +7,8 @@ export interface AppThemeOption {
   label: string;
 }
 
-const STORAGE_KEY = 'care-home-ui-theme';
-
 export const APP_THEME_OPTIONS: AppThemeOption[] = [
-  { id: 'green', label: 'Green (default)' },
+  { id: 'green', label: 'Green' },
   { id: 'blue', label: 'Blue' },
   { id: 'teal', label: 'Teal' },
   { id: 'purple', label: 'Purple' },
@@ -24,18 +22,21 @@ export class ThemeService {
   readonly activeTheme = signal<AppThemeId>('green');
 
   init(): void {
-    if (typeof document === 'undefined') {
-      return;
-    }
-    const stored = localStorage.getItem(STORAGE_KEY) as AppThemeId | null;
-    const theme =
-      stored && APP_THEME_OPTIONS.some((option) => option.id === stored) ? stored : 'green';
-    this.apply(theme);
+    this.applyDefaultAccent();
+  }
+
+  applyDefaultAccent(): void {
+    this.apply('green');
   }
 
   apply(themeId: AppThemeId): void {
+    if (typeof document === 'undefined') {
+      return;
+    }
+    if (!APP_THEME_OPTIONS.some((option) => option.id === themeId)) {
+      themeId = 'green';
+    }
     document.documentElement.setAttribute('data-app-theme', themeId);
-    localStorage.setItem(STORAGE_KEY, themeId);
     this.activeTheme.set(themeId);
   }
 }

@@ -8,8 +8,17 @@
   @if (isLoading()) {
     <app-loading-state label="Loading nominal codes..." />
   }
-  @if (!isLoading()) {
-    <div class="table-container panel panel--flat">
+  @if (!isLoading() && nominalCodes().length) {
+    <div class="table-shell">
+      <app-filter-bar [toolbar]="true">
+        <p class="m-0 text-sm text-[var(--app-text-muted)]">Ledger codes for invoices and Sage export.</p>
+        <div filterActions>
+          @if (auth.canWrite()) {
+            <a mat-flat-button color="primary" routerLink="/nominal-codes/new">Add nominal code</a>
+          }
+        </div>
+      </app-filter-bar>
+      <div class="table-container">
       <table class="data-table">
         <thead>
           <tr>
@@ -45,13 +54,21 @@
                 }
               </td>
             </tr>
-          } @empty {
-            <tr>
-              <td colspan="4">No nominal codes found.</td>
-            </tr>
           }
         </tbody>
       </table>
+      </div>
     </div>
+  }
+
+  @if (!isLoading() && nominalCodes().length === 0) {
+    <app-empty-state
+      title="No nominal codes yet"
+      message="Add nominal codes before linking funding contracts and Sage export."
+    >
+      @if (auth.canWrite()) {
+        <a mat-flat-button color="primary" routerLink="/nominal-codes/new">Add nominal code</a>
+      }
+    </app-empty-state>
   }
 </div>

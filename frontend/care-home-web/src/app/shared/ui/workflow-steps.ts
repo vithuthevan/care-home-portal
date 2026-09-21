@@ -48,7 +48,7 @@ export interface WorkflowStep {
       align-items: flex-start;
       gap: 0.65rem;
       padding: 0.65rem 0.75rem;
-      border-radius: 12px;
+      border-radius: var(--app-radius);
       border: 1px solid var(--app-border);
       background: #fff;
       color: var(--app-text-muted);

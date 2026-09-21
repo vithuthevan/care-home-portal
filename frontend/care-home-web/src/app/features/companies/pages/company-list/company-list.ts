@@ -16,10 +16,12 @@ import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatIconModule } from '@angular/material/icon';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
+import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 @Component({
   selector: 'app-company-list',
@@ -29,6 +31,7 @@ import { TablePaginationComponent } from '../../../../shared/ui/table-pagination
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
+    MatIconModule,
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
@@ -41,6 +44,7 @@ import { TablePaginationComponent } from '../../../../shared/ui/table-pagination
   templateUrl: './company-list.html',
 })
 export class CompanyList implements OnInit {
+  readonly entityRouteKey = entityRouteKey;
   private readonly companyService = inject(CompanyService);
   private readonly confirm = inject(ConfirmDialogService);
   private readonly toast = inject(ToastService);
@@ -52,10 +56,19 @@ export class CompanyList implements OnInit {
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   page = 1;
-  pageSize = 50;
+  pageSize = 20;
+  private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
     this.loadCompanies();
+  }
+
+  onSearchChange(value: string): void {
+    this.searchText.set(value);
+    if (this.searchTimer) {
+      clearTimeout(this.searchTimer);
+    }
+    this.searchTimer = setTimeout(() => this.applySearch(), 300);
   }
 
   applySearch(): void {
@@ -103,7 +116,7 @@ export class CompanyList implements OnInit {
         if (!ok) {
           return;
         }
-        this.companyService.deactivateCompany(company.id).subscribe({
+        this.companyService.deactivateCompany(entityRouteKey(company)).subscribe({
           next: () => {
             this.toast.success('Company deactivated successfully.');
             this.loadCompanies();

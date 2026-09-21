@@ -1,14 +1,22 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using CareHome.Api.Audit;
-using CareHome.Api.Billing;
+using CareHome.Api.Billing.DependencyInjection;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Documents;
 using CareHome.Api.Email;
 using CareHome.Api.Export;
+using CareHome.Api.Funding.DependencyInjection;
+using CareHome.Api.Payments.DependencyInjection;
+using CareHome.Api.Reconciliation.DependencyInjection;
+using CareHome.Api.Remittance.DependencyInjection;
+using CareHome.Api.RevenueAssurance.DependencyInjection;
+using CareHome.Api.Receivables.DependencyInjection;
 using CareHome.Api.Security;
+using CareHome.Api.Security.Authorization;
 using CareHome.Api.Services;
+using CareHome.Api.Telemetry;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -23,7 +31,11 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+QuestPdfLicenseConfigurator.Configure(builder.Configuration);
+
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddCareHomeTelemetry(builder.Configuration, builder.Environment);
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddProblemDetails();
 
@@ -130,7 +142,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddCareHomeAuthorizationPolicies();
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -176,14 +188,25 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
 builder.Services.AddScoped<AuditService>();
+builder.Services.AddScoped<IAuditWriter>(sp => sp.GetRequiredService<AuditService>());
 builder.Services.AddScoped<UserAccessService>();
+builder.Services.AddScoped<ICareHomeAccessScope>(sp => sp.GetRequiredService<UserAccessService>());
 builder.Services.AddScoped<TenantProvisioningService>();
 builder.Services.AddScoped<DocumentSequenceService>();
+builder.Services.AddScoped<IDocumentSequence>(sp => sp.GetRequiredService<DocumentSequenceService>());
 builder.Services.AddScoped<ClientIdentifierService>();
-builder.Services.AddScoped<RateCalculator>();
-builder.Services.AddScoped<InvoiceTemplateResolver>();
-builder.Services.AddScoped<BillingService>();
-builder.Services.AddScoped<CreditNoteService>();
+builder.Services.AddCareHomeFunding();
+builder.Services.AddCareHomeBilling();
+builder.Services.AddCareHomeReceivables();
+builder.Services.AddCareHomePayments();
+builder.Services.AddCareHomeReconciliation();
+builder.Services.AddCareHomeRemittance();
+builder.Services.AddCareHomeRevenueAssurance();
+builder.Services.AddScoped<DisputeWorkflowService>();
+builder.Services.AddScoped<ContractRenewalWorkflowService>();
+builder.Services.AddScoped<CollectionsWorkflowService>();
+builder.Services.AddScoped<FinanceAttentionService>();
+builder.Services.AddScoped<InvoiceReceivableReadModel>();
 builder.Services.AddScoped<InvoicePdfService>();
 builder.Services.AddScoped<IDocumentStore, LocalDocumentStore>();
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));

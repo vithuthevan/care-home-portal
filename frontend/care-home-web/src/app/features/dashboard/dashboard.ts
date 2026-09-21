@@ -12,6 +12,7 @@ import { PageHeaderComponent } from '../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../shared/ui/loading-state';
 import { StatusBadgeComponent } from '../../shared/ui/status-badge';
+import { KpiCardComponent } from '../../shared/ui/kpi-card';
 
 interface DashboardDto {
   totalCareHomes: number;
@@ -56,6 +57,7 @@ interface DashboardDto {
     ApiErrorComponent,
     LoadingStateComponent,
     StatusBadgeComponent,
+    KpiCardComponent,
   ],
   templateUrl: './dashboard.html',
 })

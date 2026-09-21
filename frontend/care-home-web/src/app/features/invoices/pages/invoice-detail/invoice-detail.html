@@ -15,7 +15,19 @@
 
   @if (invoice(); as inv) {
     <app-page-header [title]="inv.invoiceNumber" [subtitle]="invoiceSubtitle(inv)">
-      <a mat-stroked-button routerLink="/invoices">Back</a>
+      <button
+        mat-flat-button
+        color="primary"
+        type="button"
+        (click)="pdf()"
+        [disabled]="isPdfLoading()"
+      >
+        @if (isPdfLoading()) {
+          Preparing PDF...
+        } @else {
+          Download PDF
+        }
+      </button>
     </app-page-header>
 
     <section class="panel invoice-hero">
@@ -30,6 +42,11 @@
             } @else {
               {{ inv.lines[0].clientName }}
             }
+            @if (inv.lines[0].clientReference) {
+              <span class="text-base font-normal text-[var(--app-text-muted)]">
+                · {{ inv.lines[0].clientReference }}
+              </span>
+            }
           </p>
           <p class="mt-1 mb-0 text-sm text-[var(--app-text-muted)]">
             {{ inv.periodStart | displayDate }} – {{ inv.periodEnd | displayDate }}
@@ -37,7 +54,6 @@
         }
       </div>
       <div class="invoice-hero__amount">
-        <p class="m-0 text-supporting">Total</p>
         <p class="m-0 amount-hero">£{{ inv.totalAmount | number: '1.2-2' }}</p>
       </div>
     </section>
@@ -45,76 +61,67 @@
     <div class="panel panel--flat mb-4 payment-status-panel">
       <div class="payment-status-panel__row">
         <div>
-          <p class="m-0 text-supporting">Payment status</p>
-          <app-labeled-status kind="Payment" [value]="inv.paymentStatus" />
+          <p class="m-0 text-supporting">Collection status</p>
+          <app-labeled-status kind="Payment" [value]="inv.collectionStatus || inv.paymentStatus" />
+          @if (inv.outstandingAmount !== undefined) {
+            <p class="m-0 text-supporting mt-2">
+              Outstanding: £{{ inv.outstandingAmount | number: '1.2-2' }} · Paid:
+              £{{ inv.paidAmount | number: '1.2-2' }}
+            </p>
+          }
         </div>
-        @if (auth.canWrite()) {
-          <div class="payment-status-panel__actions">
-            @if (inv.paymentStatus !== 'Paid') {
-              <button
-                mat-flat-button
-                color="primary"
-                type="button"
-                (click)="confirmPay('Paid')"
-                [disabled]="isPaying()"
-              >
-                @if (isPaying()) {
-                  Updating...
-                } @else {
-                  Mark as paid
-                }
-              </button>
-            }
-            @if (inv.paymentStatus !== 'NotPaid') {
-              <button
-                mat-stroked-button
-                type="button"
-                (click)="confirmPay('NotPaid')"
-                [disabled]="isPaying()"
-              >
-                Mark as unpaid
-              </button>
-            }
-          </div>
-        }
+        <div class="payment-status-panel__actions">
+          <a mat-flat-button color="primary" routerLink="/payments">Record payment &amp; allocate</a>
+          @if (showLegacyPaymentStatusActions()) {
+            <button
+              mat-stroked-button
+              type="button"
+              (click)="confirmPay('Paid')"
+              [disabled]="isPaying()"
+            >
+              Legacy: mark as paid
+            </button>
+          }
+        </div>
       </div>
     </div>
 
-    <div class="panel panel--flat mb-4 actions-bar actions-bar--primary-first actions-bar--invoice">
-      <button
-        mat-flat-button
-        color="primary"
-        type="button"
-        (click)="pdf()"
-        [disabled]="isPdfLoading()"
-      >
-        @if (isPdfLoading()) {
-          Preparing PDF...
-        } @else {
-          <span class="inline-flex items-center gap-1">
-            <mat-icon class="align-middle">download</mat-icon>
-            Download PDF
-          </span>
-        }
-      </button>
+    <div class="panel panel--flat mb-4 actions-bar actions-bar--invoice">
       @if (auth.canWrite()) {
-        <button mat-stroked-button type="button" (click)="send()" [disabled]="isSending()">
-          @if (isSending()) {
-            Sending...
-          } @else {
-            <span class="inline-flex items-center gap-1">
-              <mat-icon class="align-middle">mail</mat-icon>
-              Email
-            </span>
-          }
+        <button
+          mat-icon-button
+          type="button"
+          (click)="send()"
+          [disabled]="isSending()"
+          aria-label="Send invoice email"
+          matTooltip="Send invoice email"
+        >
+          <mat-icon>mail</mat-icon>
         </button>
-        <a mat-stroked-button routerLink="/credit-notes" [queryParams]="creditNoteQueryParams(inv)">
-          <mat-icon class="mr-1 align-middle">undo</mat-icon>
-          Credit note
+        <a
+          mat-icon-button
+          routerLink="/credit-notes"
+          [queryParams]="creditNoteQueryParams(inv)"
+          aria-label="Create credit note"
+          matTooltip="Create credit note"
+        >
+          <mat-icon>undo</mat-icon>
         </a>
-        <button mat-stroked-button color="warn" type="button" class="btn-void" (click)="voidInvoice()">
-          Void invoice
+        <button
+          mat-icon-button
+          type="button"
+          [matMenuTriggerFor]="invoiceMore"
+          aria-label="More invoice actions"
+          matTooltip="More"
+        >
+          <mat-icon>more_vert</mat-icon>
         </button>
+        <mat-menu #invoiceMore="matMenu">
+          <button mat-menu-item type="button" (click)="voidInvoice()">
+            <mat-icon>block</mat-icon>
+            <span>Void invoice</span>
+          </button>
+        </mat-menu>
       }
     </div>
     <p class="mb-4 text-sm text-[var(--app-text-muted)]">

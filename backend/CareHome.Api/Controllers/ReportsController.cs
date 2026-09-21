@@ -1,4 +1,6 @@
 using CareHome.Api.Security;
+using CareHome.Api.Security.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using CareHome.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +9,7 @@ namespace CareHome.Api.Controllers
     [ApiController]
     [Route("api/reports")]
     [RequireTenant]
+    [Authorize(Policy = CareHomePolicies.CanViewFinancialReports)]
     public class ReportsController(ReportService reports, ITenantContext tenantContext) : ControllerBase
     {
         [HttpGet("client-census")]

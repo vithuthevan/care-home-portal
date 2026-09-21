@@ -1,5 +1,6 @@
 export interface CareHomeLocation {
   id: number;
+  publicId?: string;
   companyId: number;
   companyName: string;
 
@@ -17,6 +18,7 @@ export interface CareHomeLocation {
   managerEmail: string | null;
 
   isActive: boolean;
+  portalAccentTheme?: string | null;
 }
 
 export interface CreateCareHomeRequest {

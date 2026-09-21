@@ -9,7 +9,18 @@
   </app-page-header>
   <app-api-error [message]="errorMessage()" />
 
-  <div class="table-container panel panel--flat">
+  <div class="table-shell">
+    <app-filter-bar [toolbar]="true">
+      <p class="m-0 text-sm text-[var(--app-text-muted)]">
+        Most specific template wins at invoice generation.
+      </p>
+      <div filterActions>
+        @if (auth.canWrite()) {
+          <a mat-flat-button color="primary" routerLink="/invoice-templates/new">Add template</a>
+        }
+      </div>
+    </app-filter-bar>
+    <div class="table-container">
     <table class="data-table">
       <thead>
         <tr>
@@ -32,5 +43,6 @@
         }
       </tbody>
     </table>
+    </div>
   </div>
 </div>

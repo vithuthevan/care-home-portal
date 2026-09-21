@@ -29,7 +29,7 @@ export class CompanyService {
     return this.http.get<PagedResult<Company>>(this.apiUrl, { params });
   }
 
-  getCompany(id: number): Observable<Company> {
+  getCompany(id: number | string): Observable<Company> {
     return this.http.get<Company>(`${this.apiUrl}/${id}`);
   }
 
@@ -37,11 +37,11 @@ export class CompanyService {
     return this.http.post<Company>(this.apiUrl, request);
   }
 
-  updateCompany(id: number, request: UpdateCompanyRequest): Observable<Company> {
+  updateCompany(id: number | string, request: UpdateCompanyRequest): Observable<Company> {
     return this.http.put<Company>(`${this.apiUrl}/${id}`, request);
   }
 
-  deactivateCompany(id: number): Observable<void> {
+  deactivateCompany(id: number | string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 }

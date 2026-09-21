@@ -13,6 +13,8 @@ import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
+import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
+import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 
 @Component({
   selector: 'app-invoice-category-list',
@@ -24,6 +26,8 @@ import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-but
     LoadingStateComponent,
     StatusBadgeComponent,
     IconActionButtonComponent,
+    FilterBarComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './invoice-category-list.html',
 })

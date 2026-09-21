@@ -4,6 +4,8 @@ namespace CareHome.Api.Dtos.Companies
     {
         public int Id { get; set; }
 
+        public Guid PublicId { get; set; }
+
         public string Name { get; set; } = string.Empty;
 
         public bool IsActive { get; set; }

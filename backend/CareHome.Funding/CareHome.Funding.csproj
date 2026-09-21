@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>CareHome.Api</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Using Include="CareHome.Api.Common" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CareHome.Abstractions\CareHome.Abstractions.csproj" />
+    <ProjectReference Include="..\CareHome.Data\CareHome.Data.csproj" />
+  </ItemGroup>
+
+</Project>

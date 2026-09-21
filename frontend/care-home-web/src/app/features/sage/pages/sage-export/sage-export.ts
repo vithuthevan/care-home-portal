@@ -37,7 +37,7 @@ export class SageExportPage implements OnInit {
   readonly totalCount = signal(0);
   readonly errorMessage = signal<string | null>(null);
   page = 1;
-  pageSize = 50;
+  pageSize = 20;
 
   ngOnInit(): void {
     this.loadBatches();

@@ -8,6 +8,7 @@ import { AuthService } from '../../../../core/auth.service';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
+import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 
 @Component({
   selector: 'app-invoice-template-list',
@@ -17,6 +18,7 @@ import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
     PageHeaderComponent,
     ApiErrorComponent,
     StatusBadgeComponent,
+    FilterBarComponent,
   ],
   templateUrl: './invoice-template-list.html',
 })

@@ -91,7 +91,7 @@
   @if (!preview() && !isWorking()) {
     <app-empty-state
       title="Select scope and preview billing"
-      message="Choose your billing scope and period, then select Preview billing to see eligible residents, charges, and anything that needs attention before invoices are generated."
+      message="Choose a company, care home and billing period, then preview billing to see eligible residents."
     />
   }
 
@@ -104,6 +104,27 @@
   }
 
   @if (preview(); as previewData) {
+    <section class="billing-preview-hero panel mb-4" aria-live="polite">
+      <div class="billing-preview-hero__copy">
+        <p class="billing-preview-hero__title">{{ billingPeriodHeading() }}</p>
+        <p class="billing-preview-hero__scope">
+          {{ selectedScopeLabel() }}
+          · {{ previewEligibleResidents(previewData) }} eligible residents
+        </p>
+        @if (previewAttentionCount(previewData) > 0) {
+          <p class="billing-preview-hero__exceptions">
+            {{ previewAttentionCount(previewData) }} exception(s) before you can generate
+          </p>
+        } @else if (previewData.canGenerate) {
+          <p class="billing-preview-hero__ready">Ready to generate after review</p>
+        }
+      </div>
+      <div class="billing-preview-hero__total">
+        <span class="billing-preview-hero__total-label">Preview total</span>
+        <span class="amount-hero">£{{ previewData.totalAmount | number: '1.2-2' }}</span>
+      </div>
+    </section>
+
     @if (previewData.canGenerate) {
       <div class="alert-banner alert-banner--success">Ready to generate — review the lines below.</div>
     } @else {

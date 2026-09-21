@@ -8,11 +8,10 @@
   @if (client(); as client) {
     <app-page-header
       [title]="client.firstName + ' ' + client.lastName"
-      [subtitle]="client.referenceNumber + ' · ' + client.sageId"
+      [subtitle]="client.referenceNumber + ' · ' + client.careHomeName"
     >
-      <a mat-stroked-button routerLink="/clients">Back to residents</a>
       @if (auth.canWrite()) {
-        <a mat-stroked-button [routerLink]="['/clients', client.id, 'edit']">Edit details</a>
+        <a mat-stroked-button [routerLink]="['/clients', entityRouteKey(client), 'edit']">Edit</a>
         <a
           mat-flat-button
           color="primary"
@@ -22,6 +21,8 @@
         >
       }
     </app-page-header>
+
+    <app-entity-summary-strip [items]="summaryStrip()" />
 
     <div class="profile-hero">
       <section class="panel profile-summary">
@@ -437,7 +438,10 @@
                           <app-labeled-status kind="Invoice" [value]="invoice.status" />
                         </td>
                         <td>
-                          <app-labeled-status kind="Payment" [value]="invoice.paymentStatus" />
+                          <app-labeled-status
+                            kind="Payment"
+                            [value]="invoice.collectionStatus || invoice.paymentStatus"
+                          />
                         </td>
                       </tr>
                     }

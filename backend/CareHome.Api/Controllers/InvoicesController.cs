@@ -7,6 +7,7 @@ using CareHome.Api.Dtos.Invoices;
 using CareHome.Api.Email;
 using CareHome.Api.Models;
 using CareHome.Api.Security;
+using CareHome.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,7 +22,8 @@ namespace CareHome.Api.Controllers
         IEmailSender email,
         AuditService audit,
         UserAccessService userAccess,
-        ITenantContext tenantContext) : ControllerBase
+        ITenantContext tenantContext,
+        InvoiceReceivableReadModel receivableReadModel) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<PagedResult<InvoiceListDto>>> List(
@@ -105,6 +107,7 @@ namespace CareHome.Api.Controllers
                 .Select(x => new InvoiceListDto
                 {
                     Id = x.Id,
+                    PublicId = x.PublicId,
                     InvoiceNumber = x.InvoiceNumber,
                     CompanyName = x.SnapshotCompanyName,
                     CareHomeName = x.SnapshotCareHomeName,
@@ -121,6 +124,8 @@ namespace CareHome.Api.Controllers
                 })
                 .ToListAsync();
 
+            await receivableReadModel.EnrichListAsync(tenantContext.TenantId, items, HttpContext.RequestAborted);
+
             return Ok(new PagedResult<InvoiceListDto>
             {
                 Items = items,
@@ -130,15 +135,22 @@ namespace CareHome.Api.Controllers
             });
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<InvoiceDetailDto>> Get(int id)
+        [HttpGet("{key}")]
+        public async Task<ActionResult<InvoiceDetailDto>> Get(string key)
         {
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
+            {
+                return NotFound();
+            }
+
             var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
             var invoice = await dbContext.Invoices.AsNoTracking()
-                .Where(x => x.Id == id && x.TenantId == tenantContext.TenantId)
+                .Where(x => x.TenantId == tenantContext.TenantId)
+                .Where(x => publicId != default ? x.PublicId == publicId : x.Id == id)
                 .Select(x => new InvoiceDetailDto
                 {
                     Id = x.Id,
+                    PublicId = x.PublicId,
                     InvoiceNumber = x.InvoiceNumber,
                     CompanyId = x.CompanyId,
                     CareHomeId = x.CareHomeId,
@@ -186,6 +198,8 @@ namespace CareHome.Api.Controllers
             {
                 return NotFound();
             }
+
+            await receivableReadModel.EnrichDetailAsync(tenantContext.TenantId, invoice, HttpContext.RequestAborted);
 
             return Ok(invoice);
         }

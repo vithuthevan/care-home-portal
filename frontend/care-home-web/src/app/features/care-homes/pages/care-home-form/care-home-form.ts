@@ -23,6 +23,7 @@ import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 @Component({
   selector: 'app-care-home-form',
@@ -56,7 +57,7 @@ export class CareHomeForm implements OnInit {
   readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
 
-  careHomeId: number | null = null;
+  careHomeRouteKey: string | null = null;
 
   readonly companies = signal<Company[]>([]);
 
@@ -103,10 +104,10 @@ export class CareHomeForm implements OnInit {
   ngOnInit(): void {
     this.loadCompanies();
 
-    const id = this.route.snapshot.paramMap.get('id');
+    const key = this.route.snapshot.paramMap.get('id');
 
-    if (id) {
-      this.careHomeId = Number(id);
+    if (key) {
+      this.careHomeRouteKey = key;
 
       this.isEditMode = true;
 
@@ -129,7 +130,7 @@ export class CareHomeForm implements OnInit {
   }
 
   private loadCareHome(): void {
-    if (this.careHomeId === null) {
+    if (this.careHomeRouteKey === null) {
       return;
     }
 
@@ -137,7 +138,7 @@ export class CareHomeForm implements OnInit {
     this.errorMessage.set(null);
 
     this.careHomeService
-      .getCareHome(this.careHomeId)
+      .getCareHome(this.careHomeRouteKey)
       .pipe(
         finalize(() => {
           this.isLoading.set(false);
@@ -215,9 +216,9 @@ export class CareHomeForm implements OnInit {
       managerEmail: value.managerEmail,
     };
 
-    if (this.isEditMode && this.careHomeId !== null) {
+    if (this.isEditMode && this.careHomeRouteKey !== null) {
       this.careHomeService
-        .updateCareHome(this.careHomeId, {
+        .updateCareHome(this.careHomeRouteKey, {
           ...request,
           isActive: value.isActive,
         })
@@ -252,7 +253,7 @@ export class CareHomeForm implements OnInit {
       .subscribe({
         next: (careHome) => {
           this.toast.success('Care home created successfully.');
-          void this.router.navigate(['/care-homes', careHome.id, 'dashboard']);
+          void this.router.navigate(['/care-homes', entityRouteKey(careHome), 'dashboard']);
         },
 
         error: (error) => {

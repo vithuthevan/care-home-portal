@@ -5,24 +5,6 @@
     }
   </app-page-header>
 
-  <app-filter-bar>
-    <div class="filter-bar__fields filter-bar__fields--2">
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Search</mat-label>
-        <input
-          matInput
-          [ngModel]="searchText()"
-          (ngModelChange)="searchText.set($event)"
-          (keyup.enter)="applySearch()"
-          placeholder="Company name"
-        />
-      </mat-form-field>
-    </div>
-    <div filterActions>
-      <button mat-flat-button color="primary" type="button" (click)="applySearch()">Search</button>
-    </div>
-  </app-filter-bar>
-
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
@@ -48,7 +30,26 @@
   }
 
   @if (!isLoading() && companies().length) {
-    <div class="table-container panel panel--flat list-view-table--from-md">
+    <div class="table-shell list-view-table--from-md">
+    <app-filter-bar [toolbar]="true">
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-icon matPrefix>search</mat-icon>
+        <mat-label>Search companies</mat-label>
+        <input
+          matInput
+          [ngModel]="searchText()"
+          (ngModelChange)="onSearchChange($event)"
+          (keyup.enter)="applySearch()"
+          placeholder="Search companies..."
+        />
+      </mat-form-field>
+      <div filterActions>
+        @if (auth.canWrite()) {
+          <a mat-flat-button color="primary" routerLink="/companies/new">Add company</a>
+        }
+      </div>
+    </app-filter-bar>
+    <div class="table-container">
       <table class="data-table data-table--responsive-hide-sm">
         <thead>
           <tr>
@@ -63,7 +64,7 @@
               <td class="font-medium">
                 <a
                   class="font-medium"
-                  [routerLink]="['/companies', company.id]"
+                  [routerLink]="['/companies', entityRouteKey(company)]"
                   >{{ company.name }}</a
                 >
               </td>
@@ -80,7 +81,7 @@
                     <app-icon-action
                       icon="edit"
                       ariaLabel="Edit company"
-                      [routerLink]="['/companies', company.id, 'edit']"
+                      [routerLink]="['/companies', entityRouteKey(company), 'edit']"
                     />
                     @if (company.isActive) {
                       <app-icon-action
@@ -98,11 +99,12 @@
         </tbody>
       </table>
     </div>
+    </div>
 
     <div class="mobile-card-list mobile-card-list--breakpoint-md">
       @for (company of companies(); track company.id) {
         <article class="mobile-data-card" [class.inactive-row]="!company.isActive">
-          <a class="text-lg font-semibold no-underline" [routerLink]="['/companies', company.id]">{{
+          <a class="text-lg font-semibold no-underline" [routerLink]="['/companies', entityRouteKey(company)]">{{
             company.name
           }}</a>
           <div class="mt-2">
@@ -120,7 +122,7 @@
                 <app-icon-action
                   icon="edit"
                   ariaLabel="Edit company"
-                  [routerLink]="['/companies', company.id, 'edit']"
+                  [routerLink]="['/companies', entityRouteKey(company), 'edit']"
                 />
               }
             </span>

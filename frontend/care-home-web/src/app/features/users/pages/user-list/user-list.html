@@ -1,7 +1,7 @@
 <div class="page">
   <app-page-header
     title="Users"
-    subtitle="Roles are enforced in the API, not only by hiding buttons."
+    subtitle="Manage who can access this organisation. Roles are enforced in the API."
   >
     @if (auth.canWrite()) {
       <a mat-flat-button color="primary" routerLink="/users/new">Add user</a>
@@ -10,67 +10,92 @@
 
   <app-api-error [message]="errorMessage()" />
 
-  <div class="table-container panel panel--flat list-view-table--from-md">
-    <table class="data-table data-table--responsive-hide-sm">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Email</th>
-          <th>Role</th>
-          <th class="col-hide-sm">Assigned Homes</th>
-          <th class="col-status">Status</th>
-          <th class="col-actions">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (user of users(); track user.id) {
-          <tr [class.inactive-row]="!user.isActive">
-            <td class="font-medium">{{ user.displayName }}</td>
-            <td>{{ user.email }}</td>
-            <td>
-              @for (role of user.roles; track role) {
-                <app-status-badge [value]="role" />
-              }
-            </td>
-            <td class="col-hide-sm">{{ homeNames(user.careHomeIds) }}</td>
-            <td class="col-status"><app-status-badge [value]="user.isActive ? 'Active' : 'Inactive'" /></td>
-            <td class="actions-cell col-actions">
-              @if (auth.canWrite() && user.isActive) {
-                <app-icon-action
-                  icon="block"
-                  ariaLabel="Deactivate user"
-                  [warn]="true"
-                  (action)="deactivate(user.id)"
-                />
-              }
-            </td>
-          </tr>
-        }
-      </tbody>
-    </table>
-  </div>
-
-  <div class="mobile-card-list mobile-card-list--breakpoint-md">
-    @for (user of users(); track user.id) {
-      <div class="entity-card" [class.inactive-row]="!user.isActive">
-        <div class="font-semibold">{{ user.displayName }}</div>
-        <div class="text-sm text-[var(--app-text-muted)]">{{ user.email }}</div>
-        <div class="mt-2 flex flex-wrap gap-2">
-          @for (role of user.roles; track role) {
-            <app-status-badge [value]="role" />
+  @if (users().length) {
+    <div class="table-shell list-view-table--from-md">
+      <app-filter-bar [toolbar]="true">
+        <p class="m-0 text-sm text-[var(--app-text-muted)]">
+          {{ totalCount() }} user(s) · deactivate to revoke sign-in access
+        </p>
+        <div filterActions>
+          @if (auth.canWrite()) {
+            <a mat-flat-button color="primary" routerLink="/users/new">Add user</a>
           }
-          <app-status-badge [value]="user.isActive ? 'Active' : 'Inactive'" />
         </div>
-        <div class="mt-2 text-sm">Homes: {{ homeNames(user.careHomeIds) }}</div>
+      </app-filter-bar>
+      <div class="table-container table-container--sticky">
+        <table class="data-table data-table--responsive-hide-sm">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th class="col-hide-sm">Assigned homes</th>
+              <th class="col-status">Status</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (user of users(); track user.id) {
+              <tr [class.inactive-row]="!user.isActive">
+                <td class="font-medium">{{ user.displayName }}</td>
+                <td>{{ user.email }}</td>
+                <td>
+                  @for (role of user.roles; track role) {
+                    <app-status-badge [value]="role" />
+                  }
+                </td>
+                <td class="col-hide-sm">{{ homeNames(user.careHomeIds) }}</td>
+                <td class="col-status">
+                  <app-status-badge [value]="user.isActive ? 'Active' : 'Inactive'" />
+                </td>
+                <td class="actions-cell col-actions">
+                  @if (auth.canWrite() && user.isActive) {
+                    <app-icon-action
+                      icon="block"
+                      ariaLabel="Deactivate user"
+                      [warn]="true"
+                      (action)="deactivate(user.id)"
+                    />
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
       </div>
-    }
-  </div>
+    </div>
 
-  <app-table-pagination
-    [page]="page"
-    [pageSize]="pageSize"
-    [totalCount]="totalCount()"
-    (pageChange)="onPageChange($event)"
-    (pageSizeChange)="onPageSizeChange($event)"
-  />
+    <div class="mobile-card-list mobile-card-list--breakpoint-md">
+      @for (user of users(); track user.id) {
+        <div class="entity-card" [class.inactive-row]="!user.isActive">
+          <div class="font-semibold">{{ user.displayName }}</div>
+          <div class="text-sm text-[var(--app-text-muted)]">{{ user.email }}</div>
+          <div class="mt-2 flex flex-wrap gap-2">
+            @for (role of user.roles; track role) {
+              <app-status-badge [value]="role" />
+            }
+            <app-status-badge [value]="user.isActive ? 'Active' : 'Inactive'" />
+          </div>
+          <div class="mt-2 text-sm">Homes: {{ homeNames(user.careHomeIds) }}</div>
+        </div>
+      }
+    </div>
+
+    <app-table-pagination
+      [page]="page"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount()"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)"
+    />
+  } @else if (!errorMessage()) {
+    <app-empty-state
+      title="No users yet"
+      message="Invite colleagues so they can manage residents, billing, and reports."
+    >
+      @if (auth.canWrite()) {
+        <a mat-flat-button color="primary" routerLink="/users/new">Add user</a>
+      }
+    </app-empty-state>
+  }
 </div>

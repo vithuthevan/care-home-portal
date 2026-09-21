@@ -56,7 +56,7 @@ export class ClientForm implements OnInit {
   readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
 
-  clientId: number | null = null;
+  clientRouteKey: string | null = null;
 
   readonly careHomes = signal<CareHomeLocation[]>([]);
 
@@ -142,7 +142,7 @@ export class ClientForm implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
 
     if (id) {
-      this.clientId = Number(id);
+      this.clientRouteKey = id;
 
       this.isEditMode = true;
 
@@ -172,7 +172,7 @@ export class ClientForm implements OnInit {
   }
 
   private loadClient(): void {
-    if (this.clientId === null) {
+    if (this.clientRouteKey === null) {
       return;
     }
 
@@ -180,7 +180,7 @@ export class ClientForm implements OnInit {
     this.errorMessage.set(null);
 
     this.clientService
-      .getClient(this.clientId)
+      .getClient(this.clientRouteKey)
       .pipe(
         finalize(() => {
           this.isLoading.set(false);
@@ -254,12 +254,15 @@ export class ClientForm implements OnInit {
 
     this.isSaving.set(true);
 
+    const sageId = value.sageId.trim();
+    const referenceNumber = value.referenceNumber.trim();
+
     const baseRequest = {
       careHomeId: value.careHomeId,
 
-      sageId: value.sageId.trim(),
+      sageId: sageId || undefined,
 
-      referenceNumber: value.referenceNumber.trim(),
+      referenceNumber: referenceNumber || undefined,
 
       title: value.title,
 
@@ -280,9 +283,9 @@ export class ClientForm implements OnInit {
       notes: value.notes,
     };
 
-    if (this.isEditMode && this.clientId !== null) {
+    if (this.isEditMode && this.clientRouteKey !== null) {
       this.clientService
-        .updateClient(this.clientId, {
+        .updateClient(this.clientRouteKey, {
           ...baseRequest,
 
           status: value.status,
@@ -322,9 +325,9 @@ export class ClientForm implements OnInit {
         }),
       )
       .subscribe({
-        next: (client) => {
+        next: () => {
           this.toast.success('Resident created successfully.');
-          void this.router.navigate(['/clients', client.id]);
+          void this.router.navigate(['/clients']);
         },
 
         error: (error) => {

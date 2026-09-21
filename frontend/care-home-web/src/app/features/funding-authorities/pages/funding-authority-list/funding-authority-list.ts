@@ -15,6 +15,7 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
+import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 
 @Component({
   selector: 'app-funding-authority-list',
@@ -28,6 +29,7 @@ import { TablePaginationComponent } from '../../../../shared/ui/table-pagination
     EmptyStateComponent,
     IconActionButtonComponent,
     TablePaginationComponent,
+    FilterBarComponent,
   ],
   templateUrl: './funding-authority-list.html',
 })
@@ -41,7 +43,7 @@ export class FundingAuthorityList implements OnInit {
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   page = 1;
-  pageSize = 50;
+  pageSize = 20;
 
   ngOnInit(): void {
     this.loadFundingAuthorities();

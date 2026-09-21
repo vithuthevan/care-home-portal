@@ -1,5 +1,6 @@
 export interface Client {
   id: number;
+  publicId?: string;
 
   careHomeId: number;
   careHomeName: string;

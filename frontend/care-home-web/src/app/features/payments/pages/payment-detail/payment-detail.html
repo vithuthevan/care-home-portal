@@ -1,0 +1,181 @@
+@if (errorMessage()) {
+  <app-api-error [message]="errorMessage()!" />
+}
+
+@if (loading()) {
+  <app-loading-state label="Loading payment..." />
+}
+
+@if (detail(); as d) {
+  <app-page-header
+    [title]="d.reference || 'Payment'"
+    [subtitle]="'Received ' + (d.receivedDate | displayDate)"
+  >
+    <a mat-button routerLink="/payments">Back to payments</a>
+  </app-page-header>
+
+  <section class="panel panel--flat mb-4">
+    <div class="filter-row">
+      <div>
+        <p class="m-0 text-supporting">Payer / funder</p>
+        <p class="m-0 font-semibold">{{ d.payerName || '—' }}</p>
+      </div>
+      <div>
+        <p class="m-0 text-supporting">Source</p>
+        <p class="m-0 font-semibold">{{ d.source }}</p>
+      </div>
+      <div>
+        <p class="m-0 text-supporting">Status</p>
+        <app-status-badge [value]="d.status" />
+      </div>
+      <div>
+        <p class="m-0 text-supporting">Amount</p>
+        <p class="m-0 font-semibold">£{{ d.amount | number: '1.2-2' }}</p>
+      </div>
+      <div>
+        <p class="m-0 text-supporting">Allocated</p>
+        <p class="m-0 font-semibold">£{{ d.allocatedAmount | number: '1.2-2' }}</p>
+      </div>
+      <div>
+        <p class="m-0 text-supporting">Unapplied</p>
+        <p class="m-0 font-semibold">£{{ d.unappliedAmount | number: '1.2-2' }}</p>
+      </div>
+    </div>
+    @if (d.notes) {
+      <p class="mt-3 mb-0 text-sm text-[var(--app-text-muted)]">{{ d.notes }}</p>
+    }
+    @if (d.status !== 'Reversed') {
+      <div class="mt-4">
+        <button
+          mat-stroked-button
+          color="warn"
+          type="button"
+          (click)="confirmReversePayment()"
+          [disabled]="reversePaymentLoading()"
+        >
+          Reverse payment
+        </button>
+      </div>
+    } @else if (d.reversalReason) {
+      <p class="mt-3 mb-0 text-sm">Reversal reason: {{ d.reversalReason }}</p>
+    }
+  </section>
+
+  <section class="panel panel--flat mb-4">
+    <h3 class="m-0 mb-3">Allocations</h3>
+    @if (d.allocations.length === 0) {
+      <p class="m-0 text-supporting">No allocations yet.</p>
+    } @else {
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Invoice</th>
+              <th>Resident</th>
+              <th>Care home</th>
+              <th>Amount</th>
+              <th>Outstanding after</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (alloc of d.allocations; track alloc.publicId) {
+              <tr>
+                <td>
+                  <a [routerLink]="['/invoices', alloc.invoicePublicId]">{{ alloc.invoiceNumber }}</a>
+                </td>
+                <td>{{ alloc.residentName || '—' }}</td>
+                <td>{{ alloc.careHomeName }}</td>
+                <td>£{{ alloc.allocatedAmount | number: '1.2-2' }}</td>
+                <td>£{{ alloc.outstandingAfter | number: '1.2-2' }}</td>
+                <td>
+                  @if (d.status !== 'Reversed') {
+                    <button mat-button type="button" (click)="reverseAllocation(alloc)">Reverse</button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  @if (d.unappliedAmount > 0 && d.status !== 'Reversed') {
+    <section class="panel panel--flat mb-4">
+      <h3 class="m-0 mb-2">Allocate to invoices</h3>
+      <p class="mt-0 text-supporting">
+        Available: £{{ d.unappliedAmount | number: '1.2-2' }} · Selected:
+        £{{ selectedTotal() | number: '1.2-2' }} · Remaining:
+        £{{ remainingAfterSelection() | number: '1.2-2' }}
+      </p>
+      <div class="filter-row mb-3">
+        <mat-form-field appearance="outline">
+          <mat-label>Search invoices</mat-label>
+          <input matInput [(ngModel)]="invoiceSearch" (keyup.enter)="loadCandidates(d.publicId)" />
+        </mat-form-field>
+        <button mat-stroked-button type="button" (click)="loadCandidates(d.publicId)">Search</button>
+      </div>
+
+      @if (candidatesLoading()) {
+        <app-loading-state label="Loading invoices..." />
+      } @else if (candidates().length === 0) {
+        <p class="m-0 text-supporting">No outstanding invoices match this payment scope.</p>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th></th>
+                <th>Invoice</th>
+                <th>Resident</th>
+                <th>Funder</th>
+                <th>Outstanding</th>
+                <th>Allocate</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of candidates(); track row.invoicePublicId) {
+                <tr>
+                  <td>
+                    <mat-checkbox
+                      [checked]="isSelected(row.invoicePublicId)"
+                      (change)="toggleCandidate(row, $event.checked)"
+                    />
+                  </td>
+                  <td>{{ row.invoiceNumber }}</td>
+                  <td>{{ row.residentName || '—' }}</td>
+                  <td>{{ row.funderName }}</td>
+                  <td>£{{ row.outstandingAmount | number: '1.2-2' }}</td>
+                  <td>
+                    @if (isSelected(row.invoicePublicId)) {
+                      <input
+                        type="number"
+                        class="alloc-input"
+                        [ngModel]="amountFor(row.invoicePublicId)"
+                        (ngModelChange)="updateAmount(row.invoicePublicId, $event)"
+                        min="0.01"
+                        [max]="row.outstandingAmount"
+                        step="0.01"
+                      />
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <button
+          mat-flat-button
+          color="primary"
+          type="button"
+          class="mt-3"
+          (click)="submitAllocation()"
+          [disabled]="allocateLoading() || selectedTotal() <= 0"
+        >
+          Allocate selected
+        </button>
+      }
+    </section>
+  }
+}

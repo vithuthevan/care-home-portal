@@ -63,7 +63,7 @@ export class CreditNoteWorkspacePage implements OnInit {
   readonly notes = signal<any[]>([]);
   readonly notesTotalCount = signal(0);
   notesPage = 1;
-  notesPageSize = 50;
+  notesPageSize = 20;
   readonly errorMessage = signal<string | null>(null);
   readonly isWorking = signal(false);
   readonly sourceInvoiceNumber = signal<string | null>(null);

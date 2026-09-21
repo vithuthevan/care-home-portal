@@ -1,8 +1,11 @@
 <div class="page">
   <app-page-header
-    title="Dashboard"
-    subtitle="Operational and financial overview for your organisation."
+    title="Operations centre"
+    subtitle="What needs attention, what happened recently, and what to do next."
   >
+    @if (auth.canWrite()) {
+      <a mat-flat-button color="primary" routerLink="/billing">Start billing</a>
+    }
     <span class="text-sm text-[var(--app-text-muted)]">{{ today | date: 'd MMM y' }}</span>
   </app-page-header>
 
@@ -14,82 +17,59 @@
 
   @if (dashboard(); as data) {
     <section class="dashboard-section">
-      <h2 class="dashboard-section__title">What should I do next?</h2>
-      <div class="panel actions-bar actions-bar--primary-first">
-        @if (auth.canWrite()) {
-          <a mat-flat-button color="primary" routerLink="/clients/new">Add resident</a>
-        }
-        <a mat-stroked-button routerLink="/billing">Start billing</a>
-        <a mat-stroked-button routerLink="/invoices">View invoices</a>
-        <a mat-stroked-button routerLink="/reports" [queryParams]="{ report: 'outstanding' }"
-          >Outstanding report</a
-        >
-      </div>
-    </section>
-
-    <section class="dashboard-section">
-      <h2 class="dashboard-section__title">Operations</h2>
+      <h2 class="dashboard-section__title">Operations snapshot</h2>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div class="panel kpi-card">
-          <div class="kpi-icon"><mat-icon>home_work</mat-icon></div>
-          <div>
-            <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Care homes</h3>
-            <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.totalCareHomes }}</p>
-            <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">Locations in scope</p>
-          </div>
-        </div>
-        <a routerLink="/clients" class="panel kpi-card kpi-card--link no-underline">
-          <div class="kpi-icon"><mat-icon>groups</mat-icon></div>
-          <div>
-            <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Current residents</h3>
-            <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.currentClients }}</p>
-            <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">View residents</p>
-          </div>
-        </a>
-        <div class="panel kpi-card">
-          <div class="kpi-icon"><mat-icon>hotel</mat-icon></div>
-          <div>
-            <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Available beds</h3>
-            <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.availableBeds }}</p>
-            <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">Capacity remaining</p>
-          </div>
-        </div>
+        <app-kpi-card
+          label="Care homes"
+          [value]="data.totalCareHomes"
+          hint="Locations in scope"
+          icon="home_work"
+          tone="info"
+        />
+        <app-kpi-card
+          label="Current residents"
+          [value]="data.currentClients"
+          hint="View residents"
+          icon="groups"
+          tone="success"
+          routerLink="/clients"
+        />
+        <app-kpi-card
+          label="Available beds"
+          [value]="data.availableBeds"
+          hint="Capacity remaining"
+          icon="hotel"
+          tone="info"
+        />
       </div>
     </section>
 
     <section class="dashboard-section">
       <h2 class="dashboard-section__title">Finance</h2>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <a
+        <app-kpi-card
+          label="Outstanding receivables"
+          [value]="data.outstandingInvoices"
+          [hint]="'£' + (data.outstandingAmount | number: '1.2-2') + ' — accounts receivable'"
+          icon="request_quote"
+          tone="attention"
+          routerLink="/receivables"
+        />
+        <app-kpi-card
+          label="Generated invoices"
+          [value]="data.invoicesGenerated"
+          hint="View invoice list"
+          icon="receipt_long"
+          tone="finance"
           routerLink="/invoices"
-          [queryParams]="{ paymentStatus: 'NotPaid' }"
-          class="panel kpi-card kpi-card--link no-underline"
-        >
-          <div class="kpi-icon"><mat-icon>request_quote</mat-icon></div>
-          <div>
-            <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Outstanding invoices</h3>
-            <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.outstandingInvoices }}</p>
-            <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">
-              £{{ data.outstandingAmount | number: '1.2-2' }} unpaid — view list
-            </p>
-          </div>
-        </a>
-        <a routerLink="/invoices" class="panel kpi-card kpi-card--link no-underline">
-          <div class="kpi-icon"><mat-icon>receipt_long</mat-icon></div>
-          <div>
-            <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Generated invoices</h3>
-            <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.invoicesGenerated }}</p>
-            <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">View invoice list</p>
-          </div>
-        </a>
-        <div class="panel kpi-card">
-          <div class="kpi-icon"><mat-icon>event</mat-icon></div>
-          <div>
-            <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Upcoming billing</h3>
-            <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.upcomingBillingCount }}</p>
-            <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">Periods approaching</p>
-          </div>
-        </div>
+        />
+        <app-kpi-card
+          label="Upcoming billing"
+          [value]="data.upcomingBillingCount"
+          hint="Periods approaching"
+          icon="event"
+          tone="finance"
+        />
       </div>
     </section>
 
@@ -100,62 +80,49 @@
     ) {
       <section class="dashboard-section" id="attention">
         <h2 class="dashboard-section__title">Attention needed</h2>
-        <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div class="attention-queue">
           @if (data.outstandingInvoices > 0) {
-            <div class="panel">
-              <h3 class="mt-0 text-section">Unpaid invoices</h3>
-              <p class="text-sm text-[var(--app-text-muted)]">
-                {{ data.outstandingInvoices }} invoice(s) totalling £{{
-                  data.outstandingAmount | number: '1.2-2'
-                }}
-                are marked not paid.
-              </p>
-              <a
-                class="mt-3 inline-block text-sm font-medium"
-                routerLink="/reports"
-                [queryParams]="{ report: 'outstanding' }"
-                >Run outstanding report</a
-              >
+            <div class="attention-queue__item">
+              <span class="attention-queue__dot attention-queue__dot--warning" aria-hidden="true"></span>
+              <div>
+                <strong>Unpaid invoices</strong>
+                <p class="m-0 mt-1 text-sm text-[var(--app-text-muted)]">
+                  {{ data.outstandingInvoices }} invoice(s) · £{{
+                    data.outstandingAmount | number: '1.2-2'
+                  }}
+                  outstanding.
+                </p>
+                <a
+                  class="mt-2 inline-block text-sm font-medium"
+                  routerLink="/invoices"
+                  [queryParams]="{ paymentStatus: 'NotPaid' }"
+                  >Review invoices</a
+                >
+              </div>
             </div>
           }
-          <div class="panel" id="setup-checklist">
-            <h3 class="mt-0 text-section">Setup checklist</h3>
-            <ul class="m-0 list-none p-0 text-sm">
-              @for (item of data.setupHints; track item) {
-                <li class="mb-3 flex gap-2">
-                  <span
-                    class="mt-1 inline-block h-2 w-2 rounded-full bg-[var(--app-warning)]"
-                    aria-hidden="true"
-                  ></span>
-                  <span>{{ item }}</span>
-                </li>
-              } @empty {
-                <li class="flex gap-2 text-[var(--app-success)]">
-                  <span
-                    class="mt-1 inline-block h-2 w-2 rounded-full bg-[var(--app-success)]"
-                    aria-hidden="true"
-                  ></span>
-                  Organisation setup looks complete.
-                </li>
-              }
-            </ul>
-          </div>
-          <div class="panel xl:col-span-2">
-            <h3 class="mt-0 text-section">Billing exceptions</h3>
-            <ul class="m-0 list-none p-0 text-sm">
-              @for (item of data.billingExceptions; track item) {
-                <li class="mb-3 flex gap-2">
-                  <span
-                    class="mt-1 inline-block h-2 w-2 rounded-full bg-[var(--app-danger)]"
-                    aria-hidden="true"
-                  ></span>
-                  <span>{{ item }}</span>
-                </li>
-              } @empty {
-                <li class="text-[var(--app-text-muted)]">No billing exceptions reported.</li>
-              }
-            </ul>
-          </div>
+          @for (item of data.setupHints; track item) {
+            <div class="attention-queue__item">
+              <span class="attention-queue__dot attention-queue__dot--warning" aria-hidden="true"></span>
+              <span>{{ item }}</span>
+            </div>
+          }
+          @for (item of data.billingExceptions; track item) {
+            <div class="attention-queue__item">
+              <span class="attention-queue__dot attention-queue__dot--danger" aria-hidden="true"></span>
+              <span>{{ item }}</span>
+            </div>
+          }
+          @if (
+            !data.setupHints.length &&
+            !data.billingExceptions.length &&
+            data.outstandingInvoices === 0
+          ) {
+            <div class="attention-queue__item">
+              <span class="attention-queue__dot attention-queue__dot--success" aria-hidden="true"></span>
+              <span>No urgent items — operations look healthy.</span>
+            </div>
+          }
         </div>
       </section>
     }

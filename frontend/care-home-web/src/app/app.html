@@ -4,6 +4,7 @@
   <mat-sidenav-container class="app-shell">
     <mat-sidenav
       class="app-sidenav"
+      [class.app-sidenav--collapsed]="!isMobile() && sidebarCollapsed()"
       [mode]="isMobile() ? 'over' : 'side'"
       [opened]="menuOpen()"
       (closedStart)="isMobile() && menuOpen.set(false)"
@@ -11,126 +12,256 @@
     >
       <div class="brand">
         <div class="brand-mark">CH</div>
-        <div>
-          <div class="brand-name">Care Home</div>
-          <div class="brand-sub">{{ auth.currentUser()?.tenantName || 'Back Office' }}</div>
-        </div>
+        @if (!sidebarCollapsed() || isMobile()) {
+          <div class="brand-copy">
+            <div class="brand-name">Care Home</div>
+            <div class="brand-sub">{{ auth.currentUser()?.tenantName || 'Back Office' }}</div>
+          </div>
+        }
       </div>
 
       <nav class="nav" (click)="closeMenu()">
         @if (auth.isPlatformAdmin() && !auth.currentUser()?.tenantPublicId) {
           <a routerLink="/platform/tenants" routerLinkActive="active-link">
             <mat-icon>apartment</mat-icon>
-            Organisations
+            <span class="nav-label" matTooltip="Organisations" matTooltipShowDelay="400">Organisations</span>
           </a>
         } @else {
-          <a routerLink="/dashboard" routerLinkActive="active-link">
+          <a
+            routerLink="/dashboard"
+            routerLinkActive="active-link"
+            [class.nav-link--icon-only]="sidebarCollapsed() && !isMobile()"
+            matTooltip="Dashboard"
+            [matTooltipDisabled]="!sidebarCollapsed() || isMobile()"
+            matTooltipPosition="right"
+          >
             <mat-icon>dashboard</mat-icon>
-            Dashboard
+            <span class="nav-label">Dashboard</span>
           </a>
 
-          <button
-            type="button"
-            class="nav-section"
-            (click)="$event.stopPropagation(); operationsOpen.update((v) => !v)"
-          >
-            Operations
-            <mat-icon>{{ operationsOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
-          </button>
-          @if (operationsOpen()) {
-            <a class="nav-link-nested" routerLink="/companies" routerLinkActive="active-link"
-              ><mat-icon>business</mat-icon>Companies</a
+          @if (!sidebarCollapsed() || isMobile()) {
+            <button
+              type="button"
+              class="nav-section"
+              (click)="$event.stopPropagation(); operationsOpen.update((v) => !v)"
             >
-            <a class="nav-link-nested" routerLink="/care-homes" routerLinkActive="active-link"
-              ><mat-icon>home_work</mat-icon>Care Homes</a
+              Operations
+              <mat-icon>{{ operationsOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          }
+          @if (operationsOpen() || (sidebarCollapsed() && !isMobile())) {
+            <a
+              class="nav-link-nested"
+              [class.nav-link--icon-only]="sidebarCollapsed() && !isMobile()"
+              routerLink="/companies"
+              routerLinkActive="active-link"
+              matTooltip="Companies"
+              [matTooltipDisabled]="!sidebarCollapsed() || isMobile()"
+              matTooltipPosition="right"
+              ><mat-icon>business</mat-icon
+              ><span class="nav-label">Companies</span></a
             >
-            <a class="nav-link-nested" routerLink="/clients" routerLinkActive="active-link"
-              ><mat-icon>groups</mat-icon>Residents</a
+            <a
+              class="nav-link-nested"
+              [class.nav-link--icon-only]="sidebarCollapsed() && !isMobile()"
+              routerLink="/care-homes"
+              routerLinkActive="active-link"
+              matTooltip="Care Homes"
+              [matTooltipDisabled]="!sidebarCollapsed() || isMobile()"
+              matTooltipPosition="right"
+              ><mat-icon>home_work</mat-icon
+              ><span class="nav-label">Care Homes</span></a
+            >
+            <a
+              class="nav-link-nested"
+              [class.nav-link--icon-only]="sidebarCollapsed() && !isMobile()"
+              routerLink="/clients"
+              routerLinkActive="active-link"
+              matTooltip="Residents"
+              [matTooltipDisabled]="!sidebarCollapsed() || isMobile()"
+              matTooltipPosition="right"
+              ><mat-icon>groups</mat-icon
+              ><span class="nav-label">Residents</span></a
             >
           }
 
-          <button
-            type="button"
-            class="nav-section"
-            (click)="$event.stopPropagation(); billingSetupOpen.update((v) => !v)"
-          >
-            Billing Setup
-            <mat-icon>{{ billingSetupOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
-          </button>
-          @if (billingSetupOpen()) {
+          @if (!sidebarCollapsed() || isMobile()) {
+            <button
+              type="button"
+              class="nav-section"
+              (click)="$event.stopPropagation(); billingSetupOpen.update((v) => !v)"
+            >
+              Billing Setup
+              <mat-icon>{{ billingSetupOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          }
+          @if (billingSetupOpen() || (sidebarCollapsed() && !isMobile())) {
             <a class="nav-link-nested" routerLink="/funding-authorities" routerLinkActive="active-link"
-              ><mat-icon>account_balance</mat-icon>Funding Authorities</a
+              ><mat-icon>account_balance</mat-icon
+              ><span class="nav-label" matTooltip="Funding Authorities" matTooltipShowDelay="400"
+                >Funding Authorities</span
+              ></a
             >
             <a class="nav-link-nested" routerLink="/nominal-codes" routerLinkActive="active-link"
-              ><mat-icon>tag</mat-icon>Nominal Codes</a
+              ><mat-icon>tag</mat-icon
+              ><span class="nav-label" matTooltip="Nominal Codes" matTooltipShowDelay="400">Nominal Codes</span></a
             >
             <a class="nav-link-nested" routerLink="/invoice-categories" routerLinkActive="active-link"
-              ><mat-icon>category</mat-icon>Invoice Categories</a
+              ><mat-icon>category</mat-icon
+              ><span class="nav-label" matTooltip="Invoice Categories" matTooltipShowDelay="400"
+                >Invoice Categories</span
+              ></a
             >
             <a class="nav-link-nested" routerLink="/invoice-templates" routerLinkActive="active-link"
-              ><mat-icon>description</mat-icon>Invoice Templates</a
+              ><mat-icon>description</mat-icon
+              ><span class="nav-label" matTooltip="Invoice Templates" matTooltipShowDelay="400"
+                >Invoice Templates</span
+              ></a
             >
           }
 
-          <button
-            type="button"
-            class="nav-section"
-            (click)="$event.stopPropagation(); billingOpen.update((v) => !v)"
-          >
-            Billing
-            <mat-icon>{{ billingOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
-          </button>
-          @if (billingOpen()) {
+          @if (!sidebarCollapsed() || isMobile()) {
+            <button
+              type="button"
+              class="nav-section"
+              (click)="$event.stopPropagation(); billingOpen.update((v) => !v)"
+            >
+              Billing
+              <mat-icon>{{ billingOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          }
+          @if (billingOpen() || (sidebarCollapsed() && !isMobile())) {
             <a class="nav-link-nested" routerLink="/billing" routerLinkActive="active-link"
-              ><mat-icon>receipt_long</mat-icon>Billing Workspace</a
+              ><mat-icon>receipt_long</mat-icon
+              ><span class="nav-label" matTooltip="Billing Workspace" matTooltipShowDelay="400"
+                >Billing Workspace</span
+              ></a
             >
             <a class="nav-link-nested" routerLink="/invoices" routerLinkActive="active-link"
-              ><mat-icon>request_quote</mat-icon>Invoices</a
+              ><mat-icon>request_quote</mat-icon
+              ><span class="nav-label" matTooltip="Invoices" matTooltipShowDelay="400">Invoices</span></a
             >
             <a class="nav-link-nested" routerLink="/credit-notes" routerLinkActive="active-link"
-              ><mat-icon>undo</mat-icon>Credit Notes</a
+              ><mat-icon>undo</mat-icon
+              ><span class="nav-label" matTooltip="Credit Notes" matTooltipShowDelay="400">Credit Notes</span></a
             >
             <a class="nav-link-nested" routerLink="/misc-charges" routerLinkActive="active-link"
-              ><mat-icon>playlist_add</mat-icon>Miscellaneous Charges</a
+              ><mat-icon>playlist_add</mat-icon
+              ><span class="nav-label" matTooltip="Miscellaneous Charges" matTooltipShowDelay="400"
+                >Miscellaneous Charges</span
+              ></a
             >
           }
 
-          <button
-            type="button"
-            class="nav-section"
-            (click)="$event.stopPropagation(); reportingOpen.update((v) => !v)"
-          >
-            Reporting
-            <mat-icon>{{ reportingOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
-          </button>
-          @if (reportingOpen()) {
+          @if (!sidebarCollapsed() || isMobile()) {
+            <button
+              type="button"
+              class="nav-section"
+              (click)="$event.stopPropagation(); revenueOpen.update((v) => !v)"
+            >
+              Revenue
+              <mat-icon>{{ revenueOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          }
+          @if (revenueOpen() || (sidebarCollapsed() && !isMobile())) {
+            <a class="nav-link-nested" routerLink="/receivables" routerLinkActive="active-link"
+              ><mat-icon>account_balance_wallet</mat-icon
+              ><span class="nav-label" matTooltip="Accounts Receivable" matTooltipShowDelay="400"
+                >Accounts Receivable</span
+              ></a
+            >
+            <a class="nav-link-nested" routerLink="/payments" routerLinkActive="active-link"
+              ><mat-icon>payments</mat-icon
+              ><span class="nav-label" matTooltip="Payments" matTooltipShowDelay="400">Payments</span></a
+            >
+            <a class="nav-link-nested" routerLink="/banking" routerLinkActive="active-link"
+              ><mat-icon>account_balance</mat-icon
+              ><span class="nav-label" matTooltip="Banking &amp; reconciliation" matTooltipShowDelay="400"
+                >Banking</span
+              ></a
+            >
+            <a class="nav-link-nested" routerLink="/remittances" routerLinkActive="active-link"
+              ><mat-icon>receipt</mat-icon
+              ><span class="nav-label" matTooltip="Remittances" matTooltipShowDelay="400">Remittances</span></a
+            >
+            <a class="nav-link-nested" routerLink="/collections" routerLinkActive="active-link"
+              ><mat-icon>notification_important</mat-icon
+              ><span class="nav-label" matTooltip="Collections" matTooltipShowDelay="400">Collections</span></a
+            >
+            <a class="nav-link-nested" routerLink="/disputes" routerLinkActive="active-link"
+              ><mat-icon>gavel</mat-icon
+              ><span class="nav-label" matTooltip="Disputes" matTooltipShowDelay="400">Disputes</span></a
+            >
+          }
+
+          @if (!sidebarCollapsed() || isMobile()) {
+            <button
+              type="button"
+              class="nav-section"
+              (click)="$event.stopPropagation(); assuranceOpen.update((v) => !v)"
+            >
+              Revenue Assurance
+              <mat-icon>{{ assuranceOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          }
+          @if (assuranceOpen() || (sidebarCollapsed() && !isMobile())) {
+            <a class="nav-link-nested" routerLink="/revenue-assurance" routerLinkActive="active-link"
+              ><mat-icon>shield</mat-icon
+              ><span class="nav-label" matTooltip="Findings" matTooltipShowDelay="400">Findings</span></a
+            >
+            <a class="nav-link-nested" routerLink="/contract-renewals" routerLinkActive="active-link"
+              ><mat-icon>event_repeat</mat-icon
+              ><span class="nav-label" matTooltip="Renewals" matTooltipShowDelay="400">Renewals</span></a
+            >
+          }
+
+          @if (!sidebarCollapsed() || isMobile()) {
+            <button
+              type="button"
+              class="nav-section"
+              (click)="$event.stopPropagation(); reportingOpen.update((v) => !v)"
+            >
+              Reporting
+              <mat-icon>{{ reportingOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </button>
+          }
+          @if (reportingOpen() || (sidebarCollapsed() && !isMobile())) {
             <a class="nav-link-nested" routerLink="/reports" routerLinkActive="active-link"
-              ><mat-icon>bar_chart</mat-icon>Reports</a
+              ><mat-icon>bar_chart</mat-icon
+              ><span class="nav-label" matTooltip="Reports" matTooltipShowDelay="400">Reports</span></a
             >
             <a class="nav-link-nested" routerLink="/sage-exports" routerLinkActive="active-link"
-              ><mat-icon>file_download</mat-icon>Sage Export</a
+              ><mat-icon>file_download</mat-icon
+              ><span class="nav-label" matTooltip="Sage Export" matTooltipShowDelay="400">Sage Export</span></a
             >
           }
 
           @if (auth.canManageUsers()) {
-            <button
-              type="button"
-              class="nav-section"
-              (click)="$event.stopPropagation(); adminOpen.update((v) => !v)"
-            >
-              Administration
-              <mat-icon>{{ adminOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
-            </button>
-            @if (adminOpen()) {
+            @if (!sidebarCollapsed() || isMobile()) {
+              <button
+                type="button"
+                class="nav-section"
+                (click)="$event.stopPropagation(); adminOpen.update((v) => !v)"
+              >
+                Administration
+                <mat-icon>{{ adminOpen() ? 'expand_less' : 'expand_more' }}</mat-icon>
+              </button>
+            }
+            @if (adminOpen() || (sidebarCollapsed() && !isMobile())) {
               <a class="nav-link-nested" routerLink="/users" routerLinkActive="active-link"
-                ><mat-icon>manage_accounts</mat-icon>Users</a
+                ><mat-icon>manage_accounts</mat-icon
+                ><span class="nav-label" matTooltip="Users" matTooltipShowDelay="400">Users</span></a
               >
               <a class="nav-link-nested" routerLink="/audit" routerLinkActive="active-link"
-                ><mat-icon>history</mat-icon>Audit</a
+                ><mat-icon>history</mat-icon
+                ><span class="nav-label" matTooltip="Audit" matTooltipShowDelay="400">Audit</span></a
               >
               @if (auth.canManageOrganisation()) {
                 <a class="nav-link-nested" routerLink="/settings/organisation" routerLinkActive="active-link"
-                  ><mat-icon>settings</mat-icon>Organisation Settings</a
+                  ><mat-icon>settings</mat-icon
+                  ><span class="nav-label" matTooltip="Organisation Settings" matTooltipShowDelay="400"
+                    >Organisation Settings</span
+                  ></a
                 >
               }
             }
@@ -141,7 +272,7 @@
           <div class="nav-section-static">Platform</div>
           <a routerLink="/platform/tenants" routerLinkActive="active-link">
             <mat-icon>apartment</mat-icon>
-            Organisations
+            <span class="nav-label" matTooltip="Organisations" matTooltipShowDelay="400">Organisations</span>
           </a>
         }
       </nav>
@@ -154,22 +285,11 @@
           type="button"
           (click)="toggleMenu()"
           [attr.aria-expanded]="menuOpen()"
-          aria-label="Toggle navigation"
+          [attr.aria-label]="isMobile() ? 'Open navigation menu' : sidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'"
         >
-          <mat-icon>menu</mat-icon>
+          <mat-icon>{{ isMobile() ? 'menu' : sidebarCollapsed() ? 'menu_open' : 'menu' }}</mat-icon>
         </button>
-        <nav class="crumb" aria-label="Breadcrumb">
-          <a routerLink="/dashboard">Home</a>
-          @for (item of breadcrumbs.items(); track $index) {
-            <mat-icon>chevron_right</mat-icon>
-            @if (item.routerLink && $index < breadcrumbs.items().length - 1) {
-              <a [routerLink]="item.routerLink">{{ item.label }}</a>
-            } @else {
-              <strong>{{ item.label }}</strong>
-            }
-          }
-        </nav>
-        <span class="flex-1"></span>
+        <span class="toolbar-spacer" aria-hidden="true"></span>
         <button type="button" class="user-chip" [matMenuTriggerFor]="userMenu">
           <span class="avatar">{{ initials() }}</span>
           <span class="user-meta">
@@ -185,24 +305,6 @@
               <div class="user-name">{{ auth.currentUser()?.displayName }}</div>
               <div class="user-role">{{ roleLabel() }}</div>
             </div>
-          </div>
-          <div class="user-menu-theme">
-            <span class="user-menu-theme__label">Accent colour</span>
-            @for (theme of themeOptions; track theme.id) {
-              <button
-                mat-menu-item
-                type="button"
-                (click)="setTheme(theme.id)"
-                [attr.aria-current]="activeTheme() === theme.id ? 'true' : null"
-              >
-                @if (activeTheme() === theme.id) {
-                  <mat-icon>check</mat-icon>
-                } @else {
-                  <mat-icon>palette</mat-icon>
-                }
-                <span>{{ theme.label }}</span>
-              </button>
-            }
           </div>
           <button mat-menu-item type="button" class="user-menu-logout" (click)="auth.logout()">
             <mat-icon>logout</mat-icon>

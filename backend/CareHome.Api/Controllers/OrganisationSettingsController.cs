@@ -3,6 +3,7 @@ using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.Tenants;
 using CareHome.Api.Security;
+using CareHome.Api.Security.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,7 @@ namespace CareHome.Api.Controllers
     [ApiController]
     [Route("api/settings/organisation")]
     [RequireTenant]
-    [Authorize(Roles = $"{AppRoles.TenantAdmin},{AppRoles.Administrator}")]
+    [Authorize(Policy = CareHomePolicies.CanManageOrganisation)]
     public class OrganisationSettingsController(
         CareHomeDbContext dbContext,
         ITenantContext tenantContext,

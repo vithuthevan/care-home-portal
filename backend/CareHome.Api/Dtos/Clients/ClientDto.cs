@@ -4,6 +4,8 @@ namespace CareHome.Api.Dtos.Clients
     {
         public int Id { get; set; }
 
+        public Guid PublicId { get; set; }
+
         public int CareHomeId { get; set; }
 
         public int CompanyId { get; set; }

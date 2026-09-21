@@ -1,85 +1,122 @@
 <div class="page">
   <app-page-header
-    title="Miscellaneous Charges"
-    subtitle="CSV columns: ClientReference (resident reference), UsedDate, Description, Amount, NominalCode"
+    title="Miscellaneous charges"
+    subtitle="Import ad-hoc charges from CSV before billing. Use resident reference, not internal IDs."
   />
+
   <app-api-error [message]="errorMessage()" />
   @if (info()) {
-    <div class="mb-4 rounded-md border border-[#c8e6c9] bg-[#e8f5e9] px-4 py-3 text-sm">
-      {{ info() }}
-    </div>
+    <div class="feedback-banner feedback-banner--success">{{ info() }}</div>
   }
+
   @if (auth.canWrite()) {
-    <section class="panel mb-4">
-      <input type="file" accept=".csv,text/csv" (change)="onFile($event)" />
+    <section class="table-shell mb-4">
+      <app-filter-bar [toolbar]="true">
+        <p class="m-0 text-sm text-[var(--app-text-muted)]">
+          Columns: resident reference, used date, description, amount, nominal code.
+        </p>
+        <div filterActions>
+          <label class="inline-flex cursor-pointer">
+            <input
+              #csvInput
+              type="file"
+              class="sr-only"
+              accept=".csv,text/csv"
+              (change)="onFile($event)"
+            />
+            <button mat-stroked-button type="button" (click)="csvInput.click()">Choose CSV file</button>
+          </label>
+        </div>
+      </app-filter-bar>
     </section>
   }
-  @if (preview(); as preview) {
-    <section class="panel mb-4">
-      <p>Valid {{ preview.validCount }} · Invalid {{ preview.invalidCount }}</p>
+
+  @if (preview(); as previewData) {
+    <section class="table-shell mb-4">
+      <app-filter-bar [toolbar]="true">
+        <p class="m-0 text-sm text-[var(--app-text-muted)]">
+          <span class="font-medium text-[var(--app-text)]">Import preview</span>
+          · Valid {{ previewData.validCount }} · Invalid {{ previewData.invalidCount }}
+        </p>
+        <div filterActions>
+          @if (auth.canWrite()) {
+            <button
+              mat-flat-button
+              color="primary"
+              type="button"
+              [disabled]="previewData.invalidCount > 0"
+              (click)="confirm()"
+            >
+              Confirm import
+            </button>
+          }
+        </div>
+      </app-filter-bar>
       <div class="table-container">
         <table class="data-table">
           <thead>
             <tr>
-              <th>Row</th>
-              <th>Status</th>
+              <th class="col-ref">Row</th>
+              <th class="col-status">Status</th>
               <th>Resident</th>
               <th>Error</th>
             </tr>
           </thead>
           <tbody>
-            @for (row of preview.rows; track row.rowNumber) {
-              <tr>
+            @for (row of previewData.rows; track row.rowNumber) {
+              <tr [class.inactive-row]="!row.isValid">
                 <td>{{ row.rowNumber }}</td>
-                <td><app-status-badge [value]="row.isValid ? 'Valid' : 'Invalid'" /></td>
-                <td>{{ row.clientName }}</td>
-                <td>{{ row.error }}</td>
+                <td class="col-status">
+                  <app-status-badge [value]="row.isValid ? 'Valid' : 'Invalid'" />
+                </td>
+                <td class="font-medium">{{ row.clientName || '—' }}</td>
+                <td class="text-[var(--app-text-muted)]">{{ row.error || '—' }}</td>
               </tr>
             }
           </tbody>
         </table>
       </div>
-      @if (auth.canWrite()) {
-        <button
-          mat-flat-button
-          color="primary"
-          type="button"
-          [disabled]="preview.invalidCount > 0"
-          (click)="confirm()"
-        >
-          Confirm import
-        </button>
-      }
     </section>
   }
-  <section class="panel">
-    <h2 class="mt-0 text-lg font-semibold">Import batches</h2>
-    <div class="table-container panel panel--flat">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>File</th>
-            <th>When</th>
-            <th class="num">Accepted</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (batch of batches(); track batch.id) {
+
+  <section class="table-shell">
+    <app-filter-bar [toolbar]="true">
+      <h2 class="m-0 text-section">Import history</h2>
+      <p class="m-0 text-sm text-[var(--app-text-muted)]">{{ totalCount() }} batch(es)</p>
+    </app-filter-bar>
+    @if (batches().length) {
+      <div class="table-container table-container--sticky">
+        <table class="data-table">
+          <thead>
             <tr>
-              <td>{{ batch.fileName }}</td>
-              <td>{{ batch.importedAt }}</td>
-              <td class="num">{{ batch.acceptedRows }}</td>
+              <th>File</th>
+              <th class="col-date">Imported</th>
+              <th class="num">Accepted rows</th>
             </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-    <app-table-pagination
-      [page]="page"
-      [pageSize]="pageSize"
-      [totalCount]="totalCount()"
-      (pageChange)="onPageChange($event)"
-      (pageSizeChange)="onPageSizeChange($event)"
-    />
+          </thead>
+          <tbody>
+            @for (batch of batches(); track batch.id) {
+              <tr>
+                <td class="font-medium">{{ batch.fileName }}</td>
+                <td class="col-date">{{ batch.importedAt }}</td>
+                <td class="num">{{ batch.acceptedRows }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-table-pagination
+        [page]="page"
+        [pageSize]="pageSize"
+        [totalCount]="totalCount()"
+        (pageChange)="onPageChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)"
+      />
+    } @else {
+      <app-empty-state
+        title="No imports yet"
+        message="Upload a CSV to preview rows before committing charges to the system."
+      />
+    }
   </section>
 </div>

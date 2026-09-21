@@ -8,38 +8,6 @@
     }
   </app-page-header>
 
-  <app-filter-bar>
-    <div class="filter-bar__fields filter-bar__fields--4">
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Search</mat-label>
-        <input
-          matInput
-          [(ngModel)]="searchText"
-          (keyup.enter)="search()"
-          placeholder="Name, reference, or Sage ID"
-        />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Care home</mat-label>
-        <mat-select [(ngModel)]="selectedCareHomeId">
-          <mat-option [value]="0">All care homes</mat-option>
-          @for (careHome of careHomes(); track careHome.id) {
-            <mat-option [value]="careHome.id">{{ careHome.name }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-      <div class="flex min-h-[var(--touch-min)] items-center">
-        <mat-checkbox [(ngModel)]="showArchived" (change)="loadClients()"
-          >Show archived</mat-checkbox
-        >
-      </div>
-    </div>
-    <div filterActions>
-      <button mat-flat-button color="primary" type="button" (click)="search()">Search</button>
-      <button mat-stroked-button type="button" (click)="clearFilters()">Clear filters</button>
-    </div>
-  </app-filter-bar>
-
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
@@ -48,17 +16,55 @@
 
   @if (!isLoading() && clients().length === 0) {
     <app-empty-state
-      title="No residents yet"
-      message="Add your first resident to begin managing funding and billing."
+      [title]="hasActiveFilters() ? 'No residents found' : 'No residents yet'"
+      [message]="
+        hasActiveFilters()
+          ? 'There are no residents matching the current filters.'
+          : 'Add your first resident to begin managing funding and billing.'
+      "
     >
-      @if (auth.canWrite()) {
+      @if (hasActiveFilters()) {
+        <button mat-stroked-button type="button" (click)="clearFilters()">Clear filters</button>
+      } @else if (auth.canWrite()) {
         <a mat-flat-button color="primary" routerLink="/clients/new">Add resident</a>
       }
     </app-empty-state>
   }
 
   @if (!isLoading() && clients().length) {
-    <div class="table-container panel panel--flat list-view-table--from-md">
+    <div class="table-shell list-view-table--from-md">
+    <app-filter-bar [toolbar]="true">
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-icon matPrefix>search</mat-icon>
+        <mat-label>Search residents</mat-label>
+        <input
+          matInput
+          [(ngModel)]="searchText"
+          (ngModelChange)="onSearchChange($event)"
+          (keyup.enter)="search()"
+          placeholder="Search residents..."
+        />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Care home</mat-label>
+        <mat-select [(ngModel)]="selectedCareHomeId" (selectionChange)="search()">
+          <mat-option [value]="0">All homes</mat-option>
+          @for (careHome of careHomes(); track careHome.id) {
+            <mat-option [value]="careHome.id">{{ careHome.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <div class="flex min-h-[var(--touch-min)] items-center">
+        <mat-checkbox [(ngModel)]="showArchived" (change)="loadClients()">Show archived</mat-checkbox>
+      </div>
+      <div filterActions>
+        @if (auth.canWrite()) {
+          <a mat-flat-button color="primary" routerLink="/clients/new">Add resident</a>
+        }
+        <button mat-stroked-button type="button" (click)="clearFilters()">Clear</button>
+      </div>
+    </app-filter-bar>
+    <div class="table-container">
       <table class="data-table data-table--responsive-hide-sm">
         <thead>
           <tr>
@@ -76,7 +82,7 @@
             <tr
               class="row-clickable"
               [class.inactive-row]="client.isArchived"
-              (click)="openClient(client.id)"
+              (click)="openClient(client)"
             >
               <td class="font-semibold">
                 {{ client.title }} {{ client.firstName }} {{ client.lastName }}
@@ -96,13 +102,13 @@
                   <app-icon-action
                     icon="visibility"
                     ariaLabel="Open resident profile"
-                    [routerLink]="['/clients', client.id]"
+                    [routerLink]="['/clients', entityRouteKey(client)]"
                   />
                   @if (auth.canWrite()) {
                     <app-icon-action
                       icon="edit"
                       ariaLabel="Edit resident"
-                      [routerLink]="['/clients', client.id, 'edit']"
+                      [routerLink]="['/clients', entityRouteKey(client), 'edit']"
                     />
                     @if (!client.isArchived && client.status !== 'Current') {
                       <app-icon-action
@@ -120,10 +126,11 @@
         </tbody>
       </table>
     </div>
+    </div>
 
     <div class="mobile-card-list mobile-card-list--breakpoint-md">
       @for (client of clients(); track client.id) {
-        <a class="entity-card panel--interactive" [routerLink]="['/clients', client.id]">
+        <a class="entity-card panel--interactive" [routerLink]="['/clients', entityRouteKey(client)]">
           <div class="text-lg font-semibold">{{ client.firstName }} {{ client.lastName }}</div>
           <div class="mt-1 text-sm text-[var(--app-text-muted)]">
             {{ client.referenceNumber }} · {{ client.careHomeName }}

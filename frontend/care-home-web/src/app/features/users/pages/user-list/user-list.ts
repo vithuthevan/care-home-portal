@@ -14,6 +14,8 @@ import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.servi
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
+import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
+import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { PagedResult } from '../../../../core/models';
 
 @Component({
@@ -26,6 +28,8 @@ import { PagedResult } from '../../../../core/models';
     StatusBadgeComponent,
     IconActionButtonComponent,
     TablePaginationComponent,
+    FilterBarComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './user-list.html',
 })
@@ -40,7 +44,7 @@ export class UserListPage implements OnInit {
   readonly homes = signal<CareHomeLocation[]>([]);
   readonly errorMessage = signal<string | null>(null);
   page = 1;
-  pageSize = 50;
+  pageSize = 20;
 
   ngOnInit(): void {
     this.loadUsers();

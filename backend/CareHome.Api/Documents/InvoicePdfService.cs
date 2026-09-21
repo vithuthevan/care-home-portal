@@ -114,7 +114,6 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
 
     private static byte[] RenderInvoice(Invoice invoice, byte[]? logoBytes)
     {
-        QuestPDF.Settings.License = LicenseType.Community;
 
         return Document.Create(container =>
         {
@@ -224,7 +223,6 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
 
     private static byte[] RenderCreditNote(CreditNote creditNote)
     {
-        QuestPDF.Settings.License = LicenseType.Community;
         var invoice = creditNote.Invoice;
 
         return Document.Create(container =>

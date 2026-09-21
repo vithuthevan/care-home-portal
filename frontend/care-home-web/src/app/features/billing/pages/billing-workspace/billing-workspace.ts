@@ -193,6 +193,40 @@ export class BillingWorkspacePage implements OnInit {
     return `${this.displayDatePipe.transform(this.periodStart)} to ${this.displayDatePipe.transform(this.periodEnd)}`;
   }
 
+  billingPeriodHeading(): string {
+    if (!this.periodStart) {
+      return 'Billing preview';
+    }
+    const start = new Date(this.periodStart);
+    if (Number.isNaN(start.getTime())) {
+      return 'Billing preview';
+    }
+    return `${start.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })} billing`;
+  }
+
+  selectedCompanyName(): string {
+    return this.companies().find((c) => c.id === this.companyId)?.name ?? '';
+  }
+
+  selectedCareHomeName(): string {
+    if (!this.careHomeId) {
+      return '';
+    }
+    return this.careHomes().find((h) => h.id === this.careHomeId)?.name ?? '';
+  }
+
+  selectedScopeLabel(): string {
+    const home = this.selectedCareHomeName();
+    if (home) {
+      return home;
+    }
+    const company = this.selectedCompanyName();
+    if (company) {
+      return `${company} · all care homes`;
+    }
+    return 'Select company and care home';
+  }
+
   private applyQueryContext(): void {
     const params = this.route.snapshot.queryParamMap;
     const careHomeId = Number(params.get('careHomeId') || 0);

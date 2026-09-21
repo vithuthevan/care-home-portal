@@ -18,10 +18,19 @@
     </p>
   }
 
-  @if (!isLoading() && careHomes().length === 0 && !filterCompanyId()) {
+  @if (!isLoading() && careHomes().length === 0 && hasActiveFilters()) {
+    <app-empty-state
+      title="No care homes found"
+      message="Try another search or show all care homes."
+    >
+      <a mat-stroked-button routerLink="/care-homes">Show all</a>
+    </app-empty-state>
+  }
+
+  @if (!isLoading() && careHomes().length === 0 && !filterCompanyId() && !searchText().trim()) {
     <app-empty-state
       title="No care homes yet"
-      message="Add a care home under your company before admitting clients."
+      message="Add a care home under your company before admitting residents."
     >
       @if (auth.canWrite()) {
         <a mat-flat-button color="primary" routerLink="/care-homes/new">Add Care Home</a>
@@ -29,7 +38,7 @@
     </app-empty-state>
   }
 
-  @if (!isLoading() && careHomes().length === 0 && filterCompanyId()) {
+  @if (!isLoading() && careHomes().length === 0 && filterCompanyId() && !searchText().trim()) {
     <app-empty-state
       title="No care homes for this company"
       message="Try another company or show all care homes."
@@ -39,7 +48,25 @@
   }
 
   @if (!isLoading() && careHomes().length) {
-    <div class="table-container panel panel--flat list-view-table--from-md">
+    <div class="table-shell list-view-table--from-md">
+    <app-filter-bar [toolbar]="true">
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-icon matPrefix>search</mat-icon>
+        <mat-label>Search care homes</mat-label>
+        <input
+          matInput
+          [ngModel]="searchText()"
+          (ngModelChange)="onSearchChange($event)"
+          placeholder="Search by name, code, or company..."
+        />
+      </mat-form-field>
+      <div filterActions>
+        @if (auth.canWrite()) {
+          <a mat-flat-button color="primary" routerLink="/care-homes/new">Add care home</a>
+        }
+      </div>
+    </app-filter-bar>
+    <div class="table-container">
       <table class="data-table data-table--responsive-hide-sm">
         <thead>
           <tr>
@@ -66,13 +93,13 @@
                   <app-icon-action
                     icon="dashboard"
                     ariaLabel="Open care home dashboard"
-                    [routerLink]="['/care-homes', careHome.id, 'dashboard']"
+                    [routerLink]="['/care-homes', entityRouteKey(careHome), 'dashboard']"
                   />
                   @if (auth.canWrite()) {
                     <app-icon-action
                       icon="edit"
                       ariaLabel="Edit care home"
-                      [routerLink]="['/care-homes', careHome.id, 'edit']"
+                      [routerLink]="['/care-homes', entityRouteKey(careHome), 'edit']"
                     />
                     @if (careHome.isActive) {
                       <app-icon-action
@@ -90,6 +117,7 @@
         </tbody>
       </table>
     </div>
+    </div>
 
     <div class="mobile-card-list mobile-card-list--breakpoint-md">
       @for (careHome of careHomes(); track careHome.id) {
@@ -106,13 +134,13 @@
               <app-icon-action
                 icon="dashboard"
                 ariaLabel="Open care home dashboard"
-                [routerLink]="['/care-homes', careHome.id, 'dashboard']"
+                [routerLink]="['/care-homes', entityRouteKey(careHome), 'dashboard']"
               />
               @if (auth.canWrite()) {
                 <app-icon-action
                   icon="edit"
                   ariaLabel="Edit care home"
-                  [routerLink]="['/care-homes', careHome.id, 'edit']"
+                  [routerLink]="['/care-homes', entityRouteKey(careHome), 'edit']"
                 />
               }
             </span>

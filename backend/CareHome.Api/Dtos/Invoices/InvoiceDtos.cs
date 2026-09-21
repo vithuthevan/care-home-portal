@@ -4,6 +4,8 @@ namespace CareHome.Api.Dtos.Invoices
     {
         public int Id { get; set; }
 
+        public Guid PublicId { get; set; }
+
         public string InvoiceNumber { get; set; } = string.Empty;
 
         public string CompanyName { get; set; } = string.Empty;
@@ -23,6 +25,17 @@ namespace CareHome.Api.Dtos.Invoices
         public string Status { get; set; } = string.Empty;
 
         public string PaymentStatus { get; set; } = string.Empty;
+
+        /// <summary>Derived collection status from receivables (authoritative for revenue UI).</summary>
+        public string? CollectionStatus { get; set; }
+
+        public decimal PaidAmount { get; set; }
+
+        public decimal CreditedAmount { get; set; }
+
+        public decimal OutstandingAmount { get; set; }
+
+        public bool IsOverdue { get; set; }
 
         public bool IsDue { get; set; }
 

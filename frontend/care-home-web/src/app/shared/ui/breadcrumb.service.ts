@@ -2,7 +2,7 @@ import { Injectable, signal } from '@angular/core';
 
 export interface BreadcrumbItem {
   label: string;
-  routerLink?: string;
+  routerLink?: string | readonly (string | number)[];
 }
 
 @Injectable({

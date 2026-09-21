@@ -6,6 +6,8 @@ namespace CareHome.Api.Dtos.Audit
 
         public string? UserId { get; set; }
 
+        public string? UserDisplayName { get; set; }
+
         public DateTimeOffset LoggedAt { get; set; }
 
         public string EntityType { get; set; } = string.Empty;
