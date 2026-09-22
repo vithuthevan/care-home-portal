@@ -5,8 +5,8 @@
 import crypto from 'node:crypto';
 
 const baseUrl = (process.argv[2] || '').replace(/\/$/, '');
-const email = process.argv[3];
-const password = process.argv[4];
+const email = process.argv[3] || process.env.CAREHOME_LIVE_EMAIL;
+const password = process.argv[4] || process.env.CAREHOME_LIVE_PASSWORD;
 
 const bugs = [];
 const passes = [];
@@ -145,7 +145,7 @@ async function main() {
     ['GET', '/api/sage-exports'],
     ['GET', '/api/users'],
     ['GET', '/api/audit?page=1&pageSize=20'],
-    ['GET', '/api/organisation-settings'],
+    ['GET', '/api/settings/organisation'],
   ];
 
   for (const [method, path] of apiChecks) {
@@ -156,7 +156,16 @@ async function main() {
       } else if (res.status === 403) {
         bug('low', 'API', `${method} ${path} forbidden`, 'May be role-gated for this user');
       } else if (res.status >= 500) {
-        bug('high', 'API', `${method} ${path} server error`, `${res.status}: ${JSON.stringify(body).slice(0, 500)}`);
+        const correlation =
+          body && typeof body === 'object' && body.correlationId
+            ? ` correlationId=${body.correlationId}`
+            : '';
+        bug(
+          'high',
+          'API',
+          `${method} ${path} server error`,
+          `${res.status}: ${JSON.stringify(body).slice(0, 500)}${correlation}`,
+        );
       } else if (!res.ok) {
         bug('medium', 'API', `${method} ${path} unexpected ${res.status}`, JSON.stringify(body).slice(0, 300));
       } else {

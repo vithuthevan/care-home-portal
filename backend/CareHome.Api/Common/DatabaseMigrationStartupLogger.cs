@@ -20,7 +20,8 @@ public static class DatabaseMigrationStartupLogger
 
             logger.LogError(
                 "Database schema is behind the application. Pending EF migrations: {PendingMigrations}. "
-                + "Accounts receivable, collections, revenue assurance, and contract renewals may return HTTP 500 until migrations are applied.",
+                + "GET /api/dashboard (when commercial revenue is enabled), accounts receivable, collections, revenue assurance, "
+                + "and contract renewals may return HTTP 500 until migrations are applied.",
                 string.Join(", ", pending));
         }
         catch (Exception ex)

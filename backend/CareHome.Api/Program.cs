@@ -229,6 +229,17 @@ var app = builder.Build();
 var startupLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
 ProductionStartupValidator.Validate(app.Configuration, app.Environment, startupLogger);
 
+if (args.Contains("--apply-migrations", StringComparer.OrdinalIgnoreCase))
+{
+    using var migrateScope = app.Services.CreateScope();
+    var migrateDb = migrateScope.ServiceProvider.GetRequiredService<CareHomeDbContext>();
+    var migrateLogger = migrateScope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+    await migrateDb.Database.MigrateAsync();
+    await DatabaseMigrationStartupLogger.LogPendingMigrationsAsync(migrateDb, migrateLogger);
+    migrateLogger.LogInformation("Database migrations applied (--apply-migrations).");
+    return;
+}
+
 app.UseExceptionHandler();
 app.UseForwardedHeaders();
 app.UseMiddleware<CorrelationIdMiddleware>();

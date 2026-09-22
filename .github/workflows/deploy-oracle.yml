@@ -77,6 +77,11 @@ jobs:
 
           cp -a "$FRONTEND_PATH"/. publish/api/wwwroot/
 
+      - name: Copy ops scripts into publish bundle
+        run: |
+          mkdir -p publish/api/scripts
+          cp scripts/apply-database-migrations-on-host.sh publish/api/scripts/
+
       # -------------------------
       # Prepare SSH
       # -------------------------
@@ -148,6 +153,17 @@ jobs:
               -C /home/ubuntu/api
 
             rm -f /tmp/carehome-deploy.tar.gz
+
+            echo "Applying database migrations..."
+            cd /home/ubuntu/api
+            ENV_VARS="$(sudo systemctl show carehome-api --property=Environment --value || true)"
+            if [ -n "$ENV_VARS" ]; then
+              set -a
+              # shellcheck disable=SC2086
+              export $ENV_VARS
+              set +a
+            fi
+            dotnet CareHome.Api.dll --apply-migrations
 
             echo "Starting CareHome API..."
             sudo systemctl start carehome-api

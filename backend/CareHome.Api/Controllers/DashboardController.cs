@@ -1,10 +1,13 @@
+using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.Dashboard;
+using CareHome.Api.Features;
 using CareHome.Api.Receivables.Contracts;
 using CareHome.Api.Receivables.Dtos;
 using CareHome.Api.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace CareHome.Api.Controllers
 {
@@ -15,7 +18,8 @@ namespace CareHome.Api.Controllers
         CareHomeDbContext dbContext,
         UserAccessService userAccess,
         ITenantContext tenantContext,
-        IReceivablesService receivables) : ControllerBase
+        IReceivablesService receivables,
+        IOptions<CommercialRevenueFeature> commercialRevenue) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<DashboardDto>> GetDashboard()
@@ -37,10 +41,24 @@ namespace CareHome.Api.Controllers
                 Available = x.BedCapacity - x.Clients.Count(c => c.Status == "Current" && !c.IsArchived)
             }).ToListAsync();
 
-            var receivableSummary = await receivables.GetTenantSummaryAsync(
-                tenantContext.TenantId,
-                new ReceivableInvoiceQuery(),
-                HttpContext.RequestAborted);
+            int outstandingInvoices;
+            decimal outstandingAmount;
+            if (commercialRevenue.Value.CommercialRevenueEnabled)
+            {
+                var receivableSummary = await receivables.GetTenantSummaryAsync(
+                    tenantContext.TenantId,
+                    new ReceivableInvoiceQuery(),
+                    HttpContext.RequestAborted);
+                outstandingInvoices = receivableSummary.OpenInvoiceCount;
+                outstandingAmount = receivableSummary.TotalOutstanding;
+            }
+            else
+            {
+                (outstandingInvoices, outstandingAmount) = await GetLegacyOutstandingAsync(
+                    tenantContext.TenantId,
+                    homes,
+                    HttpContext.RequestAborted);
+            }
 
             var recent = await dbContext.Invoices.AsNoTracking()
                 .Where(x => homes.Contains(x.CareHomeId))
@@ -92,8 +110,8 @@ namespace CareHome.Api.Controllers
                 CurrentClients = occupied,
                 AvailableBeds = capacity - occupied,
                 UpcomingBillingCount = upcoming.Count,
-                OutstandingInvoices = receivableSummary.OpenInvoiceCount,
-                OutstandingAmount = receivableSummary.TotalOutstanding,
+                OutstandingInvoices = outstandingInvoices,
+                OutstandingAmount = outstandingAmount,
                 InvoicesGenerated = await dbContext.Invoices.CountAsync(x =>
                     x.TenantId == tenantContext.TenantId && homes.Contains(x.CareHomeId) && x.Status != "Void"),
                 OccupancyByHome = occupancy,
@@ -117,11 +135,25 @@ namespace CareHome.Api.Controllers
             }
 
             var occupied = home.Clients.Count(c => c.Status == "Current" && !c.IsArchived);
-            var homeReceivables = await receivables.GetCareHomeSummaryAsync(
-                tenantContext.TenantId,
-                id,
-                new ReceivableInvoiceQuery(),
-                HttpContext.RequestAborted);
+            int homeOutstandingCount;
+            decimal homeOutstandingAmount;
+            if (commercialRevenue.Value.CommercialRevenueEnabled)
+            {
+                var homeReceivables = await receivables.GetCareHomeSummaryAsync(
+                    tenantContext.TenantId,
+                    id,
+                    new ReceivableInvoiceQuery(),
+                    HttpContext.RequestAborted);
+                homeOutstandingCount = homeReceivables?.OpenInvoiceCount ?? 0;
+                homeOutstandingAmount = homeReceivables?.TotalOutstanding ?? 0;
+            }
+            else
+            {
+                (homeOutstandingCount, homeOutstandingAmount) = await GetLegacyOutstandingAsync(
+                    tenantContext.TenantId,
+                    [id],
+                    HttpContext.RequestAborted);
+            }
 
             var recent = await dbContext.Invoices.AsNoTracking()
                 .Where(x => x.CareHomeId == id)
@@ -157,9 +189,29 @@ namespace CareHome.Api.Controllers
                     .OrderBy(x => x)
                     .ToList(),
                 RecentInvoices = recent,
-                OutstandingCount = homeReceivables?.OpenInvoiceCount ?? 0,
-                OutstandingAmount = homeReceivables?.TotalOutstanding ?? 0
+                OutstandingCount = homeOutstandingCount,
+                OutstandingAmount = homeOutstandingAmount
             });
+        }
+
+        private async Task<(int Count, decimal Amount)> GetLegacyOutstandingAsync(
+            int tenantId,
+            List<int> homes,
+            CancellationToken cancellationToken)
+        {
+            if (homes.Count == 0)
+            {
+                return (0, 0m);
+            }
+
+            var open = await dbContext.Invoices.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && homes.Contains(x.CareHomeId))
+                .Where(x => x.Status != InvoiceStatuses.Void)
+                .Where(x => x.PaymentStatus != PaymentStatuses.Paid)
+                .Select(x => x.TotalAmount)
+                .ToListAsync(cancellationToken);
+
+            return (open.Count, open.Sum());
         }
 
         private async Task<List<string>> BuildSetupHints(int tenantId)
