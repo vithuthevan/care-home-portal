@@ -155,15 +155,7 @@ jobs:
             rm -f /tmp/carehome-deploy.tar.gz
 
             echo "Applying database migrations..."
-            cd /home/ubuntu/api
-            ENV_VARS="$(sudo systemctl show carehome-api --property=Environment --value || true)"
-            if [ -n "$ENV_VARS" ]; then
-              set -a
-              # shellcheck disable=SC2086
-              export $ENV_VARS
-              set +a
-            fi
-            dotnet CareHome.Api.dll --apply-migrations
+            bash /home/ubuntu/api/scripts/apply-database-migrations-on-host.sh /home/ubuntu/api
 
             echo "Starting CareHome API..."
             sudo systemctl start carehome-api
