@@ -4,17 +4,27 @@
     subtitle="Manage organisations and people that fund resident care."
   >
     @if (auth.canWrite()) {
-      <a mat-flat-button color="primary" routerLink="/funding-authorities/new">Add Authority</a>
+      <a mat-flat-button color="primary" routerLink="/funding-authorities/new">Add authority</a>
     }
   </app-page-header>
-  <app-api-error [message]="errorMessage()" />
-  @if (isLoading()) {
+
+  @if (errorMessage()) {
+    <div class="list-error-row">
+      <app-api-error [message]="errorMessage()" />
+      <button mat-stroked-button type="button" (click)="loadFundingAuthorities()" [disabled]="isLoading()">
+        Retry
+      </button>
+    </div>
+  }
+
+  @if (isLoading() && fundingAuthorities().length === 0 && !errorMessage()) {
     <app-loading-state label="Loading funding authorities..." />
   }
-  @if (!isLoading() && fundingAuthorities().length === 0) {
+
+  @if (!isLoading() && fundingAuthorities().length === 0 && !errorMessage()) {
     <app-empty-state
-      title="No funding authorities yet"
-      message="Add councils, families, or other payers before linking resident funding contracts."
+      title="No funding authorities"
+      message="Add a funding authority to use it in resident funding contracts."
     >
       @if (auth.canWrite()) {
         <a mat-flat-button color="primary" routerLink="/funding-authorities/new">Add authority</a>
@@ -22,75 +32,68 @@
     </app-empty-state>
   }
 
-  @if (!isLoading() && fundingAuthorities().length) {
+  @if (fundingAuthorities().length) {
     <div class="table-shell list-view-table--from-lg">
-      <app-filter-bar [toolbar]="true">
-        <p class="m-0 text-sm text-[var(--app-text-muted)]">
-          Payers linked to resident funding contracts.
-        </p>
-        <div filterActions>
-          @if (auth.canWrite()) {
-            <a mat-flat-button color="primary" routerLink="/funding-authorities/new"
-              >Add authority</a
-            >
-          }
-        </div>
-      </app-filter-bar>
       <div class="table-container">
-      <table class="data-table data-table--responsive-hide-sm">
-        <thead>
-          <tr>
-            <th>Code</th>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Billing Frequency</th>
-            <th class="col-hide-sm">Contact</th>
-            <th class="col-status">Status</th>
-            <th class="col-actions">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (authority of fundingAuthorities(); track authority.id) {
-            <tr [class.inactive-row]="!authority.isActive">
-              <td>{{ authority.code }}</td>
-              <td class="font-medium">{{ authority.name }}</td>
-              <td>{{ authority.type }}</td>
-              <td>{{ authority.billingFrequency }}</td>
-              <td class="col-hide-sm">{{ authority.contactName || '—' }}</td>
-              <td class="col-status"><app-status-badge [value]="authority.isActive ? 'Active' : 'Inactive'" /></td>
-              <td class="actions-cell col-actions">
-                @if (auth.canWrite()) {
-                  <span class="table-actions">
-                    <app-icon-action
-                      icon="edit"
-                      ariaLabel="Edit funding authority"
-                      [routerLink]="['/funding-authorities', authority.id, 'edit']"
-                    />
-                    @if (authority.isActive) {
-                      <app-icon-action
-                        icon="block"
-                        ariaLabel="Deactivate funding authority"
-                        [warn]="true"
-                        (action)="deactivateFundingAuthority(authority)"
-                      />
-                    }
-                  </span>
-                }
-              </td>
+        <table class="data-table data-table--responsive-hide-sm">
+          <thead>
+            <tr>
+              <th>Funding authority</th>
+              <th>Type</th>
+              <th>Billing frequency</th>
+              <th class="col-hide-sm">Contact</th>
+              <th class="col-status">Status</th>
+              <th class="col-actions">Actions</th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (authority of fundingAuthorities(); track authority.id) {
+              <tr [class.inactive-row]="!authority.isActive">
+                <td>
+                  <div class="table-cell-stack">
+                    <span class="table-cell-stack__primary">{{ authority.name }}</span>
+                    <span class="table-cell-stack__secondary">{{ authority.code }}</span>
+                  </div>
+                </td>
+                <td>{{ authority.type }}</td>
+                <td>{{ authority.billingFrequency }}</td>
+                <td class="col-hide-sm">{{ authority.contactName || '—' }}</td>
+                <td class="col-status">
+                  <app-status-badge [value]="authority.isActive ? 'Active' : 'Inactive'" />
+                </td>
+                <td class="actions-cell col-actions">
+                  @if (auth.canWrite()) {
+                    <span class="table-actions">
+                      <app-icon-action
+                        icon="edit"
+                        ariaLabel="Edit funding authority"
+                        [routerLink]="['/funding-authorities', authority.id, 'edit']"
+                      />
+                      @if (authority.isActive) {
+                        <app-icon-action
+                          icon="block"
+                          ariaLabel="Deactivate funding authority"
+                          [warn]="true"
+                          (action)="deactivateFundingAuthority(authority)"
+                        />
+                      }
+                    </span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
       </div>
     </div>
 
     <div class="mobile-card-list mobile-card-list--breakpoint-lg">
       @for (authority of fundingAuthorities(); track authority.id) {
         <article class="mobile-data-card" [class.inactive-row]="!authority.isActive">
-          <div class="font-semibold">{{ authority.name }}</div>
-          <p class="mt-1 mb-0 text-sm text-[var(--app-text-muted)]">
-            {{ authority.code }} · {{ authority.type }}
-          </p>
+          <div class="table-cell-stack">
+            <span class="table-cell-stack__primary">{{ authority.name }}</span>
+            <span class="table-cell-stack__secondary">{{ authority.code }} · {{ authority.type }}</span>
+          </div>
           <div class="mobile-data-card__row">
             <span class="mobile-data-card__label">Frequency</span>
             <span>{{ authority.billingFrequency }}</span>
@@ -107,6 +110,14 @@
                   ariaLabel="Edit funding authority"
                   [routerLink]="['/funding-authorities', authority.id, 'edit']"
                 />
+                @if (authority.isActive) {
+                  <app-icon-action
+                    icon="block"
+                    ariaLabel="Deactivate funding authority"
+                    [warn]="true"
+                    (action)="deactivateFundingAuthority(authority)"
+                  />
+                }
               </span>
             </div>
           }

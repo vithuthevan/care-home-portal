@@ -1,35 +1,47 @@
 <div class="page page--narrow">
-  <app-page-header [title]="isEditMode ? 'Edit Invoice Category' : 'Add Invoice Category'" />
+  <app-page-header
+    [title]="isEditMode ? 'Edit invoice category' : 'Add invoice category'"
+    subtitle="Categories group invoice lines for billing and reporting."
+  />
   <app-api-error [message]="errorMessage()" />
   @if (isLoading()) {
     <app-loading-state label="Loading invoice category..." />
   }
   @if (!isLoading()) {
     <form [formGroup]="form" (ngSubmit)="save()" class="panel max-w-3xl">
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Code</mat-label>
-          <input matInput formControlName="code" required />
-          @if (form.controls.code.touched && form.controls.code.hasError('required')) {
-            <mat-error>Code is required.</mat-error>
-          }
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Name</mat-label>
-          <input matInput formControlName="name" required />
-          @if (form.controls.name.touched && form.controls.name.hasError('required')) {
-            <mat-error>Name is required.</mat-error>
-          }
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full md:col-span-2">
-          <mat-label>Description</mat-label>
-          <textarea matInput rows="3" formControlName="description"></textarea>
-        </mat-form-field>
-      </div>
+      <p class="m-0 mb-4 text-sm text-[var(--app-text-muted)]">
+        Fields marked with <span aria-hidden="true">*</span> are required.
+      </p>
+
+      <section class="form-section">
+        <h2 class="form-section__title">Basic information</h2>
+        <div class="form-grid form-grid--2">
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Code</mat-label>
+            <input matInput formControlName="code" required />
+            @if (form.controls.code.touched && form.controls.code.hasError('required')) {
+              <mat-error>Code is required.</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="name" required />
+            @if (form.controls.name.touched && form.controls.name.hasError('required')) {
+              <mat-error>Name is required.</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="w-full md:col-span-2">
+            <mat-label>Description</mat-label>
+            <textarea matInput rows="3" formControlName="description"></textarea>
+          </mat-form-field>
+        </div>
+      </section>
+
       @if (isEditMode) {
         <mat-checkbox formControlName="isActive">Active</mat-checkbox>
       }
-      <div class="mt-4 flex flex-wrap gap-2">
+
+      <div class="form-actions">
         <a mat-stroked-button routerLink="/invoice-categories">Cancel</a>
         <button
           mat-flat-button
@@ -40,7 +52,7 @@
           @if (isSaving()) {
             Saving...
           } @else {
-            Save
+            Save category
           }
         </button>
       </div>

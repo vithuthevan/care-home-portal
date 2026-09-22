@@ -93,6 +93,11 @@ export const routes: Routes = [
   { path: 'nominal-codes/:id/edit', component: NominalCodeForm, canActivate: [authGuard] },
   { path: 'invoice-templates', component: InvoiceTemplateListPage, canActivate: [authGuard] },
   { path: 'invoice-templates/new', component: InvoiceTemplateFormPage, canActivate: [authGuard] },
+  {
+    path: 'invoice-templates/:id/edit',
+    component: InvoiceTemplateFormPage,
+    canActivate: [authGuard],
+  },
   { path: 'billing', component: BillingWorkspacePage, canActivate: [authGuard] },
   { path: 'invoices', component: InvoiceListPage, canActivate: [authGuard] },
   { path: 'invoices/:id', component: InvoiceDetailPage, canActivate: [authGuard] },

@@ -13,7 +13,6 @@ import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
-import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 
 @Component({
@@ -26,7 +25,6 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
     LoadingStateComponent,
     StatusBadgeComponent,
     IconActionButtonComponent,
-    FilterBarComponent,
     EmptyStateComponent,
   ],
   templateUrl: './nominal-code-list.html',
@@ -66,8 +64,8 @@ export class NominalCodeList implements OnInit {
   deactivateNominalCode(nominalCode: NominalCode): void {
     this.confirm
       .confirm({
-        title: 'Deactivate nominal code',
-        message: `Deactivate ${nominalCode.name}? It will no longer be available for new billing.`,
+        title: 'Deactivate nominal code?',
+        message: `${nominalCode.name} will no longer be available for future use.`,
         confirmLabel: 'Deactivate',
       })
       .subscribe((ok) => {

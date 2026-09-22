@@ -1,66 +1,114 @@
 <div class="page page--narrow">
   <app-page-header
-    title="Add invoice template"
-    subtitle="Category default used when generating invoices."
-  >
-    <a mat-stroked-button routerLink="/invoice-templates">Cancel</a>
-  </app-page-header>
+    [title]="isEditMode ? 'Edit invoice template' : 'Add invoice template'"
+    subtitle="Layout and payment details used when generating invoices."
+  />
 
   <app-api-error [message]="errorMessage()" />
 
-  <form [formGroup]="form" (ngSubmit)="save()" class="panel max-w-4xl">
-    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Name</mat-label>
-        <input matInput formControlName="name" required />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Category</mat-label>
-        <mat-select formControlName="invoiceCategoryId" required>
-          <mat-option [value]="0">Select category</mat-option>
-          @for (item of categories(); track item.id) {
-            <mat-option [value]="item.id">{{ item.name }}</mat-option>
+  @if (isLoading()) {
+    <app-loading-state label="Loading invoice template..." />
+  }
+
+  @if (!isLoading()) {
+    <form [formGroup]="form" (ngSubmit)="save()" class="panel max-w-4xl">
+      <p class="m-0 mb-4 text-sm text-[var(--app-text-muted)]">
+        Fields marked with <span aria-hidden="true">*</span> are required.
+      </p>
+
+      <section class="form-section">
+        <h2 class="form-section__title">Basic information</h2>
+        <div class="form-grid form-grid--2">
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="name" required />
+            @if (form.controls.name.touched && form.controls.name.hasError('required')) {
+              <mat-error>Name is required.</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Category</mat-label>
+            <mat-select formControlName="invoiceCategoryId" required>
+              <mat-option [value]="0">Select category</mat-option>
+              @for (item of categories(); track item.id) {
+                <mat-option [value]="item.id">{{ item.name }}</mat-option>
+              }
+            </mat-select>
+            @if (
+              form.controls.invoiceCategoryId.touched &&
+              form.controls.invoiceCategoryId.hasError('min')
+            ) {
+              <mat-error>Category is required.</mat-error>
+            }
+          </mat-form-field>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h2 class="form-section__title">Invoice text</h2>
+        <div class="form-grid form-grid--2">
+          <mat-form-field appearance="outline" class="w-full md:col-span-2">
+            <mat-label>Header (optional)</mat-label>
+            <input matInput formControlName="headerText1" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="w-full md:col-span-2">
+            <mat-label>Footer (optional)</mat-label>
+            <input matInput formControlName="footerText" />
+          </mat-form-field>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h2 class="form-section__title">Bank details</h2>
+        <div class="form-grid form-grid--2">
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Bank account (optional)</mat-label>
+            <input matInput formControlName="bankAccountName" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Sort code (optional)</mat-label>
+            <input matInput formControlName="sortCode" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Account number (optional)</mat-label>
+            <input matInput formControlName="accountNumber" />
+          </mat-form-field>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h2 class="form-section__title">Contact</h2>
+        <div class="form-grid form-grid--2">
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Contact name (optional)</mat-label>
+            <input matInput formControlName="contactName" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="w-full md:col-span-2">
+            <mat-label>Contact email (optional)</mat-label>
+            <input matInput formControlName="contactEmail" />
+          </mat-form-field>
+        </div>
+      </section>
+
+      @if (isEditMode) {
+        <mat-checkbox formControlName="isActive">Active</mat-checkbox>
+      }
+
+      <div class="form-actions">
+        <a mat-stroked-button routerLink="/invoice-templates">Cancel</a>
+        <button
+          mat-flat-button
+          color="primary"
+          type="submit"
+          [disabled]="isSaving() || !auth.canWrite()"
+        >
+          @if (isSaving()) {
+            Saving...
+          } @else {
+            Save template
           }
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full md:col-span-2">
-        <mat-label>Header (optional)</mat-label>
-        <input matInput formControlName="headerText1" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full md:col-span-2">
-        <mat-label>Footer (optional)</mat-label>
-        <input matInput formControlName="footerText" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Bank account (optional)</mat-label>
-        <input matInput formControlName="bankAccountName" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Sort code (optional)</mat-label>
-        <input matInput formControlName="sortCode" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Account number (optional)</mat-label>
-        <input matInput formControlName="accountNumber" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Contact name (optional)</mat-label>
-        <input matInput formControlName="contactName" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full md:col-span-2">
-        <mat-label>Contact email (optional)</mat-label>
-        <input matInput formControlName="contactEmail" />
-      </mat-form-field>
-    </div>
-    <div class="form-actions">
-      <a mat-stroked-button routerLink="/invoice-templates">Cancel</a>
-      <button mat-flat-button color="primary" type="submit" [disabled]="isSaving()">
-        @if (isSaving()) {
-          Saving...
-        } @else {
-          Save template
-        }
-      </button>
-    </div>
-  </form>
+        </button>
+      </div>
+    </form>
+  }
 </div>

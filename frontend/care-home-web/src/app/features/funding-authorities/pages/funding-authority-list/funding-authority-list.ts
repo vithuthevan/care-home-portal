@@ -15,7 +15,6 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
-import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 
 @Component({
   selector: 'app-funding-authority-list',
@@ -29,7 +28,6 @@ import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
     EmptyStateComponent,
     IconActionButtonComponent,
     TablePaginationComponent,
-    FilterBarComponent,
   ],
   templateUrl: './funding-authority-list.html',
 })
@@ -84,8 +82,8 @@ export class FundingAuthorityList implements OnInit {
   deactivateFundingAuthority(authority: FundingAuthority): void {
     this.confirm
       .confirm({
-        title: 'Deactivate funding authority',
-        message: `Deactivate ${authority.name}? It will no longer be available for new contracts.`,
+        title: 'Deactivate funding authority?',
+        message: `${authority.name} will no longer be available for future use.`,
         confirmLabel: 'Deactivate',
       })
       .subscribe((ok) => {

@@ -1,48 +1,126 @@
 <div class="page">
   <app-page-header
     title="Invoice Templates"
-    subtitle="Most specific matching template is used at generation time."
+    subtitle="Manage invoice templates used by the billing workflow."
   >
     @if (auth.canWrite()) {
       <a mat-flat-button color="primary" routerLink="/invoice-templates/new">Add template</a>
     }
   </app-page-header>
-  <app-api-error [message]="errorMessage()" />
 
-  <div class="table-shell">
-    <app-filter-bar [toolbar]="true">
-      <p class="m-0 text-sm text-[var(--app-text-muted)]">
-        Most specific template wins at invoice generation.
-      </p>
-      <div filterActions>
-        @if (auth.canWrite()) {
-          <a mat-flat-button color="primary" routerLink="/invoice-templates/new">Add template</a>
-        }
-      </div>
-    </app-filter-bar>
-    <div class="table-container">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Category</th>
-          <th>Authority</th>
-          <th>Home</th>
-          <th class="col-status">Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (item of items(); track item.id) {
-          <tr>
-            <td class="font-medium">{{ item.name }}</td>
-            <td>{{ item.invoiceCategoryName }}</td>
-            <td>{{ item.fundingAuthorityName || 'Any' }}</td>
-            <td>{{ item.careHomeName || 'Any' }}</td>
-            <td class="col-status"><app-status-badge [value]="item.isActive ? 'Active' : 'Inactive'" /></td>
-          </tr>
-        }
-      </tbody>
-    </table>
+  @if (errorMessage()) {
+    <div class="list-error-row">
+      <app-api-error [message]="errorMessage()" />
+      <button mat-stroked-button type="button" (click)="loadTemplates()" [disabled]="isLoading()">
+        Retry
+      </button>
     </div>
-  </div>
+  }
+
+  @if (isLoading() && items().length === 0 && !errorMessage()) {
+    <app-loading-state label="Loading invoice templates..." />
+  }
+
+  @if (!isLoading() && items().length === 0 && !errorMessage()) {
+    <app-empty-state
+      title="No invoice templates"
+      message="Add a template to control layout and payment details on generated invoices."
+    >
+      @if (auth.canWrite()) {
+        <a mat-flat-button color="primary" routerLink="/invoice-templates/new">Add template</a>
+      }
+    </app-empty-state>
+  }
+
+  @if (items().length) {
+    <div class="table-shell list-view-table--from-lg">
+      <div class="table-container">
+        <table class="data-table data-table--responsive-hide-sm">
+          <thead>
+            <tr>
+              <th>Template</th>
+              <th class="col-hide-sm">Authority</th>
+              <th class="col-hide-sm">Care home</th>
+              <th class="col-status">Status</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of items(); track item.id) {
+              <tr [class.inactive-row]="!item.isActive">
+                <td>
+                  <div class="table-cell-stack">
+                    <span class="table-cell-stack__primary">{{ item.name }}</span>
+                    <span class="table-cell-stack__secondary">{{ item.invoiceCategoryName }}</span>
+                  </div>
+                </td>
+                <td class="col-hide-sm">{{ item.fundingAuthorityName || 'Any' }}</td>
+                <td class="col-hide-sm">{{ item.careHomeName || 'Any' }}</td>
+                <td class="col-status">
+                  <app-status-badge [value]="item.isActive ? 'Active' : 'Inactive'" />
+                </td>
+                <td class="actions-cell col-actions">
+                  @if (auth.canWrite()) {
+                    <span class="table-actions">
+                      <app-icon-action
+                        icon="edit"
+                        ariaLabel="Edit invoice template"
+                        [routerLink]="['/invoice-templates', item.id, 'edit']"
+                      />
+                      @if (item.isActive) {
+                        <app-icon-action
+                          icon="block"
+                          ariaLabel="Deactivate invoice template"
+                          [warn]="true"
+                          (action)="deactivateTemplate(item)"
+                        />
+                      }
+                    </span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="mobile-card-list mobile-card-list--breakpoint-lg">
+      @for (item of items(); track item.id) {
+        <article class="mobile-data-card" [class.inactive-row]="!item.isActive">
+          <div class="table-cell-stack">
+            <span class="table-cell-stack__primary">{{ item.name }}</span>
+            <span class="table-cell-stack__secondary">{{ item.invoiceCategoryName }}</span>
+          </div>
+          <div class="mobile-data-card__row">
+            <span class="mobile-data-card__label">Authority</span>
+            <span>{{ item.fundingAuthorityName || 'Any' }}</span>
+          </div>
+          <div class="mobile-data-card__row">
+            <span class="mobile-data-card__label">Status</span>
+            <app-status-badge [value]="item.isActive ? 'Active' : 'Inactive'" />
+          </div>
+          @if (auth.canWrite()) {
+            <div class="mobile-data-card__actions">
+              <span class="table-actions">
+                <app-icon-action
+                  icon="edit"
+                  ariaLabel="Edit invoice template"
+                  [routerLink]="['/invoice-templates', item.id, 'edit']"
+                />
+                @if (item.isActive) {
+                  <app-icon-action
+                    icon="block"
+                    ariaLabel="Deactivate invoice template"
+                    [warn]="true"
+                    (action)="deactivateTemplate(item)"
+                  />
+                }
+              </span>
+            </div>
+          }
+        </article>
+      }
+    </div>
+  }
 </div>

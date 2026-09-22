@@ -1,6 +1,6 @@
 <div class="page page--narrow">
   <app-page-header
-    [title]="isEditMode ? 'Edit Funding Authority' : 'Add Authority'"
+    [title]="isEditMode ? 'Edit funding authority' : 'Add funding authority'"
     subtitle="Funder details used on invoices and contracts."
   />
   <app-api-error [message]="errorMessage()" />
@@ -9,81 +9,113 @@
   }
   @if (!isLoading()) {
     <form [formGroup]="form" (ngSubmit)="save()" class="panel max-w-4xl">
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <p class="m-0 mb-4 text-sm text-[var(--app-text-muted)]">
+        Fields marked with <span aria-hidden="true">*</span> are required.
+      </p>
+
+      <section class="form-section">
+        <h2 class="form-section__title">Basic information</h2>
+        <div class="form-grid form-grid--2">
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Code</mat-label>
+            <input matInput formControlName="code" required />
+            @if (form.controls.code.touched && form.controls.code.hasError('required')) {
+              <mat-error>Code is required.</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="name" required />
+            @if (form.controls.name.touched && form.controls.name.hasError('required')) {
+              <mat-error>Name is required.</mat-error>
+            }
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Type</mat-label>
+            <mat-select formControlName="type" required>
+              <mat-option value="">Select type</mat-option>
+              <mat-option value="NHS">NHS</mat-option>
+              <mat-option value="Council">Council</mat-option>
+              <mat-option value="Private">Private</mat-option>
+              <mat-option value="Other">Other</mat-option>
+            </mat-select>
+            @if (form.controls.type.touched && form.controls.type.hasError('required')) {
+              <mat-error>Type is required.</mat-error>
+            }
+          </mat-form-field>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h2 class="form-section__title">Contact</h2>
+        <div class="form-grid form-grid--2">
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Contact name</mat-label>
+            <input matInput formControlName="contactName" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Phone</mat-label>
+            <input matInput formControlName="phone" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="w-full md:col-span-2">
+            <mat-label>Email</mat-label>
+            <input matInput type="email" formControlName="email" />
+            @if (form.controls.email.touched && form.controls.email.hasError('email')) {
+              <mat-error>Please enter a valid email address.</mat-error>
+            }
+          </mat-form-field>
+        </div>
+      </section>
+
+      <section class="form-section">
+        <h2 class="form-section__title">Address</h2>
         <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Code</mat-label>
-          <input matInput formControlName="code" required />
-          @if (form.controls.code.touched && form.controls.code.hasError('required')) {
-            <mat-error>Code is required.</mat-error>
-          }
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Name</mat-label>
-          <input matInput formControlName="name" required />
-          @if (form.controls.name.touched && form.controls.name.hasError('required')) {
-            <mat-error>Name is required.</mat-error>
-          }
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Type</mat-label>
-          <mat-select formControlName="type" required>
-            <mat-option value="">Select type</mat-option>
-            <mat-option value="NHS">NHS</mat-option>
-            <mat-option value="Council">Council</mat-option>
-            <mat-option value="Private">Private</mat-option>
-            <mat-option value="Other">Other</mat-option>
-          </mat-select>
-          @if (form.controls.type.touched && form.controls.type.hasError('required')) {
-            <mat-error>Type is required.</mat-error>
-          }
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Contact name</mat-label>
-          <input matInput formControlName="contactName" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Phone</mat-label>
-          <input matInput formControlName="phone" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Email</mat-label>
-          <input matInput type="email" formControlName="email" />
-          @if (form.controls.email.touched && form.controls.email.hasError('email')) {
-            <mat-error>Please enter a valid email address.</mat-error>
-          }
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full md:col-span-2">
           <mat-label>Address</mat-label>
           <textarea matInput rows="3" formControlName="address"></textarea>
         </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Billing frequency</mat-label>
-          <mat-select formControlName="billingFrequency" required>
-            <mat-option value="">Select frequency</mat-option>
-            <mat-option value="Daily">Daily</mat-option>
-            <mat-option value="Weekly">Weekly</mat-option>
-            <mat-option value="Monthly">Monthly</mat-option>
-            <mat-option value="AdHoc">AdHoc</mat-option>
-            <mat-option value="CustomDays">CustomDays</mat-option>
-          </mat-select>
-          @if (
-            form.controls.billingFrequency.touched &&
-            form.controls.billingFrequency.hasError('required')
-          ) {
-            <mat-error>Billing frequency is required.</mat-error>
-          }
-        </mat-form-field>
-        @if (isCustomDays) {
+      </section>
+
+      <section class="form-section">
+        <h2 class="form-section__title">Billing</h2>
+        <div class="form-grid form-grid--2">
           <mat-form-field appearance="outline" class="w-full">
-            <mat-label>Billing interval days</mat-label>
-            <input matInput type="number" formControlName="billingIntervalDays" />
+            <mat-label>Billing frequency</mat-label>
+            <mat-select formControlName="billingFrequency" required>
+              <mat-option value="">Select frequency</mat-option>
+              <mat-option value="Daily">Daily</mat-option>
+              <mat-option value="Weekly">Weekly</mat-option>
+              <mat-option value="Monthly">Monthly</mat-option>
+              <mat-option value="AdHoc">AdHoc</mat-option>
+              <mat-option value="CustomDays">CustomDays</mat-option>
+            </mat-select>
+            <mat-hint>Select how often this funding authority is billed.</mat-hint>
+            @if (
+              form.controls.billingFrequency.touched &&
+              form.controls.billingFrequency.hasError('required')
+            ) {
+              <mat-error>Billing frequency is required.</mat-error>
+            }
           </mat-form-field>
-        }
-      </div>
+          @if (isCustomDays) {
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Billing interval days</mat-label>
+              <input matInput type="number" formControlName="billingIntervalDays" required />
+              @if (
+                form.controls.billingIntervalDays.touched &&
+                form.controls.billingIntervalDays.hasError('required')
+              ) {
+                <mat-error>Interval days are required for custom billing.</mat-error>
+              }
+            </mat-form-field>
+          }
+        </div>
+      </section>
+
       @if (isEditMode) {
         <mat-checkbox formControlName="isActive">Active</mat-checkbox>
       }
-      <div class="mt-4 flex flex-wrap gap-2">
+
+      <div class="form-actions">
         <a mat-stroked-button routerLink="/funding-authorities">Cancel</a>
         <button
           mat-flat-button
@@ -94,7 +126,7 @@
           @if (isSaving()) {
             Saving...
           } @else {
-            Save
+            Save authority
           }
         </button>
       </div>

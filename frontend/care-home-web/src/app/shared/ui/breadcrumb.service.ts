@@ -83,11 +83,47 @@ export class BreadcrumbService {
         { label: 'Credit notes', routerLink: '/credit-notes' },
       ];
     }
+    if (path.startsWith('/funding-authorities/new')) {
+      return [
+        { label: 'Funding Authorities', routerLink: '/funding-authorities' },
+        { label: 'Add authority' },
+      ];
+    }
+    if (/^\/funding-authorities\/\d+\/edit/.test(path)) {
+      return [
+        { label: 'Funding Authorities', routerLink: '/funding-authorities' },
+        { label: 'Edit authority' },
+      ];
+    }
     if (path.startsWith('/funding-authorities')) {
       return [{ label: 'Funding Authorities' }];
     }
+    if (path.startsWith('/invoice-categories/new')) {
+      return [
+        { label: 'Invoice Categories', routerLink: '/invoice-categories' },
+        { label: 'Add category' },
+      ];
+    }
+    if (/^\/invoice-categories\/\d+\/edit/.test(path)) {
+      return [
+        { label: 'Invoice Categories', routerLink: '/invoice-categories' },
+        { label: 'Edit category' },
+      ];
+    }
     if (path.startsWith('/invoice-categories')) {
       return [{ label: 'Invoice Categories' }];
+    }
+    if (path.startsWith('/nominal-codes/new')) {
+      return [
+        { label: 'Nominal Codes', routerLink: '/nominal-codes' },
+        { label: 'Add nominal code' },
+      ];
+    }
+    if (/^\/nominal-codes\/\d+\/edit/.test(path)) {
+      return [
+        { label: 'Nominal Codes', routerLink: '/nominal-codes' },
+        { label: 'Edit nominal code' },
+      ];
     }
     if (path.startsWith('/nominal-codes')) {
       return [{ label: 'Nominal Codes' }];
@@ -95,7 +131,13 @@ export class BreadcrumbService {
     if (path.startsWith('/invoice-templates/new')) {
       return [
         { label: 'Invoice Templates', routerLink: '/invoice-templates' },
-        { label: 'New template' },
+        { label: 'Add template' },
+      ];
+    }
+    if (/^\/invoice-templates\/\d+\/edit/.test(path)) {
+      return [
+        { label: 'Invoice Templates', routerLink: '/invoice-templates' },
+        { label: 'Edit template' },
       ];
     }
     if (path.startsWith('/invoice-templates')) {
