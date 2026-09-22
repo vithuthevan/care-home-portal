@@ -1,3 +1,4 @@
+using System.Globalization;
 using CareHome.Api.Models;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -7,20 +8,13 @@ namespace CareHome.Api.Documents;
 
 public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfService> logger)
 {
+    private static readonly CultureInfo UkCulture = CultureInfo.GetCultureInfo("en-GB");
+
     public async Task<byte[]> GetOrCreateInvoicePdfAsync(
         Invoice invoice,
         Guid tenantPublicId,
         CancellationToken cancellationToken = default)
     {
-        if (!string.IsNullOrWhiteSpace(invoice.PdfPath))
-        {
-            var existing = await documents.ReadAsync(invoice.PdfPath, cancellationToken);
-            if (existing is not null)
-            {
-                return existing;
-            }
-        }
-
         var logo = await TryReadFirstLogoAsync(
             [
                 invoice.InvoiceTemplate?.CompanyLogoPath,
@@ -114,111 +108,288 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
 
     private static byte[] RenderInvoice(Invoice invoice, byte[]? logoBytes)
     {
+        var primaryLine = invoice.Lines.FirstOrDefault();
 
         return Document.Create(container =>
         {
             container.Page(page =>
             {
-                page.Margin(32);
                 page.Size(PageSizes.A4);
-                page.DefaultTextStyle(x => x.FontSize(9));
-                page.Header().Column(col =>
+                page.MarginHorizontal(42);
+                page.MarginVertical(36);
+                page.DefaultTextStyle(x => x.FontSize(10).FontColor(Colors.Grey.Darken3));
+
+                page.Header().Element(header => ComposeInvoiceHeader(header, invoice, logoBytes));
+
+                page.Content().PaddingTop(20).Column(col =>
+                {
+                    col.Spacing(18);
+
+                    col.Item().Row(row =>
+                    {
+                        row.RelativeItem().Element(c => ComposeResidentPanel(c, primaryLine));
+                        row.ConstantItem(24);
+                        row.RelativeItem().Element(c => ComposeFundingPanel(c, invoice));
+                    });
+
+                    col.Item().Element(c => ComposeLineItemsSection(c, invoice));
+
+                    col.Item().AlignRight().Width(260).Element(c => ComposeTotalsPanel(c, invoice));
+
+                    if (HasBankDetails(invoice))
+                    {
+                        col.Item().Element(c => ComposeBankDetailsPanel(c, invoice));
+                    }
+
+                    col.Item().Text(
+                            "Line amounts are calculated by billing from eligible days and contracted rates. "
+                            + "The invoice service period may differ from an individual line period when charges are pro-rated.")
+                        .FontSize(8.5f)
+                        .FontColor(Colors.Grey.Darken1)
+                        .LineHeight(1.35f);
+                });
+
+                page.Footer().PaddingTop(8).Column(col =>
+                {
+                    col.Item().LineHorizontal(0.5f).LineColor(Colors.Grey.Lighten2);
+                    col.Item().PaddingTop(6);
+                    if (!string.IsNullOrWhiteSpace(invoice.SnapshotFooterText))
+                    {
+                        col.Item().Text(invoice.SnapshotFooterText).FontSize(8.5f).LineHeight(1.3f);
+                    }
+
+                    var contact = FormatContactLine(invoice);
+                    if (!string.IsNullOrWhiteSpace(contact))
+                    {
+                        col.Item().PaddingTop(4).Text(contact).FontSize(8.5f).FontColor(Colors.Grey.Darken1);
+                    }
+
+                    col.Item().AlignRight().Text(text =>
+                    {
+                        text.Span("Page ").FontSize(8);
+                        text.CurrentPageNumber().FontSize(8);
+                        text.Span(" of ").FontSize(8);
+                        text.TotalPages().FontSize(8);
+                    });
+                });
+            });
+        }).GeneratePdf();
+    }
+
+    private static void ComposeInvoiceHeader(IContainer container, Invoice invoice, byte[]? logoBytes)
+    {
+        container.Column(col =>
+        {
+            col.Spacing(14);
+
+            col.Item().Row(row =>
+            {
+                row.RelativeItem(3).Column(left =>
                 {
                     if (logoBytes is { Length: > 0 })
                     {
-                        col.Item().MaxHeight(52).MaxWidth(140).Image(logoBytes).FitArea();
+                        left.Item().MaxHeight(56).MaxWidth(160).Image(logoBytes).FitArea();
+                        left.Item().PaddingTop(8);
                     }
 
-                    col.Item().Text(invoice.SnapshotTenantName).FontSize(11);
-                    col.Item().Text(invoice.SnapshotCompanyName).FontSize(16).Bold();
-                    col.Item().Text(invoice.SnapshotCareHomeName).FontSize(12);
+                    if (!string.IsNullOrWhiteSpace(invoice.SnapshotTenantName))
+                    {
+                        left.Item().Text(invoice.SnapshotTenantName).FontSize(10).FontColor(Colors.Grey.Darken1);
+                    }
+
+                    left.Item().Text(invoice.SnapshotCompanyName).FontSize(15).Bold();
+                    left.Item().PaddingTop(2).Text(invoice.SnapshotCareHomeName).FontSize(11).SemiBold();
+
                     if (!string.IsNullOrWhiteSpace(invoice.SnapshotHeaderText1))
                     {
-                        col.Item().Text(invoice.SnapshotHeaderText1);
+                        left.Item().PaddingTop(6).Text(invoice.SnapshotHeaderText1).FontSize(9).LineHeight(1.35f);
                     }
 
                     if (!string.IsNullOrWhiteSpace(invoice.SnapshotHeaderText2))
                     {
-                        col.Item().Text(invoice.SnapshotHeaderText2);
+                        left.Item().Text(invoice.SnapshotHeaderText2).FontSize(9).LineHeight(1.35f);
                     }
                 });
 
-                page.Content().PaddingTop(16).Column(col =>
+                row.ConstantItem(20);
+
+                row.RelativeItem(2).AlignRight().Column(right =>
                 {
-                    col.Item().Text($"Invoice {invoice.InvoiceNumber}").FontSize(16).Bold();
-                    col.Item().Text($"Invoice date: {invoice.InvoiceDate:yyyy-MM-dd}");
-                    col.Item().Text($"Due date: {invoice.DueDate:yyyy-MM-dd}");
-                    col.Item().Text($"Service period: {invoice.PeriodStart:yyyy-MM-dd} to {invoice.PeriodEnd:yyyy-MM-dd}");
-                    col.Item().Text($"Company: {invoice.SnapshotCompanyName}");
-                    col.Item().Text($"Care home: {invoice.SnapshotCareHomeName}");
-                    col.Item().Text($"Funding authority: {invoice.SnapshotFundingAuthorityName} ({invoice.SnapshotFundingAuthorityCode})");
-                    col.Item().Text($"Category: {invoice.SnapshotInvoiceCategoryName}");
-                    col.Item().PaddingTop(12).Table(table =>
+                    right.Item().Text("INVOICE").FontSize(11).LetterSpacing(0.08f).FontColor(Colors.Grey.Darken1);
+                    right.Item().PaddingTop(4).Text(invoice.InvoiceNumber).FontSize(22).Bold();
+                    right.Item().PaddingTop(10).Text(FormatMoney(invoice.TotalAmount))
+                        .FontSize(18)
+                        .Bold()
+                        .FontColor(Colors.Grey.Darken4);
+
+                    right.Item().PaddingTop(14).Table(table =>
                     {
                         table.ColumnsDefinition(columns =>
                         {
-                            columns.RelativeColumn(2.2f);
-                            columns.RelativeColumn(1.2f);
-                            columns.RelativeColumn(1.1f);
-                            columns.RelativeColumn(2.4f);
-                            columns.RelativeColumn(0.7f);
-                            columns.RelativeColumn(1.3f);
-                            columns.RelativeColumn(0.9f);
-                            columns.RelativeColumn(1.0f);
+                            columns.ConstantColumn(92);
+                            columns.RelativeColumn();
                         });
 
-                        table.Header(header =>
+                        void MetaRow(string label, string value)
                         {
-                            header.Cell().Element(HeaderCell).Text("Client");
-                            header.Cell().Element(HeaderCell).Text("Reference");
-                            header.Cell().Element(HeaderCell).Text("Sage ID");
-                            header.Cell().Element(HeaderCell).Text("Service / description");
-                            header.Cell().Element(HeaderCell).AlignRight().Text("Days");
-                            header.Cell().Element(HeaderCell).AlignRight().Text("Rate");
-                            header.Cell().Element(HeaderCell).Text("Nominal");
-                            header.Cell().Element(HeaderCell).AlignRight().Text("Amount");
-                        });
-
-                        foreach (var line in invoice.Lines)
-                        {
-                            table.Cell().Element(BodyCell).Text(line.SnapshotClientName);
-                            table.Cell().Element(BodyCell).Text(line.SnapshotClientReferenceNumber);
-                            table.Cell().Element(BodyCell).Text(line.SnapshotSageId);
-                            table.Cell().Element(BodyCell).Column(cell =>
-                            {
-                                cell.Item().Text($"{line.ServicePeriodStart:yyyy-MM-dd} to {line.ServicePeriodEnd:yyyy-MM-dd}");
-                                if (!string.IsNullOrWhiteSpace(line.Description))
-                                {
-                                    cell.Item().Text(line.Description).FontSize(8).FontColor(Colors.Grey.Darken2);
-                                }
-                            });
-                            table.Cell().Element(BodyCell).AlignRight().Text(line.EligibleDays.ToString());
-                            table.Cell().Element(BodyCell).AlignRight().Text($"{line.RateAmount:0.00} {line.RateFrequency}");
-                            table.Cell().Element(BodyCell).Text(line.SnapshotNominalCode);
-                            table.Cell().Element(BodyCell).AlignRight().Text(line.LineAmount.ToString("0.00"));
+                            table.Cell().PaddingVertical(2).Text(label).FontSize(9).FontColor(Colors.Grey.Darken1);
+                            table.Cell().PaddingVertical(2).AlignRight().Text(value).FontSize(9).SemiBold();
                         }
+
+                        MetaRow("Invoice date", FormatDisplayDate(invoice.InvoiceDate));
+                        MetaRow("Due date", FormatDisplayDate(invoice.DueDate));
+                        MetaRow("Service period", FormatDateRange(invoice.PeriodStart, invoice.PeriodEnd));
                     });
-
-                    col.Item().AlignRight().PaddingTop(12).Text($"Total: {invoice.TotalAmount:0.00}").FontSize(12).Bold();
-
-                    col.Item().PaddingTop(16).Text("Bank details").Bold();
-                    col.Item().Text($"Account: {invoice.SnapshotBankAccountName}");
-                    col.Item().Text($"Sort code: {invoice.SnapshotSortCode}");
-                    col.Item().Text($"Account number: {invoice.SnapshotAccountNumber}");
-                });
-
-                page.Footer().Column(col =>
-                {
-                    if (!string.IsNullOrWhiteSpace(invoice.SnapshotFooterText))
-                    {
-                        col.Item().Text(invoice.SnapshotFooterText).FontSize(8);
-                    }
-
-                    col.Item().Text($"{invoice.SnapshotContactName} {invoice.SnapshotContactEmail} {invoice.SnapshotContactPhone}")
-                        .FontSize(8);
                 });
             });
-        }).GeneratePdf();
+
+            col.Item().LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
+        });
+    }
+
+    private static void ComposeResidentPanel(IContainer container, InvoiceLine? line)
+    {
+        container.Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(12).Column(col =>
+        {
+            col.Spacing(8);
+            col.Item().Text("Resident").FontSize(10).SemiBold().FontColor(Colors.Grey.Darken2);
+
+            if (line is null)
+            {
+                col.Item().Text("—").FontColor(Colors.Grey.Darken1);
+                return;
+            }
+
+            col.Item().Table(table =>
+            {
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.ConstantColumn(72);
+                    columns.RelativeColumn();
+                });
+
+                LabelValueRow(table, "Client", line.SnapshotClientName);
+                LabelValueRow(table, "Reference", NullIfEmpty(line.SnapshotClientReferenceNumber));
+                LabelValueRow(table, "Sage ID", NullIfEmpty(line.SnapshotSageId));
+            });
+        });
+    }
+
+    private static void ComposeFundingPanel(IContainer container, Invoice invoice)
+    {
+        container.Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(12).Column(col =>
+        {
+            col.Spacing(8);
+            col.Item().Text("Funding & billing").FontSize(10).SemiBold().FontColor(Colors.Grey.Darken2);
+
+            col.Item().Table(table =>
+            {
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.ConstantColumn(108);
+                    columns.RelativeColumn();
+                });
+
+                LabelValueRow(table, "Funding authority", invoice.SnapshotFundingAuthorityName);
+                LabelValueRow(table, "Funding code", NullIfEmpty(invoice.SnapshotFundingAuthorityCode));
+                LabelValueRow(table, "Category", invoice.SnapshotInvoiceCategoryName);
+                if (!string.IsNullOrWhiteSpace(invoice.SnapshotInvoiceCategoryCode))
+                {
+                    LabelValueRow(table, "Category code", invoice.SnapshotInvoiceCategoryCode);
+                }
+
+                LabelValueRow(table, "Care home", invoice.SnapshotCareHomeName);
+                LabelValueRow(table, "Company", invoice.SnapshotCompanyName);
+            });
+        });
+    }
+
+    private static void ComposeLineItemsSection(IContainer container, Invoice invoice)
+    {
+        container.Column(col =>
+        {
+            col.Spacing(10);
+            col.Item().Text("Invoice lines").FontSize(11).SemiBold();
+
+            col.Item().Table(table =>
+            {
+                table.ColumnsDefinition(columns =>
+                {
+                    columns.RelativeColumn(1.7f);
+                    columns.RelativeColumn(1.0f);
+                    columns.RelativeColumn(0.9f);
+                    columns.RelativeColumn(2.6f);
+                    columns.RelativeColumn(0.55f);
+                    columns.RelativeColumn(1.15f);
+                    columns.RelativeColumn(0.85f);
+                    columns.RelativeColumn(0.95f);
+                });
+
+                table.Header(header =>
+                {
+                    header.Cell().Element(TableHeaderCell).Text("Client");
+                    header.Cell().Element(TableHeaderCell).Text("Reference");
+                    header.Cell().Element(TableHeaderCell).Text("Sage ID");
+                    header.Cell().Element(TableHeaderCell).Text("Service / description");
+                    header.Cell().Element(TableHeaderCell).AlignRight().Text("Days");
+                    header.Cell().Element(TableHeaderCell).AlignRight().Text("Rate");
+                    header.Cell().Element(TableHeaderCell).Text("Nominal");
+                    header.Cell().Element(TableHeaderCell).AlignRight().Text("Amount");
+                });
+
+                foreach (var line in invoice.Lines)
+                {
+                    table.Cell().Element(TableBodyCell).AlignMiddle().Text(line.SnapshotClientName);
+                    table.Cell().Element(TableBodyCell).AlignMiddle().Text(line.SnapshotClientReferenceNumber);
+                    table.Cell().Element(TableBodyCell).AlignMiddle().Text(NullIfEmpty(line.SnapshotSageId));
+                    table.Cell().Element(TableBodyCell).Column(cell =>
+                    {
+                        cell.Item().Text(FormatDateRange(line.ServicePeriodStart, line.ServicePeriodEnd))
+                            .FontSize(9)
+                            .SemiBold();
+                        if (!string.IsNullOrWhiteSpace(line.Description))
+                        {
+                            cell.Item().PaddingTop(3).Text(line.Description).LineHeight(1.35f);
+                        }
+
+                        var basis = line.AmountBasis?.Trim();
+                        if (!string.IsNullOrWhiteSpace(basis))
+                        {
+                            cell.Item().PaddingTop(3).Text(basis).FontSize(8.5f).FontColor(Colors.Grey.Darken1).LineHeight(1.3f);
+                        }
+                    });
+                    table.Cell().Element(TableBodyCell).AlignMiddle().AlignRight().Text(line.EligibleDays.ToString());
+                    table.Cell().Element(TableBodyCell).AlignMiddle().AlignRight()
+                        .Text($"{FormatMoney(line.RateAmount)} {line.RateFrequency}".Trim());
+                    table.Cell().Element(TableBodyCell).AlignMiddle().Text(line.SnapshotNominalCode);
+                    table.Cell().Element(TableBodyCell).AlignMiddle().AlignRight().Text(FormatMoney(line.LineAmount));
+                }
+            });
+        });
+    }
+
+    private static void ComposeTotalsPanel(IContainer container, Invoice invoice)
+    {
+        container.Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(12).Column(col =>
+        {
+            col.Item().Row(row =>
+            {
+                row.RelativeItem().Text("Total").FontSize(12).SemiBold();
+                row.ConstantItem(100).AlignRight().Text(FormatMoney(invoice.TotalAmount)).FontSize(14).Bold();
+            });
+        });
+    }
+
+    private static void ComposeBankDetailsPanel(IContainer container, Invoice invoice)
+    {
+        container.Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(12).Column(col =>
+        {
+            col.Spacing(6);
+            col.Item().Text("Bank details").FontSize(10).SemiBold();
+            col.Item().Text($"Account name: {invoice.SnapshotBankAccountName}").FontSize(9.5f);
+            col.Item().Text($"Sort code: {invoice.SnapshotSortCode}").FontSize(9.5f);
+            col.Item().Text($"Account number: {invoice.SnapshotAccountNumber}").FontSize(9.5f);
+        });
     }
 
     private static byte[] RenderCreditNote(CreditNote creditNote)
@@ -247,13 +418,13 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
                         });
                         table.Header(header =>
                         {
-                            header.Cell().Element(HeaderCell).Text("Description");
-                            header.Cell().Element(HeaderCell).AlignRight().Text("Amount");
+                            header.Cell().Element(TableHeaderCell).Text("Description");
+                            header.Cell().Element(TableHeaderCell).AlignRight().Text("Amount");
                         });
                         foreach (var line in creditNote.Lines)
                         {
-                            table.Cell().Element(BodyCell).Text(line.Description);
-                            table.Cell().Element(BodyCell).AlignRight().Text(line.Amount.ToString("0.00"));
+                            table.Cell().Element(TableBodyCell).Text(line.Description);
+                            table.Cell().Element(TableBodyCell).AlignRight().Text(line.Amount.ToString("0.00"));
                         }
                     });
                     col.Item().AlignRight().PaddingTop(12).Text($"Total: {creditNote.TotalAmount:0.00}").Bold();
@@ -262,13 +433,60 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
         }).GeneratePdf();
     }
 
-    private static IContainer HeaderCell(IContainer container)
+    private static IContainer TableHeaderCell(IContainer container)
     {
-        return container.DefaultTextStyle(x => x.SemiBold().FontSize(8)).Padding(3).BorderBottom(1);
+        return container
+            .DefaultTextStyle(x => x.SemiBold().FontSize(9).FontColor(Colors.Grey.Darken3))
+            .Background(Colors.Grey.Lighten4)
+            .PaddingVertical(7)
+            .PaddingHorizontal(5)
+            .BorderBottom(0.75f)
+            .BorderColor(Colors.Grey.Lighten1);
     }
 
-    private static IContainer BodyCell(IContainer container)
+    private static IContainer TableBodyCell(IContainer container)
     {
-        return container.PaddingVertical(3).PaddingHorizontal(2).BorderBottom(0.5f);
+        return container
+            .PaddingVertical(7)
+            .PaddingHorizontal(5)
+            .BorderBottom(0.25f)
+            .BorderColor(Colors.Grey.Lighten2)
+            .MinHeight(28);
+    }
+
+    private static void LabelValueRow(TableDescriptor table, string label, string? value)
+    {
+        table.Cell().PaddingVertical(2).Text(label).FontSize(9).FontColor(Colors.Grey.Darken1);
+        table.Cell().PaddingVertical(2).Text(value ?? "—").FontSize(9.5f);
+    }
+
+    private static bool HasBankDetails(Invoice invoice) =>
+        !string.IsNullOrWhiteSpace(invoice.SnapshotBankAccountName)
+        || !string.IsNullOrWhiteSpace(invoice.SnapshotSortCode)
+        || !string.IsNullOrWhiteSpace(invoice.SnapshotAccountNumber);
+
+    private static string FormatDisplayDate(DateOnly date) =>
+        date.ToString("d MMM yyyy", UkCulture);
+
+    private static string FormatDateRange(DateOnly start, DateOnly end) =>
+        $"{FormatDisplayDate(start)} – {FormatDisplayDate(end)}";
+
+    private static string FormatMoney(decimal amount) =>
+        amount.ToString("C2", UkCulture);
+
+    private static string NullIfEmpty(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "—" : value;
+
+    private static string? FormatContactLine(Invoice invoice)
+    {
+        var parts = new[]
+        {
+            invoice.SnapshotContactName,
+            invoice.SnapshotContactJobTitle,
+            invoice.SnapshotContactEmail,
+            invoice.SnapshotContactPhone
+        }.Where(p => !string.IsNullOrWhiteSpace(p)).ToArray();
+
+        return parts.Length == 0 ? null : string.Join(" · ", parts);
     }
 }
