@@ -1,8 +1,15 @@
+# Production image: Angular static files in wwwroot + API (same-origin /api).
+FROM node:22-bookworm-slim AS spa
+WORKDIR /app
+COPY frontend/care-home-web/package.json frontend/care-home-web/package-lock.json ./
+RUN npm ci
+COPY frontend/care-home-web/ ./
+RUN npm run build
+
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-
-# Full backend tree (main = CareHome.Api only; revenue-cycle-v2 = modular projects).
 COPY backend/ backend/
+COPY --from=spa /app/dist/care-home-web/browser backend/CareHome.Api/wwwroot/
 RUN dotnet restore backend/CareHome.Api/CareHome.Api.csproj
 RUN dotnet publish backend/CareHome.Api/CareHome.Api.csproj -c Release -o /app/publish --no-restore
 

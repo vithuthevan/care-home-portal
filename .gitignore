@@ -24,8 +24,10 @@ desktop.ini
 # Local environment (templates .env.example / .env.demo.example are tracked)
 .env
 .env.demo
+.env.production
 !.env.example
 !.env.demo.example
+!.env.production.example
 
 # Generated deploy secrets inventory (never commit)
 /secrets-inventory/
@@ -42,6 +44,7 @@ backend/_build_verify_tests/
 
 # Publish / Azure deploy artifacts
 /artifacts/
+/publish/
 backend/CareHome.Api/wwwroot/*
 !backend/CareHome.Api/wwwroot/.gitignore
 infra/azure/*.json

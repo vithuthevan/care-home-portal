@@ -46,6 +46,10 @@ docker compose stop
 docker compose down
 ```
 
+## Host on Oracle Cloud (OCI)
+
+Production on a Compute VM: `docker-compose.prod.yml`, `Dockerfile.prod`, TLS via Caddy/nginx. Use a **dedicated database per branch** (`main` vs `revenue-cycle-v2`). See `docs/ORACLE_CLOUD_DEPLOYMENT.md`.
+
 ## Host on Azure
 
 Recommended Production host: App Service (API + Angular same origin) + Azure SQL. See `docs/AZURE_HOSTING.md`.

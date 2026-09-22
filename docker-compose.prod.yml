@@ -1,0 +1,59 @@
+# Production-oriented Compose for a single VM (e.g. Oracle Cloud Compute).
+# - API serves Angular from wwwroot (build with Dockerfile.prod).
+# - SQL is NOT included by default; point ConnectionStrings__DefaultConnection at managed or host SQL.
+# - For amd64-only local SQL in Docker, use profile "with-sql" (not for Oracle ARM shapes).
+name: carehome-prod
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: backend/CareHome.Api/Dockerfile.prod
+    container_name: carehome-api-prod
+    env_file:
+      - path: .env.production
+        required: true
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      DocumentStorage__RootPath: /app/App_Data/documents
+      Database__ApplyMigrations: "${DATABASE__APPLY_MIGRATIONS:-false}"
+    ports:
+      # Bind to localhost only; put Caddy/nginx on 80/443 on the host.
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - carehome-documents:/app/App_Data/documents
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/health/ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 60s
+    restart: unless-stopped
+
+  sql:
+    profiles: ["with-sql"]
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    container_name: carehome-sql-prod
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: "${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in .env.production}"
+    volumes:
+      - carehome-sql-data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -C -b || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" -b",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  carehome-documents:
+  carehome-sql-data:
