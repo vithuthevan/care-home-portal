@@ -347,52 +347,43 @@ app-root {
   background: var(--app-success);
 }
 
-.billing-preview-hero {
+.billing-status-summary {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: var(--space-4) var(--space-5);
-  background: linear-gradient(
-    135deg,
-    var(--app-primary-soft) 0%,
-    var(--app-surface) 55%
-  );
-  border-color: color-mix(in srgb, var(--app-primary) 20%, var(--app-border));
+  padding: var(--space-4);
+  background: var(--app-surface);
 }
 
-.billing-preview-hero__title {
+.billing-status-summary__title {
   margin: 0;
-  font-size: 1.125rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--app-text);
 }
 
-.billing-preview-hero__scope {
+.billing-status-summary__scope {
   margin: var(--space-1) 0 0;
   font-size: 0.875rem;
   color: var(--app-text-secondary);
 }
 
-.billing-preview-hero__exceptions {
+.billing-status-summary__hint {
   margin: var(--space-2) 0 0;
   font-size: 0.8125rem;
-  font-weight: 600;
-  color: var(--app-warning);
+  color: var(--app-text-muted);
 }
 
-.billing-preview-hero__ready {
-  margin: var(--space-2) 0 0;
-  font-size: 0.8125rem;
-  color: var(--app-success);
+.billing-status-summary__metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  align-items: flex-end;
 }
 
-.billing-preview-hero__total {
-  text-align: right;
-}
-
-.billing-preview-hero__total-label {
+.billing-status-summary__metric-label {
   display: block;
   font-size: 0.72rem;
   font-weight: 600;
@@ -402,12 +393,92 @@ app-root {
   margin-bottom: var(--space-1);
 }
 
+.billing-scope-readonly {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-3) var(--space-4);
+  margin: 0;
+}
+
+.billing-scope-readonly dt {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-text-muted);
+}
+
+.billing-scope-readonly dd {
+  margin: var(--space-1) 0 0;
+  font-size: 0.875rem;
+  color: var(--app-text);
+}
+
+.billing-exceptions {
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  padding: var(--space-4);
+  background: color-mix(in srgb, var(--app-warning) 6%, var(--app-surface));
+  margin-bottom: var(--space-4);
+}
+
+.billing-exceptions__title {
+  margin: 0 0 var(--space-3);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.billing-exception-item {
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--app-border);
+}
+
+.billing-exception-item:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.billing-exception-item__name {
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.billing-exception-item__message {
+  margin: var(--space-1) 0 0;
+  font-size: 0.875rem;
+  color: var(--app-text-secondary);
+}
+
+.billing-generation-ready {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: color-mix(in srgb, var(--app-success) 8%, var(--app-surface));
+  margin-bottom: var(--space-4);
+}
+
+.billing-generation-blocked {
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: color-mix(in srgb, var(--app-warning) 6%, var(--app-surface));
+  margin-bottom: var(--space-4);
+}
+
+.billing-review-status--attention {
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.billing-review-status--ok {
+  color: var(--app-text-secondary);
+}
+
 @media (max-width: 639px) {
-  .billing-preview-hero__total {
-    text-align: left;
+  .billing-status-summary__metrics {
     width: 100%;
-    padding-top: var(--space-3);
-    border-top: 1px solid var(--app-border);
   }
 }
 
