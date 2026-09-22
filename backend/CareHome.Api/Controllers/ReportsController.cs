@@ -47,9 +47,19 @@ namespace CareHome.Api.Controllers
         }
 
         [HttpGet("income-by-category")]
-        public async Task<IActionResult> Income(DateOnly from, DateOnly to, string? format)
+        public async Task<IActionResult> Income(DateOnly? from, DateOnly? to, string? format)
         {
-            var rows = await reports.IncomeByCategoryAsync(tenantContext.TenantId, from, to, HttpContext.RequestAborted);
+            if (from is null || to is null)
+            {
+                return BadRequest(new { message = "From and to dates are required." });
+            }
+
+            if (to < from)
+            {
+                return BadRequest(new { message = "To date cannot be before from date." });
+            }
+
+            var rows = await reports.IncomeByCategoryAsync(tenantContext.TenantId, from.Value, to.Value, HttpContext.RequestAborted);
             return Export(format, "income-by-category", rows, rows.Select(r => $"{r.Category} {r.Amount}"));
         }
 
