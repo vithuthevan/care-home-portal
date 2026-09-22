@@ -152,17 +152,28 @@ jobs:
             echo "Starting CareHome API..."
             sudo systemctl start carehome-api
 
-            sleep 8
-
             echo "Checking service..."
             sudo systemctl is-active --quiet carehome-api
 
-            echo "Checking API health..."
-            curl --fail \
-              --retry 5 \
-              --retry-delay 3 \
-              http://127.0.0.1:5000/health/live
+            echo "Waiting for API to become healthy..."
 
-            echo ""
-            echo "Deployment completed successfully."
+            for i in {1..30}; do
+              if curl -fsS http://127.0.0.1:5000/health/live > /dev/null; then
+                echo "API is healthy."
+                exit 0
+              fi
+
+              echo "API not ready yet - attempt $i/30"
+              sleep 5
+            done
+
+            echo "API failed to become healthy within 150 seconds."
+
+            echo "Service status:"
+            sudo systemctl status carehome-api --no-pager -l || true
+
+            echo "Recent application logs:"
+            sudo journalctl -u carehome-api -n 100 --no-pager || true
+
+            exit 1
           EOF
