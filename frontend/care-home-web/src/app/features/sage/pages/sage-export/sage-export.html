@@ -6,14 +6,8 @@
   <app-api-error [message]="errorMessage()" />
   <section class="panel mb-4">
     <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Date from</mat-label>
-        <input matInput type="date" [(ngModel)]="dateFrom" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Date to</mat-label>
-        <input matInput type="date" [(ngModel)]="dateTo" />
-      </mat-form-field>
+      <app-date-field label="Date from" [(ngModel)]="dateFrom" />
+      <app-date-field label="Date to" [(ngModel)]="dateTo" />
       <div class="flex flex-wrap items-center gap-2">
         <button mat-stroked-button type="button" (click)="runPreview()">Validate</button>
         @if (auth.canWrite()) {

@@ -310,6 +310,31 @@
             <mat-icon>logout</mat-icon>
             <span>Sign out</span>
           </button>
+          <div class="user-menu-theme">
+            <span class="user-menu-theme__label">Appearance</span>
+            <button
+              mat-menu-item
+              type="button"
+              (click)="setColorMode('light')"
+              [attr.aria-current]="themeService.activeColorMode() === 'light' ? 'true' : null"
+            >
+              <mat-icon>{{
+                themeService.activeColorMode() === 'light' ? 'check' : 'light_mode'
+              }}</mat-icon>
+              <span>Light mode</span>
+            </button>
+            <button
+              mat-menu-item
+              type="button"
+              (click)="setColorMode('dark')"
+              [attr.aria-current]="themeService.activeColorMode() === 'dark' ? 'true' : null"
+            >
+              <mat-icon>{{
+                themeService.activeColorMode() === 'dark' ? 'check' : 'dark_mode'
+              }}</mat-icon>
+              <span>Dark mode</span>
+            </button>
+          </div>
         </mat-menu>
       </header>
       <main class="min-w-0">

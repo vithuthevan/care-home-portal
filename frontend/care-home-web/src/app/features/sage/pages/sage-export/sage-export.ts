@@ -12,6 +12,7 @@ import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { PagedResult } from '../../../../core/models';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
+import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 
 @Component({
   selector: 'app-sage-export',
@@ -24,6 +25,7 @@ import { TablePaginationComponent } from '../../../../shared/ui/table-pagination
     ApiErrorComponent,
     IconActionButtonComponent,
     TablePaginationComponent,
+    AppDateFieldComponent,
   ],
   templateUrl: './sage-export.html',
 })

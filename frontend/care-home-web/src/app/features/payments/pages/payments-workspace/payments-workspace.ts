@@ -19,6 +19,7 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
+import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 
 interface PaymentRow {
   publicId: string;
@@ -65,6 +66,7 @@ interface PaymentAllocationRow {
     DisplayDatePipe,
     StatusBadgeComponent,
     TablePaginationComponent,
+    AppDateFieldComponent,
   ],
   templateUrl: './payments-workspace.html',
 })

@@ -6,10 +6,7 @@
 <section class="panel panel--flat mb-4">
   <h3 class="m-0 mb-3">Record manual payment</h3>
   <div class="filter-row">
-    <mat-form-field appearance="outline">
-      <mat-label>Received date</mat-label>
-      <input matInput type="date" [(ngModel)]="newReceivedDate" />
-    </mat-form-field>
+    <app-date-field label="Received date" [(ngModel)]="newReceivedDate" />
     <mat-form-field appearance="outline">
       <mat-label>Amount</mat-label>
       <input matInput type="number" [(ngModel)]="newAmount" />

@@ -21,6 +21,7 @@ import {
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 import {
   billingExceptionHeadline,
   billingExceptionLabel,
@@ -50,6 +51,7 @@ import { Client } from '../../../clients/models/client.model';
     WorkflowStepsComponent,
     EmptyStateComponent,
     LoadingStateComponent,
+    AppDateFieldComponent,
   ],
   templateUrl: './billing-workspace.html',
 })

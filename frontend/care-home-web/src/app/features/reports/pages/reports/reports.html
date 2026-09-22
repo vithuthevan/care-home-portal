@@ -23,14 +23,8 @@
             <mat-option value="outstanding">Payment status / outstanding</mat-option>
           </mat-select>
         </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>From</mat-label>
-          <input matInput type="date" [(ngModel)]="from" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>To</mat-label>
-          <input matInput type="date" [(ngModel)]="to" />
-        </mat-form-field>
+        <app-date-field label="From" [(ngModel)]="from" />
+        <app-date-field label="To" [(ngModel)]="to" />
       </div>
       <div filterActions>
         <button

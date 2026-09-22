@@ -26,6 +26,7 @@ import { Client } from '../../../clients/models/client.model';
 import { ClientService } from '../../../clients/services/client.service';
 import { PagedResult } from '../../../../core/models';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
+import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 
 @Component({
   selector: 'app-credit-note-workspace',
@@ -46,6 +47,7 @@ import { TablePaginationComponent } from '../../../../shared/ui/table-pagination
     CurrencyDisplayComponent,
     IconActionButtonComponent,
     TablePaginationComponent,
+    AppDateFieldComponent,
   ],
   templateUrl: './credit-note-workspace.html',
 })

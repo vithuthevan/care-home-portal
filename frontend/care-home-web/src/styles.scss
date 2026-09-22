@@ -47,6 +47,7 @@
   --kpi-attention-fg: #c2410c;
   --kpi-critical-bg: #fef2f2;
   --kpi-critical-fg: #b91c1c;
+  --app-hover-muted: #f3f4f6;
 
   --primary: var(--app-primary);
   --primary-hover: var(--app-primary-hover);
@@ -123,8 +124,63 @@ html {
   );
 }
 
-html[data-app-theme] {
+html[data-app-color-mode='light'],
+html:not([data-app-color-mode]) {
   color-scheme: light;
+}
+
+html[data-app-color-mode='dark'] {
+  color-scheme: dark;
+  --app-surface: #1a1d21;
+  --app-surface-muted: #121418;
+  --app-surface-alt: #22262c;
+  --app-border: #2e3339;
+  --app-border-subtle: #252930;
+  --app-text: #f3f4f6;
+  --app-text-muted: #9ca3af;
+  --app-text-secondary: #d1d5db;
+  --app-success-light: rgb(21 128 61 / 18%);
+  --app-warning-light: rgb(180 83 9 / 18%);
+  --app-danger-light: rgb(185 28 28 / 18%);
+  --app-info-light: rgb(3 105 161 / 18%);
+  --app-info-soft: rgb(3 105 161 / 18%);
+  --app-shadow-hover: 0 1px 2px rgb(0 0 0 / 35%);
+  --kpi-info-bg: rgb(29 78 216 / 22%);
+  --kpi-info-fg: #93c5fd;
+  --kpi-success-bg: rgb(21 128 61 / 22%);
+  --kpi-success-fg: #86efac;
+  --kpi-finance-bg: rgb(109 40 217 / 22%);
+  --kpi-finance-fg: #c4b5fd;
+  --kpi-attention-bg: rgb(194 65 12 / 22%);
+  --kpi-attention-fg: #fdba74;
+  --kpi-critical-bg: rgb(185 28 28 / 22%);
+  --kpi-critical-fg: #fca5a5;
+  --app-hover-muted: #2a2f36;
+}
+
+html[data-app-color-mode='dark'][data-app-theme='green'] {
+  --app-primary-soft: rgb(21 128 61 / 22%);
+  --app-primary-light: rgb(21 128 61 / 22%);
+}
+
+html[data-app-color-mode='dark'][data-app-theme='blue'] {
+  --app-primary-soft: rgb(29 78 216 / 22%);
+  --app-primary-light: rgb(29 78 216 / 22%);
+}
+
+html[data-app-color-mode='dark'][data-app-theme='teal'] {
+  --app-primary-soft: rgb(15 118 110 / 22%);
+  --app-primary-light: rgb(15 118 110 / 22%);
+}
+
+html[data-app-color-mode='dark'][data-app-theme='purple'] {
+  --app-primary-soft: rgb(124 58 237 / 22%);
+  --app-primary-light: rgb(124 58 237 / 22%);
+}
+
+html[data-app-color-mode='dark'][data-app-theme='slate'] {
+  --app-primary-soft: rgb(51 65 85 / 35%);
+  --app-primary-light: rgb(51 65 85 / 35%);
 }
 
 html,
@@ -1335,7 +1391,7 @@ input[type='password'] {
 }
 
 .user-menu-panel .user-menu-logout:hover {
-  background: #f3f4f6;
+  background: var(--app-hover-muted);
 }
 
 .user-menu-theme {

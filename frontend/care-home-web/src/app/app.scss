@@ -5,7 +5,7 @@
 
 .app-sidenav {
   width: 248px;
-  background: #fff;
+  background: var(--app-surface);
   border-right: 1px solid var(--app-border);
   color: var(--app-text);
   transition: width 0.2s ease;
@@ -153,7 +153,7 @@
 }
 
 .nav a:hover {
-  background: #f3f4f6;
+  background: var(--app-hover-muted);
   color: var(--app-text);
 }
 
@@ -178,7 +178,7 @@
   gap: var(--space-2);
   min-height: 52px;
   padding: 0 var(--space-3);
-  background: #fff;
+  background: var(--app-surface);
   border-bottom: 1px solid var(--app-border-subtle);
   position: sticky;
   top: 0;
@@ -244,7 +244,7 @@
 }
 
 .user-chip:hover {
-  background: #f3f4f6;
+  background: var(--app-hover-muted);
 }
 
 .avatar {

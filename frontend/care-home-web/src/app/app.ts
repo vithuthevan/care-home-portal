@@ -35,7 +35,7 @@ export class App {
   readonly isMobile = signal(false);
   readonly menuOpen = signal(false);
   readonly breadcrumbs = inject(BreadcrumbService);
-  private readonly themeService = inject(ThemeService);
+  readonly themeService = inject(ThemeService);
   private readonly careHomePortalTheme = inject(CareHomePortalThemeService);
   readonly operationsOpen = signal(true);
   readonly billingSetupOpen = signal(true);
@@ -110,4 +110,7 @@ export class App {
     return this.auth.currentUser()?.roles?.[0] || 'User';
   }
 
+  setColorMode(mode: 'light' | 'dark'): void {
+    this.themeService.setColorMode(mode);
+  }
 }

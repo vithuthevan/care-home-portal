@@ -289,15 +289,16 @@
                     }
                   </mat-select>
                 </mat-form-field>
-                <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>Start date *</mat-label>
-                  <input matInput type="date" [(ngModel)]="newContract.contractStartDate" />
-                </mat-form-field>
-                <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>End date (optional)</mat-label>
-                  <input matInput type="date" [(ngModel)]="newContract.contractEndDate" />
-                  <mat-hint>Leave blank for an open-ended contract</mat-hint>
-                </mat-form-field>
+                <app-date-field
+                  label="Start date *"
+                  [(ngModel)]="newContract.contractStartDate"
+                  [required]="true"
+                />
+                <app-date-field
+                  label="End date (optional)"
+                  [(ngModel)]="newContract.contractEndDate"
+                  hint="Leave blank for an open-ended contract"
+                />
               </div>
               <button
                 mat-flat-button
@@ -328,15 +329,16 @@
                     }
                   </mat-select>
                 </mat-form-field>
-                <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>Effective from *</mat-label>
-                  <input matInput type="date" [(ngModel)]="newRate.effectiveFrom" />
-                </mat-form-field>
-                <mat-form-field appearance="outline" class="w-full">
-                  <mat-label>Effective to (optional)</mat-label>
-                  <input matInput type="date" [(ngModel)]="newRate.effectiveTo" />
-                  <mat-hint>Leave blank while the rate is current</mat-hint>
-                </mat-form-field>
+                <app-date-field
+                  label="Effective from *"
+                  [(ngModel)]="newRate.effectiveFrom"
+                  [required]="true"
+                />
+                <app-date-field
+                  label="Effective to (optional)"
+                  [(ngModel)]="newRate.effectiveTo"
+                  hint="Leave blank while the rate is current"
+                />
                 <mat-form-field appearance="outline" class="w-full">
                   <mat-label>Frequency *</mat-label>
                   <mat-select [(ngModel)]="newRate.frequency">

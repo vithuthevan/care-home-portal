@@ -19,6 +19,7 @@ import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
 import { DisplayDateTimePipe } from '../../../../shared/format/display-date-time.pipe';
 import { CurrencyDisplayComponent } from '../../../../shared/ui/currency-display';
 import { LabeledStatusComponent } from '../../../../shared/ui/labeled-status';
+import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 
 const SHARED_COLUMN_LABELS: Record<string, string> = {
   clientName: 'Resident',
@@ -69,6 +70,7 @@ const SHARED_COLUMN_LABELS: Record<string, string> = {
     DisplayDateTimePipe,
     CurrencyDisplayComponent,
     LabeledStatusComponent,
+    AppDateFieldComponent,
   ],
   templateUrl: './reports.html',
 })

@@ -23,6 +23,7 @@ import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 
 @Component({
   selector: 'app-client-form',
@@ -38,6 +39,7 @@ import { ToastService } from '../../../../shared/ui/toast.service';
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
+    AppDateFieldComponent,
   ],
 
   templateUrl: './client-form.html',

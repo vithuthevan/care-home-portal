@@ -30,6 +30,7 @@ import {
   EntitySummaryStripComponent,
 } from '../../../../shared/ui/entity-summary-strip';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 
 interface FundingContractView {
   id: number;
@@ -72,6 +73,7 @@ interface FundingRateView {
     LabeledStatusComponent,
     EmptyStateComponent,
     EntitySummaryStripComponent,
+    AppDateFieldComponent,
   ],
   templateUrl: './client-profile.html',
   styleUrl: './client-profile.scss',

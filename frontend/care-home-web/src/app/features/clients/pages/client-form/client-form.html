@@ -92,10 +92,7 @@
             <mat-error>Last name is required.</mat-error>
           }
         </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Date of birth (optional)</mat-label>
-          <input matInput type="date" formControlName="dateOfBirth" />
-        </mat-form-field>
+        <app-date-field formControlName="dateOfBirth" label="Date of birth (optional)" />
       </div>
 
       </section>
@@ -114,15 +111,12 @@
             <mat-error>Care type is required.</mat-error>
           }
         </mat-form-field>
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Admission date *</mat-label>
-          <input matInput type="date" formControlName="admissionDate" required />
-          @if (
-            form.controls.admissionDate.touched && form.controls.admissionDate.hasError('required')
-          ) {
-            <mat-error>Admission date is required.</mat-error>
-          }
-        </mat-form-field>
+        <app-date-field
+          formControlName="admissionDate"
+          label="Admission date *"
+          [required]="true"
+          requiredErrorMessage="Admission date is required."
+        />
 
         @if (isEditMode) {
           <mat-form-field appearance="outline" class="w-full">
@@ -134,16 +128,16 @@
             </mat-select>
           </mat-form-field>
           @if (!isCurrentStatus) {
-            <mat-form-field appearance="outline" class="w-full">
-              <mat-label>Discharge date</mat-label>
-              <input matInput type="date" formControlName="dischargeDate" />
-              @if (
+            <app-date-field
+              formControlName="dischargeDate"
+              label="Discharge date"
+              [errorText]="
                 form.controls.dischargeDate.touched &&
                 form.controls.dischargeDate.hasError('required')
-              ) {
-                <mat-error>Discharge date cannot be earlier than admission date.</mat-error>
-              }
-            </mat-form-field>
+                  ? 'Discharge date cannot be earlier than admission date.'
+                  : null
+              "
+            />
             <mat-form-field appearance="outline" class="w-full md:col-span-2">
               <mat-label>Discharge reason</mat-label>
               <input matInput formControlName="dischargeReason" />
