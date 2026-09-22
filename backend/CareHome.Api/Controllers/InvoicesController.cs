@@ -1,5 +1,6 @@
 using CareHome.Api.Audit;
 using CareHome.Api.Billing;
+using CareHome.Billing.Billing;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Documents;
@@ -153,9 +154,11 @@ namespace CareHome.Api.Controllers
                     PublicId = x.PublicId,
                     InvoiceNumber = x.InvoiceNumber,
                     CompanyId = x.CompanyId,
+                    CompanyPublicId = x.Company.PublicId,
                     CareHomeId = x.CareHomeId,
                     CareHomePublicId = x.CareHome.PublicId,
                     FundingAuthorityId = x.FundingAuthorityId,
+                    FundingAuthorityPublicId = x.FundingAuthority.PublicId,
                     InvoiceCategoryId = x.InvoiceCategoryId,
                     CompanyName = x.SnapshotCompanyName,
                     CareHomeName = x.SnapshotCareHomeName,
@@ -186,7 +189,8 @@ namespace CareHome.Api.Controllers
                         RateFrequency = l.RateFrequency,
                         RateAmount = l.RateAmount,
                         LineAmount = l.LineAmount,
-                        Description = l.Description
+                        Description = l.Description,
+                        AmountBasis = l.AmountBasis
                     }).ToList()
                 })
                 .FirstOrDefaultAsync();
@@ -202,6 +206,20 @@ namespace CareHome.Api.Controllers
             }
 
             await receivableReadModel.EnrichDetailAsync(tenantContext.TenantId, invoice, HttpContext.RequestAborted);
+
+            foreach (var line in invoice.Lines)
+            {
+                if (!string.IsNullOrWhiteSpace(line.AmountBasis))
+                {
+                    continue;
+                }
+
+                line.AmountBasis = InvoiceLineAmountBasis.Format(
+                    line.EligibleDays,
+                    line.RateFrequency,
+                    line.RateAmount,
+                    string.Equals(line.RateFrequency, "AdHoc", StringComparison.OrdinalIgnoreCase));
+            }
 
             return Ok(invoice);
         }

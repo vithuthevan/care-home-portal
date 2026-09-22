@@ -69,6 +69,9 @@ namespace CareHome.Api.Models
         [MaxLength(500)]
         public string Description { get; set; } = string.Empty;
 
+        [MaxLength(500)]
+        public string? AmountBasis { get; set; }
+
         public Invoice Invoice { get; set; } = null!;
 
         public Client Client { get; set; } = null!;

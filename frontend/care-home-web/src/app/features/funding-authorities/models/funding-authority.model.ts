@@ -1,5 +1,6 @@
 export interface FundingAuthority {
   id: number;
+  publicId?: string;
   code: string;
   name: string;
   type: string;

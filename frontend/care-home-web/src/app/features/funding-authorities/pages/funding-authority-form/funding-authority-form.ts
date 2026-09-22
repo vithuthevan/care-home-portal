@@ -38,7 +38,7 @@ export class FundingAuthorityForm implements OnInit {
   private readonly router = inject(Router);
   readonly auth = inject(AuthService);
 
-  fundingAuthorityId: number | null = null;
+  fundingAuthorityRouteKey: string | null = null;
 
   isEditMode = false;
   readonly isLoading = signal(false);
@@ -70,7 +70,7 @@ export class FundingAuthorityForm implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
 
     if (id) {
-      this.fundingAuthorityId = Number(id);
+      this.fundingAuthorityRouteKey = id;
       this.isEditMode = true;
       this.loadFundingAuthority();
     }
@@ -90,7 +90,7 @@ export class FundingAuthorityForm implements OnInit {
   }
 
   private loadFundingAuthority(): void {
-    if (this.fundingAuthorityId === null) {
+    if (this.fundingAuthorityRouteKey === null) {
       return;
     }
 
@@ -98,7 +98,7 @@ export class FundingAuthorityForm implements OnInit {
     this.errorMessage.set(null);
 
     this.fundingAuthorityService
-      .getFundingAuthority(this.fundingAuthorityId)
+      .getFundingAuthority(this.fundingAuthorityRouteKey)
       .pipe(
         finalize(() => {
           this.isLoading.set(false);
@@ -157,9 +157,9 @@ export class FundingAuthorityForm implements OnInit {
         value.billingFrequency === 'CustomDays' ? value.billingIntervalDays : null,
     };
 
-    if (this.isEditMode && this.fundingAuthorityId !== null) {
+    if (this.isEditMode && this.fundingAuthorityRouteKey !== null) {
       this.fundingAuthorityService
-        .updateFundingAuthority(this.fundingAuthorityId, {
+        .updateFundingAuthority(this.fundingAuthorityRouteKey, {
           ...request,
           isActive: value.isActive,
         })

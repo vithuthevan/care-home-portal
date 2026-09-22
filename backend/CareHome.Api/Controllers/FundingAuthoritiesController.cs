@@ -53,6 +53,7 @@ namespace CareHome.Api.Controllers
                 .Select(x => new FundingAuthorityDto
                 {
                     Id = x.Id,
+                    PublicId = x.PublicId,
                     Code = x.Code,
                     Name = x.Name,
                     Type = x.Type,
@@ -82,15 +83,22 @@ namespace CareHome.Api.Controllers
             });
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<FundingAuthorityDto>> GetFundingAuthority(int id)
+        [HttpGet("{key}")]
+        public async Task<ActionResult<FundingAuthorityDto>> GetFundingAuthority(string key)
         {
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
+            {
+                return NotFound();
+            }
+
             var authority = await dbContext.FundingAuthorities
                 .AsNoTracking()
-                .Where(x => x.Id == id && x.TenantId == tenantContext.TenantId)
+                .Where(x => x.TenantId == tenantContext.TenantId)
+                .Where(x => publicId != default ? x.PublicId == publicId : x.Id == id)
                 .Select(x => new FundingAuthorityDto
                 {
                     Id = x.Id,
+                    PublicId = x.PublicId,
                     Code = x.Code,
                     Name = x.Name,
                     Type = x.Type,
@@ -172,17 +180,24 @@ namespace CareHome.Api.Controllers
 
             return CreatedAtAction(
                 nameof(GetFundingAuthority),
-                new { id = authority.Id },
+                new { key = authority.PublicId.ToString() },
                 MapToDto(authority));
         }
 
-        [HttpPut("{id:int}")]
+        [HttpPut("{key}")]
         public async Task<ActionResult<FundingAuthorityDto>> UpdateFundingAuthority(
-            int id,
+            string key,
             UpdateFundingAuthorityRequest request)
         {
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
+            {
+                return NotFound();
+            }
+
             var authority = await dbContext.FundingAuthorities
-                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
+                .FirstOrDefaultAsync(x =>
+                    x.TenantId == tenantContext.TenantId &&
+                    (publicId != default ? x.PublicId == publicId : x.Id == id));
 
             if (authority is null)
             {
@@ -194,7 +209,7 @@ namespace CareHome.Api.Controllers
             var duplicateCode = await dbContext.FundingAuthorities
                 .AnyAsync(x =>
                     x.TenantId == tenantContext.TenantId &&
-                    x.Id != id &&
+                    x.Id != authority.Id &&
                     x.Code == code);
 
             if (duplicateCode)
@@ -310,6 +325,7 @@ namespace CareHome.Api.Controllers
             return new FundingAuthorityDto
             {
                 Id = authority.Id,
+                PublicId = authority.PublicId,
                 Code = authority.Code,
                 Name = authority.Name,
                 Type = authority.Type,

@@ -86,7 +86,11 @@
                       [attr.aria-label]="'Select invoice ' + item.invoiceNumber"
                     />
                   </td>
-                  <td class="font-medium">{{ item.invoiceNumber }}</td>
+                  <td class="font-medium" (click)="$event.stopPropagation()">
+                    <a class="table-cell-link" [routerLink]="['/invoices', entityRouteKey(item)]">{{
+                      item.invoiceNumber
+                    }}</a>
+                  </td>
                   <td class="col-hide-sm">{{ formatPeriod(item) }}</td>
                   <td class="col-hide-sm">{{ item.invoiceDate | displayDate }}</td>
                   <td class="cell-truncate">{{ item.careHomeName }}</td>
@@ -130,7 +134,7 @@
       @for (item of items(); track item.id) {
         <article class="mobile-data-card">
           <div class="flex items-start justify-between gap-2">
-            <a class="text-lg font-semibold no-underline" [routerLink]="['/invoices', entityRouteKey(item)]">{{
+            <a class="table-cell-link text-lg" [routerLink]="['/invoices', entityRouteKey(item)]">{{
               item.invoiceNumber
             }}</a>
             <mat-checkbox

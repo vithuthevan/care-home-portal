@@ -67,7 +67,7 @@
                       <app-icon-action
                         icon="edit"
                         ariaLabel="Edit funding authority"
-                        [routerLink]="['/funding-authorities', authority.id, 'edit']"
+                        [routerLink]="['/funding-authorities', entityRouteKey(authority), 'edit']"
                       />
                       @if (authority.isActive) {
                         <app-icon-action
@@ -108,7 +108,7 @@
                 <app-icon-action
                   icon="edit"
                   ariaLabel="Edit funding authority"
-                  [routerLink]="['/funding-authorities', authority.id, 'edit']"
+                  [routerLink]="['/funding-authorities', entityRouteKey(authority), 'edit']"
                 />
                 @if (authority.isActive) {
                   <app-icon-action

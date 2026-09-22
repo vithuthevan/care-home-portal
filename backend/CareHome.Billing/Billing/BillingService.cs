@@ -1,5 +1,6 @@
 using CareHome.Api.Abstractions;
 using CareHome.Api.Billing;
+using CareHome.Billing.Billing;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.Billing;
@@ -246,7 +247,12 @@ namespace CareHome.Api.Billing
                         RateAmount = line.Rate,
                         EligibleDays = line.EligibleDays,
                         LineAmount = line.Amount,
-                        Description = line.Description
+                        Description = line.Description,
+                        AmountBasis = InvoiceLineAmountBasis.Format(
+                            line.EligibleDays,
+                            line.Frequency,
+                            line.Rate,
+                            line.MiscChargeId is not null)
                     });
 
                     if (line.MiscChargeId is int miscId)

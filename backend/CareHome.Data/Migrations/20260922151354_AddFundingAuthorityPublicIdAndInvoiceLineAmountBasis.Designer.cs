@@ -4,6 +4,7 @@ using CareHome.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CareHome.Api.Migrations
 {
     [DbContext(typeof(CareHomeDbContext))]
-    partial class CareHomeDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260922151354_AddFundingAuthorityPublicIdAndInvoiceLineAmountBasis")]
+    partial class AddFundingAuthorityPublicIdAndInvoiceLineAmountBasis
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

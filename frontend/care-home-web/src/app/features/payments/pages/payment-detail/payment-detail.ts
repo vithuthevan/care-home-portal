@@ -115,6 +115,13 @@ export class PaymentDetailPage implements OnInit {
   });
 
   ngOnInit(): void {
+    this.route.queryParamMap.subscribe((query) => {
+      const search = query.get('search');
+      if (search) {
+        this.invoiceSearch = search;
+      }
+    });
+
     this.route.paramMap.subscribe((params) => {
       const id = params.get('id');
       if (id) {
@@ -137,6 +144,10 @@ export class PaymentDetailPage implements OnInit {
             { label: 'Payments', routerLink: '/payments' },
             { label: d.reference || 'Payment' },
           ]);
+          const search = this.route.snapshot.queryParamMap.get('search');
+          if (search && !this.invoiceSearch) {
+            this.invoiceSearch = search;
+          }
           if (d.unappliedAmount > 0 && d.status !== 'Reversed') {
             this.loadCandidates(publicId);
           }

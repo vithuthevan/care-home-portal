@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
@@ -20,6 +20,7 @@ import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
+import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
 
 interface PaymentRow {
   publicId: string;
@@ -72,6 +73,9 @@ interface PaymentAllocationRow {
 })
 export class PaymentsWorkspacePage implements OnInit {
   private readonly http = inject(HttpClient);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly breadcrumbs = inject(BreadcrumbService);
 
   loading = signal(true);
   errorMessage = signal<string | null>(null);
@@ -88,8 +92,13 @@ export class PaymentsWorkspacePage implements OnInit {
   newReference = '';
   newReceivedDate = new Date().toISOString().slice(0, 10);
   saving = signal(false);
+  private allocateSearch = '';
 
   ngOnInit(): void {
+    this.breadcrumbs.set([{ label: 'Payments' }]);
+    this.route.queryParamMap.subscribe((params) => {
+      this.allocateSearch = params.get('search')?.trim() ?? '';
+    });
     this.load();
   }
 
@@ -152,9 +161,17 @@ export class PaymentsWorkspacePage implements OnInit {
       })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({
-        next: () => {
+        next: (detail) => {
           this.newAmount = null;
           this.newReference = '';
+          const search =
+            this.allocateSearch || this.route.snapshot.queryParamMap.get('search')?.trim() || '';
+          if (search && detail.publicId) {
+            void this.router.navigate(['/payments', detail.publicId], {
+              queryParams: { search },
+            });
+            return;
+          }
           this.load();
         },
         error: (err) => this.errorMessage.set(getApiErrorMessage(err, 'Failed to record payment.')),

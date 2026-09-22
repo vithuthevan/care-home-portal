@@ -26,8 +26,8 @@ export class FundingAuthorityService {
     return this.http.get<PagedResult<FundingAuthority>>(this.apiUrl, { params });
   }
 
-  getFundingAuthority(id: number): Observable<FundingAuthority> {
-    return this.http.get<FundingAuthority>(`${this.apiUrl}/${id}`);
+  getFundingAuthority(routeKey: string): Observable<FundingAuthority> {
+    return this.http.get<FundingAuthority>(`${this.apiUrl}/${routeKey}`);
   }
 
   createFundingAuthority(request: CreateFundingAuthorityRequest): Observable<FundingAuthority> {
@@ -35,10 +35,10 @@ export class FundingAuthorityService {
   }
 
   updateFundingAuthority(
-    id: number,
+    routeKey: string,
     request: UpdateFundingAuthorityRequest,
   ): Observable<FundingAuthority> {
-    return this.http.put<FundingAuthority>(`${this.apiUrl}/${id}`, request);
+    return this.http.put<FundingAuthority>(`${this.apiUrl}/${routeKey}`, request);
   }
 
   deactivateFundingAuthority(id: number): Observable<void> {

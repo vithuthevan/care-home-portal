@@ -7,6 +7,8 @@ namespace CareHome.Api.Models
     {
         public int Id { get; set; }
 
+        public Guid PublicId { get; set; } = Guid.NewGuid();
+
         public int TenantId { get; set; }
 
         [Required]

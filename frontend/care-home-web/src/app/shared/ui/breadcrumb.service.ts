@@ -67,7 +67,7 @@ export class BreadcrumbService {
     if (path.startsWith('/billing')) {
       return [{ label: 'Billing', routerLink: '/billing' }];
     }
-    if (/^\/invoices\/\d+/.test(path)) {
+    if (/^\/invoices\/[^/]+/.test(path)) {
       return [
         { label: 'Billing', routerLink: '/billing' },
         { label: 'Invoices', routerLink: '/invoices' },
@@ -76,6 +76,33 @@ export class BreadcrumbService {
     }
     if (path.startsWith('/invoices')) {
       return [{ label: 'Billing', routerLink: '/billing' }, { label: 'Invoices' }];
+    }
+    if (/^\/payments\/[^/]+/.test(path)) {
+      return [{ label: 'Payments', routerLink: '/payments' }, { label: 'Payment' }];
+    }
+    if (path.startsWith('/payments')) {
+      return [{ label: 'Payments' }];
+    }
+    if (path.startsWith('/receivables')) {
+      return [{ label: 'Accounts receivable' }];
+    }
+    if (path.startsWith('/banking')) {
+      return [{ label: 'Banking' }];
+    }
+    if (path.startsWith('/remittances')) {
+      return [{ label: 'Remittances' }];
+    }
+    if (path.startsWith('/collections')) {
+      return [{ label: 'Collections' }];
+    }
+    if (path.startsWith('/disputes')) {
+      return [{ label: 'Disputes' }];
+    }
+    if (path.startsWith('/revenue-assurance')) {
+      return [{ label: 'Revenue assurance' }];
+    }
+    if (path.startsWith('/contract-renewals')) {
+      return [{ label: 'Contract renewals' }];
     }
     if (path.startsWith('/credit-notes')) {
       return [
@@ -89,7 +116,7 @@ export class BreadcrumbService {
         { label: 'Add authority' },
       ];
     }
-    if (/^\/funding-authorities\/\d+\/edit/.test(path)) {
+    if (/^\/funding-authorities\/[^/]+\/edit/.test(path)) {
       return [
         { label: 'Funding Authorities', routerLink: '/funding-authorities' },
         { label: 'Edit authority' },

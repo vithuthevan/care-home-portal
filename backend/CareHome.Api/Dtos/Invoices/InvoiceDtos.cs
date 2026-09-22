@@ -48,11 +48,15 @@ namespace CareHome.Api.Dtos.Invoices
     {
         public int CompanyId { get; set; }
 
+        public Guid CompanyPublicId { get; set; }
+
         public int CareHomeId { get; set; }
 
         public Guid CareHomePublicId { get; set; }
 
         public int FundingAuthorityId { get; set; }
+
+        public Guid FundingAuthorityPublicId { get; set; }
 
         public int InvoiceCategoryId { get; set; }
 
@@ -92,6 +96,9 @@ namespace CareHome.Api.Dtos.Invoices
         public decimal LineAmount { get; set; }
 
         public string Description { get; set; } = string.Empty;
+
+        /// <summary>Human-readable basis captured when the line was generated (not a recalculation).</summary>
+        public string? AmountBasis { get; set; }
     }
 
     public class UpdatePaymentStatusRequest

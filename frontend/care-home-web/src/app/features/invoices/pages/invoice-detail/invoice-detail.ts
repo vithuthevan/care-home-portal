@@ -151,15 +151,15 @@ export class InvoiceDetailPage implements OnInit {
     }
 
     const number = current.invoiceNumber || 'this invoice';
-    const label =
+    const message =
       status === 'Paid'
-        ? `Mark ${number} as paid?`
-        : `Mark ${number} as not paid?`;
+        ? `Mark ${number} as paid without recording a payment? This updates the invoice payment flag only — it does not create a payment or allocation. To record cash received, use Payments.`
+        : `Mark ${number} as not paid? This updates the invoice payment flag only.`;
     this.confirm
       .confirm({
-        title: 'Update payment status',
-        message: label,
-        confirmLabel: 'Confirm',
+        title: 'Legacy: payment status flag',
+        message,
+        confirmLabel: status === 'Paid' ? 'Mark as paid' : 'Mark as not paid',
       })
       .subscribe((ok) => {
         if (!ok) {
@@ -189,11 +189,6 @@ export class InvoiceDetailPage implements OnInit {
       });
   }
 
-  invoiceSubtitle(inv: { invoiceCategoryName?: string; careHomeName?: string }): string {
-    const parts = [inv.invoiceCategoryName, inv.careHomeName].filter(Boolean);
-    return parts.join(' · ') || 'Invoice document';
-  }
-
   careHomeDashboardLink(inv: {
     careHomeId?: number;
     careHomePublicId?: string;
@@ -206,6 +201,61 @@ export class InvoiceDetailPage implements OnInit {
       entityRouteKey({ id: inv.careHomeId, publicId: inv.careHomePublicId }),
       'dashboard',
     ];
+  }
+
+  companyDetailLink(inv: { companyId?: number; companyPublicId?: string }): string[] | null {
+    if (!inv.companyId) {
+      return null;
+    }
+    return ['/companies', entityRouteKey({ id: inv.companyId, publicId: inv.companyPublicId })];
+  }
+
+  fundingAuthorityEditLink(inv: {
+    fundingAuthorityId?: number;
+    fundingAuthorityPublicId?: string;
+  }): string[] | null {
+    if (!inv.fundingAuthorityId) {
+      return null;
+    }
+    return [
+      '/funding-authorities',
+      entityRouteKey({ id: inv.fundingAuthorityId, publicId: inv.fundingAuthorityPublicId }),
+      'edit',
+    ];
+  }
+
+  paymentsHandoffQueryParams(inv: {
+    invoiceNumber?: string;
+    publicId?: string;
+  }): Record<string, string> {
+    const params: Record<string, string> = {};
+    if (inv.invoiceNumber) {
+      params['search'] = inv.invoiceNumber;
+    }
+    if (inv.publicId) {
+      params['invoicePublicId'] = inv.publicId;
+    }
+    return params;
+  }
+
+  lineAmountHint(line: {
+    amountBasis?: string | null;
+    eligibleDays?: number;
+    rateAmount?: number;
+    rateFrequency?: string;
+  }): string | null {
+    if (line.amountBasis?.trim()) {
+      return line.amountBasis.trim();
+    }
+    if (line.eligibleDays === undefined || line.eligibleDays === null) {
+      return null;
+    }
+    const rate =
+      line.rateAmount != null ? `£${line.rateAmount.toFixed(2)} ${line.rateFrequency || ''}`.trim() : '';
+    if (rate) {
+      return `Line amount reflects ${line.eligibleDays} eligible day(s) at ${rate} (as calculated by billing).`;
+    }
+    return `Line amount reflects ${line.eligibleDays} eligible day(s) (as calculated by billing).`;
   }
 
   clientProfileLink(line: { clientId?: number; clientPublicId?: string }): string[] | null {

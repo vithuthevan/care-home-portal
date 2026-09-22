@@ -15,6 +15,7 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
+import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 @Component({
   selector: 'app-funding-authority-list',
@@ -32,6 +33,7 @@ import { TablePaginationComponent } from '../../../../shared/ui/table-pagination
   templateUrl: './funding-authority-list.html',
 })
 export class FundingAuthorityList implements OnInit {
+  readonly entityRouteKey = entityRouteKey;
   private readonly fundingAuthorityService = inject(FundingAuthorityService);
   private readonly confirm = inject(ConfirmDialogService);
   readonly auth = inject(AuthService);
