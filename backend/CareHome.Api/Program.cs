@@ -33,6 +33,31 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var applyMigrationsOnly = args.Contains("--apply-migrations", StringComparer.OrdinalIgnoreCase);
+if (applyMigrationsOnly)
+{
+    var migrateConnectionString =
+        builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException(
+            "Connection string 'DefaultConnection' was not found.");
+
+    ProductionStartupValidator.ValidateConnectionString(migrateConnectionString);
+
+    builder.Services.AddDbContext<CareHomeDbContext>(options =>
+        options.UseSqlServer(migrateConnectionString));
+
+    var migrateApp = builder.Build();
+    using var migrateScope = migrateApp.Services.CreateScope();
+    var migrateDb = migrateScope.ServiceProvider.GetRequiredService<CareHomeDbContext>();
+    var migrateLogger = migrateScope.ServiceProvider
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("Startup");
+    await migrateDb.Database.MigrateAsync();
+    await DatabaseMigrationStartupLogger.LogPendingMigrationsAsync(migrateDb, migrateLogger);
+    migrateLogger.LogInformation("Database migrations applied (--apply-migrations).");
+    return;
+}
+
 QuestPdfLicenseConfigurator.Configure(builder.Configuration);
 
 builder.Services.Configure<CommercialRevenueFeature>(
@@ -228,17 +253,6 @@ var app = builder.Build();
 
 var startupLogger = app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
 ProductionStartupValidator.Validate(app.Configuration, app.Environment, startupLogger);
-
-if (args.Contains("--apply-migrations", StringComparer.OrdinalIgnoreCase))
-{
-    using var migrateScope = app.Services.CreateScope();
-    var migrateDb = migrateScope.ServiceProvider.GetRequiredService<CareHomeDbContext>();
-    var migrateLogger = migrateScope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
-    await migrateDb.Database.MigrateAsync();
-    await DatabaseMigrationStartupLogger.LogPendingMigrationsAsync(migrateDb, migrateLogger);
-    migrateLogger.LogInformation("Database migrations applied (--apply-migrations).");
-    return;
-}
 
 app.UseExceptionHandler();
 app.UseForwardedHeaders();
