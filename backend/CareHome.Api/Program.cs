@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using CareHome.Api.Audit;
 using CareHome.Api.Billing.DependencyInjection;
 using CareHome.Api.Common;
+using CareHome.Api.Features;
 using CareHome.Api.Data;
 using CareHome.Api.Documents;
 using CareHome.Api.Email;
@@ -16,6 +17,7 @@ using CareHome.Api.Receivables.DependencyInjection;
 using CareHome.Api.Security;
 using CareHome.Api.Security.Authorization;
 using CareHome.Api.Services;
+using CareHome.Api.Middleware;
 using CareHome.Api.Telemetry;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -33,6 +35,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 QuestPdfLicenseConfigurator.Configure(builder.Configuration);
 
+builder.Services.Configure<CommercialRevenueFeature>(
+    builder.Configuration.GetSection(CommercialRevenueFeature.SectionName));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddCareHomeTelemetry(builder.Configuration, builder.Environment);
@@ -241,6 +245,7 @@ app.UseCors("AllowAngularApp");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<CommercialRevenueApiGateMiddleware>();
 app.UseMiddleware<RequestLoggingScopeMiddleware>();
 app.UseMiddleware<InactiveTenantMiddleware>();
 app.UseMiddleware<MustChangePasswordMiddleware>();

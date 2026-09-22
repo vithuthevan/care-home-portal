@@ -19,6 +19,7 @@ import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.servi
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import { COMMERCIAL_REVENUE_ENABLED } from '../../../../core/commercial-revenue.feature';
 
 @Component({
   selector: 'app-invoice-detail',
@@ -44,6 +45,7 @@ export class InvoiceDetailPage implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly breadcrumbs = inject(BreadcrumbService);
   readonly auth = inject(AuthService);
+  readonly commercialRevenueEnabled = COMMERCIAL_REVENUE_ENABLED;
   readonly entityRouteKey = entityRouteKey;
   readonly invoice = signal<any | null>(null);
   readonly errorMessage = signal<string | null>(null);

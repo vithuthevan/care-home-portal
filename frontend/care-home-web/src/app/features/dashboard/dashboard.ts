@@ -8,6 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { getApiErrorMessage } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
+import { COMMERCIAL_REVENUE_ENABLED } from '../../core/commercial-revenue.feature';
 import { PageHeaderComponent } from '../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../shared/ui/loading-state';
@@ -88,6 +89,11 @@ export interface SetupHintAction {
 export class DashboardPage implements OnInit {
   private readonly http = inject(HttpClient);
   readonly auth = inject(AuthService);
+  readonly commercialRevenueEnabled = COMMERCIAL_REVENUE_ENABLED;
+  readonly outstandingKpiLink = COMMERCIAL_REVENUE_ENABLED ? '/receivables' : '/invoices';
+  readonly outstandingKpiQueryParams = COMMERCIAL_REVENUE_ENABLED
+    ? null
+    : { paymentStatus: 'NotPaid' };
   private readonly router = inject(Router);
   readonly dashboard = signal<DashboardDto | null>(null);
   readonly errorMessage = signal<string | null>(null);

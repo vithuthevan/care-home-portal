@@ -58,41 +58,48 @@
       </div>
     </section>
 
-    <section class="panel panel--flat payment-status-panel" aria-labelledby="collection-status-heading">
-      <h2 id="collection-status-heading" class="payment-status-panel__heading m-0">Collection status</h2>
-      <div class="payment-status-panel__row">
-        <dl class="payment-status-panel__metrics">
-          <div>
-            <dt>Payment status</dt>
-            <dd>
-              <app-labeled-status kind="Payment" [value]="inv.collectionStatus || inv.paymentStatus" />
-            </dd>
+    @if (commercialRevenueEnabled) {
+      <section class="panel panel--flat payment-status-panel" aria-labelledby="collection-status-heading">
+        <h2 id="collection-status-heading" class="payment-status-panel__heading m-0">Collection status</h2>
+        <div class="payment-status-panel__row">
+          <dl class="payment-status-panel__metrics">
+            <div>
+              <dt>Payment status</dt>
+              <dd>
+                <app-labeled-status kind="Payment" [value]="inv.collectionStatus || inv.paymentStatus" />
+              </dd>
+            </div>
+            @if (inv.outstandingAmount !== undefined) {
+              <div>
+                <dt>Outstanding</dt>
+                <dd class="payment-status-panel__amount">£{{ inv.outstandingAmount | number: '1.2-2' }}</dd>
+              </div>
+              <div>
+                <dt>Paid</dt>
+                <dd class="payment-status-panel__amount">£{{ inv.paidAmount | number: '1.2-2' }}</dd>
+              </div>
+            }
+          </dl>
+          <div class="payment-status-panel__actions">
+            <a
+              mat-flat-button
+              color="primary"
+              routerLink="/payments"
+              [queryParams]="paymentsHandoffQueryParams(inv)"
+              >Record payment &amp; allocate</a
+            >
+            <p class="payment-status-panel__hint m-0">
+              Record cash here, then you will be taken to allocate to this invoice when possible.
+            </p>
           </div>
-          @if (inv.outstandingAmount !== undefined) {
-            <div>
-              <dt>Outstanding</dt>
-              <dd class="payment-status-panel__amount">£{{ inv.outstandingAmount | number: '1.2-2' }}</dd>
-            </div>
-            <div>
-              <dt>Paid</dt>
-              <dd class="payment-status-panel__amount">£{{ inv.paidAmount | number: '1.2-2' }}</dd>
-            </div>
-          }
-        </dl>
-        <div class="payment-status-panel__actions">
-          <a
-            mat-flat-button
-            color="primary"
-            routerLink="/payments"
-            [queryParams]="paymentsHandoffQueryParams(inv)"
-            >Record payment &amp; allocate</a
-          >
-          <p class="payment-status-panel__hint m-0">
-            Record cash here, then you will be taken to allocate to this invoice when possible.
-          </p>
         </div>
-      </div>
-    </section>
+      </section>
+    } @else {
+      <section class="panel panel--flat payment-status-panel" aria-labelledby="payment-status-heading">
+        <h2 id="payment-status-heading" class="payment-status-panel__heading m-0">Payment status</h2>
+        <app-labeled-status kind="Payment" [value]="inv.paymentStatus" />
+      </section>
+    }
 
     <div class="panel panel--flat mb-4 actions-bar actions-bar--invoice">
       @if (auth.canWrite()) {

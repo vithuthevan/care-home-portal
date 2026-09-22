@@ -19,7 +19,8 @@ public sealed class CareHomeWebApplicationFactory : WebApplicationFactory<Progra
                 ["Seed:AdminEmail"] = "",
                 ["Seed:AdminPassword"] = "",
                 ["Jwt:Key"] = "integration-test-signing-key-32chars-min!",
-                ["Telemetry:EnableConsoleExporter"] = "false"
+                ["Telemetry:EnableConsoleExporter"] = "false",
+                ["Features:CommercialRevenueEnabled"] = "true"
             });
         });
     }

@@ -8,6 +8,7 @@ import {
   organisationSettingsGuard,
   passwordChangeGuard,
 } from './core/auth.guard';
+import { commercialRevenueGuard } from './core/commercial-revenue.guard';
 import { LoginPage } from './features/login/login';
 import { ChangePasswordPage } from './features/login/change-password';
 import { ForbiddenPage } from './features/forbidden/forbidden';
@@ -102,15 +103,51 @@ export const routes: Routes = [
   { path: 'invoices', component: InvoiceListPage, canActivate: [authGuard] },
   { path: 'invoices/:id', component: InvoiceDetailPage, canActivate: [authGuard] },
   { path: 'credit-notes', component: CreditNoteWorkspacePage, canActivate: [authGuard] },
-  { path: 'receivables', component: ReceivablesWorkspacePage, canActivate: [authGuard] },
-  { path: 'payments', component: PaymentsWorkspacePage, canActivate: [authGuard] },
-  { path: 'payments/:id', component: PaymentDetailPage, canActivate: [authGuard] },
-  { path: 'banking', component: BankingWorkspacePage, canActivate: [authGuard] },
-  { path: 'remittances', component: RemittanceWorkspacePage, canActivate: [authGuard] },
-  { path: 'revenue-assurance', component: RevenueAssuranceWorkspacePage, canActivate: [authGuard] },
-  { path: 'disputes', component: DisputesWorkspacePage, canActivate: [authGuard] },
-  { path: 'collections', component: CollectionsWorkspacePage, canActivate: [authGuard] },
-  { path: 'contract-renewals', component: RenewalsWorkspacePage, canActivate: [authGuard] },
+  {
+    path: 'receivables',
+    component: ReceivablesWorkspacePage,
+    canActivate: [authGuard, commercialRevenueGuard],
+  },
+  {
+    path: 'payments',
+    component: PaymentsWorkspacePage,
+    canActivate: [authGuard, commercialRevenueGuard],
+  },
+  {
+    path: 'payments/:id',
+    component: PaymentDetailPage,
+    canActivate: [authGuard, commercialRevenueGuard],
+  },
+  {
+    path: 'banking',
+    component: BankingWorkspacePage,
+    canActivate: [authGuard, commercialRevenueGuard],
+  },
+  {
+    path: 'remittances',
+    component: RemittanceWorkspacePage,
+    canActivate: [authGuard, commercialRevenueGuard],
+  },
+  {
+    path: 'revenue-assurance',
+    component: RevenueAssuranceWorkspacePage,
+    canActivate: [authGuard, commercialRevenueGuard],
+  },
+  {
+    path: 'disputes',
+    component: DisputesWorkspacePage,
+    canActivate: [authGuard, commercialRevenueGuard],
+  },
+  {
+    path: 'collections',
+    component: CollectionsWorkspacePage,
+    canActivate: [authGuard, commercialRevenueGuard],
+  },
+  {
+    path: 'contract-renewals',
+    component: RenewalsWorkspacePage,
+    canActivate: [authGuard, commercialRevenueGuard],
+  },
   { path: 'misc-charges', component: MiscChargesPage, canActivate: [authGuard] },
   { path: 'reports', component: ReportsPage, canActivate: [authGuard] },
   { path: 'sage-exports', component: SageExportPage, canActivate: [authGuard] },

@@ -55,12 +55,13 @@
       <h2 id="dashboard-finance-heading" class="dashboard-section__title">Finance</h2>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <app-kpi-card
-          label="Outstanding receivables"
+          [label]="commercialRevenueEnabled ? 'Outstanding receivables' : 'Outstanding invoices'"
           [value]="outstandingReceivablesValue(data)"
           [hint]="outstandingReceivablesHint(data)"
           icon="request_quote"
           tone="attention"
-          routerLink="/receivables"
+          [routerLink]="outstandingKpiLink"
+          [queryParams]="outstandingKpiQueryParams"
         />
         <app-kpi-card
           label="Generated invoices"

@@ -12,6 +12,7 @@ import { AuthService } from './core/auth.service';
 import { BreadcrumbService } from './shared/ui/breadcrumb.service';
 import { ThemeService } from './shared/ui/theme.service';
 import { CareHomePortalThemeService } from './core/care-home-portal-theme.service';
+import { COMMERCIAL_REVENUE_ENABLED } from './core/commercial-revenue.feature';
 
 @Component({
   selector: 'app-root',
@@ -40,6 +41,7 @@ export class App {
   readonly operationsOpen = signal(true);
   readonly billingSetupOpen = signal(true);
   readonly billingOpen = signal(true);
+  readonly showCommercialRevenueNav = COMMERCIAL_REVENUE_ENABLED;
   readonly revenueOpen = signal(true);
   readonly assuranceOpen = signal(true);
   readonly reportingOpen = signal(true);
