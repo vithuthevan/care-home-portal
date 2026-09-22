@@ -1,0 +1,132 @@
+.dashboard-context {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--app-text-secondary);
+}
+
+.dashboard-lead {
+  margin: var(--space-1) 0 0;
+  font-size: 0.875rem;
+  color: var(--app-text-muted);
+}
+
+.dashboard-error-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.dashboard-error-row app-api-error {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.dashboard-billing-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.dashboard-billing-panel__copy {
+  min-width: 0;
+  max-width: 36rem;
+}
+
+.dashboard-billing-panel__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.dashboard-billing-panel__text {
+  margin: var(--space-2) 0 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--app-text-muted);
+}
+
+.dashboard-billing-panel__stat {
+  margin: var(--space-2) 0 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--app-text-secondary);
+}
+
+.attention-queue__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.attention-queue__title {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--app-text);
+}
+
+.attention-queue__detail {
+  margin: var(--space-1) 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: var(--app-text-muted);
+}
+
+.attention-queue__action {
+  display: inline-block;
+  margin-top: var(--space-2);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--app-primary);
+  text-decoration: none;
+}
+
+.attention-queue__action:hover {
+  text-decoration: underline;
+}
+
+.dashboard-invoices-empty {
+  margin-top: var(--space-2);
+}
+
+.dashboard-occupancy-empty {
+  margin-top: 0;
+}
+
+.data-table--dashboard-invoices th,
+.data-table--dashboard-invoices td {
+  vertical-align: middle;
+}
+
+.data-table--dashboard-invoices .invoice-link {
+  font-weight: 600;
+  color: var(--app-text);
+  text-decoration: none;
+}
+
+.data-table--dashboard-invoices .invoice-link:hover {
+  color: var(--app-primary);
+  text-decoration: underline;
+}
+
+.data-table--dashboard-occupancy .home-link {
+  font-weight: 600;
+  color: var(--app-text);
+  text-decoration: none;
+}
+
+.data-table--dashboard-occupancy .home-link:hover {
+  color: var(--app-primary);
+  text-decoration: underline;
+}
+
+@media (min-width: 1280px) {
+  .dashboard-main-grid {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  }
+}

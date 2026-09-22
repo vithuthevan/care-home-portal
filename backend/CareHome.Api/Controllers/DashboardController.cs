@@ -30,6 +30,7 @@ namespace CareHome.Api.Controllers
             var occupancy = await queryHomes.Select(x => new OccupancyCardDto
             {
                 CareHomeId = x.Id,
+                PublicId = x.PublicId,
                 CareHomeName = x.Name,
                 Capacity = x.BedCapacity,
                 Occupied = x.Clients.Count(c => c.Status == "Current" && !c.IsArchived),
@@ -48,10 +49,12 @@ namespace CareHome.Api.Controllers
                 .Select(x => new RecentInvoiceDto
                 {
                     Id = x.Id,
+                    PublicId = x.PublicId,
                     InvoiceNumber = x.InvoiceNumber,
                     CareHomeName = x.SnapshotCareHomeName,
                     TotalAmount = x.TotalAmount,
-                    Status = x.Status
+                    Status = x.Status,
+                    PaymentStatus = x.PaymentStatus
                 })
                 .ToListAsync();
 
@@ -60,7 +63,11 @@ namespace CareHome.Api.Controllers
                 .Where(x => x.CareHomeId == null || homes.Contains(x.CareHomeId.Value))
                 .OrderByDescending(x => x.LoggedAt)
                 .Take(8)
-                .Select(x => x.Message)
+                .Select(x => new DashboardBillingExceptionDto
+                {
+                    Code = x.Code,
+                    Message = x.Message
+                })
                 .ToListAsync();
 
             var upcoming = await dbContext.ClientFundingContracts.AsNoTracking()
@@ -119,10 +126,12 @@ namespace CareHome.Api.Controllers
                 .Select(x => new RecentInvoiceDto
                 {
                     Id = x.Id,
+                    PublicId = x.PublicId,
                     InvoiceNumber = x.InvoiceNumber,
                     CareHomeName = x.SnapshotCareHomeName,
                     TotalAmount = x.TotalAmount,
-                    Status = x.Status
+                    Status = x.Status,
+                    PaymentStatus = x.PaymentStatus
                 })
                 .ToListAsync();
 
