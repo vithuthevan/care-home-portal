@@ -6,10 +6,12 @@ public class SecurityHeadersMiddleware(RequestDelegate next)
     // See docs/PRODUCTION_CONFIGURATION.md.
     private const string ApiCsp =
         "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
-
     private const string SpaCsp =
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data:; font-src 'self'; connect-src 'self'; " +
+        "default-src 'self'; script-src 'self'; " +
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+        "img-src 'self' data:; " +
+        "font-src 'self' https://fonts.gstatic.com; " +
+        "connect-src 'self'; " +
         "frame-ancestors 'none'; base-uri 'self'; form-action 'self'";
 
     public async Task InvokeAsync(HttpContext context)
