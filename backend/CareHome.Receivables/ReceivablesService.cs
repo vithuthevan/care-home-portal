@@ -225,6 +225,10 @@ public sealed class ReceivablesService(
     {
         query ??= new ReceivableInvoiceQuery();
         var homes = await accessScope.GetScopedCareHomeIdsAsync(tenantId, cancellationToken);
+        if (homes.Count == 0)
+        {
+            return [];
+        }
 
         var invoices = dbContext.Invoices.AsNoTracking()
             .Where(x => x.TenantId == tenantId && homes.Contains(x.CareHomeId));

@@ -105,6 +105,9 @@ export class ReceivablesWorkspacePage implements OnInit {
   readonly totalCount = signal(0);
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly loadErrorTitle = 'Unable to load accounts receivable';
+  readonly loadErrorHint =
+    "We couldn't retrieve this information right now. Please try again.";
 
   page = 1;
   pageSize = 25;
@@ -126,7 +129,8 @@ export class ReceivablesWorkspacePage implements OnInit {
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: (data) => this.summary.set(data),
-        error: (err) => this.errorMessage.set(getApiErrorMessage(err, 'Failed to load receivables.')),
+        error: (err) =>
+          this.errorMessage.set(getApiErrorMessage(err, this.loadErrorHint)),
       });
 
     this.loadInvoices();
@@ -159,7 +163,7 @@ export class ReceivablesWorkspacePage implements OnInit {
         this.invoices.set(page.items);
         this.totalCount.set(page.totalCount);
       },
-      error: (err) => this.errorMessage.set(getApiErrorMessage(err, 'Failed to load invoices.')),
+      error: (err) => this.errorMessage.set(getApiErrorMessage(err, this.loadErrorHint)),
     });
   }
 

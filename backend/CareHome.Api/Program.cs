@@ -296,11 +296,13 @@ using (var scope = app.Services.CreateScope())
     var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
         .CreateLogger("Startup");
 
+    var db = scope.ServiceProvider.GetRequiredService<CareHomeDbContext>();
     if (app.Configuration.GetValue("Database:ApplyMigrations", false))
     {
-        var db = scope.ServiceProvider.GetRequiredService<CareHomeDbContext>();
         await db.Database.MigrateAsync();
     }
+
+    await DatabaseMigrationStartupLogger.LogPendingMigrationsAsync(db, logger);
 
     try
     {

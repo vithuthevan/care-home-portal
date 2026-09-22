@@ -6,7 +6,12 @@
     <button mat-stroked-button type="button" (click)="refresh()">Refresh</button>
   </app-page-header>
 
-  <app-api-error [message]="errorMessage()" />
+  <app-api-error
+    [title]="errorMessage() ? loadErrorTitle : null"
+    [message]="errorMessage()"
+    [showRetry]="!!errorMessage()"
+    (retry)="refresh()"
+  />
 
   @if (isLoading() && !summary()) {
     <app-loading-state label="Loading receivables..." />
@@ -79,7 +84,7 @@
         </mat-form-field>
       </app-filter-bar>
 
-      @if (invoices().length === 0) {
+      @if (!errorMessage() && invoices().length === 0) {
         <app-empty-state title="No open receivables" message="Adjust filters or generate invoices from billing." />
       } @else {
         <div class="table-shell overflow-x-auto">
