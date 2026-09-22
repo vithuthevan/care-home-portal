@@ -275,7 +275,19 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 
 if (Directory.Exists(wwwRoot))
 {
-    app.MapFallbackToFile("index.html").AllowAnonymous();
+    var spaIndexPath = Path.Combine(wwwRoot, "index.html");
+    app.MapFallback(async (HttpContext context) =>
+    {
+        if (SecurityHeadersMiddleware.MatchesApiOrHealthPath(context.Request.Path))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            await context.Response.WriteAsJsonAsync(new { message = "Not found." });
+            return;
+        }
+
+        context.Response.ContentType = "text/html; charset=utf-8";
+        await context.Response.SendFileAsync(spaIndexPath);
+    }).AllowAnonymous();
 }
 
 using (var scope = app.Services.CreateScope())
