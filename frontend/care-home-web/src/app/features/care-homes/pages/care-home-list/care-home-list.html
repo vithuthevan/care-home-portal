@@ -6,7 +6,7 @@
     >
       <a mat-stroked-button [routerLink]="['/companies', ctx.routeKey]">Back to company</a>
       @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/care-homes/new">
+        <a mat-flat-button color="primary" routerLink="/care-homes/new" [queryParams]="newCareHomeQueryParams()">
           <mat-icon>add</mat-icon>
           Add care home
         </a>
@@ -15,7 +15,7 @@
   } @else {
     <app-page-header title="Care Homes" subtitle="Manage care home locations.">
       @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/care-homes/new">Add Care Home</a>
+        <a mat-flat-button color="primary" routerLink="/care-homes/new" [queryParams]="newCareHomeQueryParams()">Add Care Home</a>
       }
     </app-page-header>
   }
@@ -43,7 +43,7 @@
       message="This company doesn't have any care homes configured."
     >
       @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/care-homes/new">
+        <a mat-flat-button color="primary" routerLink="/care-homes/new" [queryParams]="newCareHomeQueryParams()">
           <mat-icon>add</mat-icon>
           Add care home
         </a>
@@ -58,7 +58,7 @@
       message="Add a care home under your company before admitting residents."
     >
       @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/care-homes/new">Add Care Home</a>
+        <a mat-flat-button color="primary" routerLink="/care-homes/new" [queryParams]="newCareHomeQueryParams()">Add Care Home</a>
       }
     </app-empty-state>
   }
@@ -87,7 +87,7 @@
       </mat-form-field>
       <div filterActions>
         @if (auth.canWrite()) {
-          <a mat-flat-button color="primary" routerLink="/care-homes/new">Add care home</a>
+          <a mat-flat-button color="primary" routerLink="/care-homes/new" [queryParams]="newCareHomeQueryParams()">Add care home</a>
         }
       </div>
     </app-filter-bar>
@@ -106,14 +106,18 @@
         </thead>
         <tbody>
           @for (careHome of careHomes(); track careHome.id) {
-            <tr [class.inactive-row]="!careHome.isActive">
+            <tr
+              class="row-clickable"
+              [class.inactive-row]="!careHome.isActive"
+              [routerLink]="['/care-homes', entityRouteKey(careHome), 'dashboard']"
+            >
               <td>{{ careHome.code }}</td>
               <td class="font-medium">{{ careHome.name }}</td>
               <td>{{ careHome.companyName }}</td>
               <td class="num">{{ careHome.bedCapacity }}</td>
               <td class="col-hide-sm">{{ careHome.managerName || '—' }}</td>
               <td class="col-status"><app-status-badge [value]="careHome.isActive ? 'Active' : 'Inactive'" /></td>
-              <td class="actions-cell col-actions">
+              <td class="actions-cell col-actions" (click)="$event.stopPropagation()">
                 <span class="table-actions">
                   <app-icon-action
                     icon="dashboard"

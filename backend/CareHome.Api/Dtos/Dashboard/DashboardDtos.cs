@@ -59,6 +59,12 @@ namespace CareHome.Api.Dtos.Dashboard
 
         public string CareHomeName { get; set; } = string.Empty;
 
+        public string ClientName { get; set; } = string.Empty;
+
+        public DateOnly PeriodStart { get; set; }
+
+        public DateOnly PeriodEnd { get; set; }
+
         public decimal TotalAmount { get; set; }
 
         public string Status { get; set; } = string.Empty;

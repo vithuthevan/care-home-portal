@@ -37,8 +37,8 @@
         </div>
         @if (inv.lines?.length) {
           <p class="mt-3 mb-0 text-lg font-semibold">
-            @if (inv.lines[0].clientId) {
-              <a [routerLink]="['/clients', inv.lines[0].clientId]">{{ inv.lines[0].clientName }}</a>
+            @if (clientProfileLink(inv.lines[0]); as clientLink) {
+              <a [routerLink]="clientLink">{{ inv.lines[0].clientName }}</a>
             } @else {
               {{ inv.lines[0].clientName }}
             }
@@ -136,10 +136,8 @@
             <div>
               <dt>Name</dt>
               <dd>
-                @if (inv.lines[0].clientId) {
-                  <a [routerLink]="['/clients', inv.lines[0].clientId]">{{
-                    inv.lines[0].clientName
-                  }}</a>
+                @if (clientProfileLink(inv.lines[0]); as clientLink) {
+                  <a [routerLink]="clientLink">{{ inv.lines[0].clientName }}</a>
                 } @else {
                   {{ inv.lines[0].clientName }}
                 }
@@ -172,8 +170,8 @@
           <div>
             <dt>Care home</dt>
             <dd>
-              @if (inv.careHomeId) {
-                <a [routerLink]="['/care-homes', inv.careHomeId, 'dashboard']">{{ inv.careHomeName }}</a>
+              @if (careHomeDashboardLink(inv); as homeLink) {
+                <a [routerLink]="homeLink">{{ inv.careHomeName }}</a>
               } @else {
                 {{ inv.careHomeName }}
               }
@@ -223,8 +221,8 @@
             @for (line of inv.lines; track line.id) {
               <tr>
                 <td>
-                  @if (line.clientId) {
-                    <a [routerLink]="['/clients', line.clientId]">{{ line.clientName }}</a>
+                  @if (clientProfileLink(line); as clientLink) {
+                    <a [routerLink]="clientLink">{{ line.clientName }}</a>
                   } @else {
                     {{ line.clientName }}
                   }

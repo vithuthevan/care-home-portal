@@ -23,7 +23,8 @@ describe('CareHomeForm', () => {
           provide: ActivatedRoute,
           useValue: {
             paramMap: of(convertToParamMap({})),
-            snapshot: { paramMap: convertToParamMap({}) },
+            queryParamMap: of(convertToParamMap({})),
+            snapshot: { paramMap: convertToParamMap({}), queryParamMap: convertToParamMap({}) },
           },
         },
       ],

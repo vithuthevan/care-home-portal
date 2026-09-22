@@ -23,6 +23,7 @@ import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 @Component({
@@ -56,6 +57,7 @@ export class CareHomeForm implements OnInit {
 
   readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
+  private readonly breadcrumbs = inject(BreadcrumbService);
 
   careHomeRouteKey: string | null = null;
 
@@ -111,8 +113,39 @@ export class CareHomeForm implements OnInit {
 
       this.isEditMode = true;
 
+      this.breadcrumbs.set([
+        { label: 'Care Homes', routerLink: '/care-homes' },
+        { label: 'Edit care home' },
+      ]);
+
       this.loadCareHome();
+      return;
     }
+
+    this.breadcrumbs.set([
+      { label: 'Care Homes', routerLink: '/care-homes' },
+      { label: 'Add care home' },
+    ]);
+
+    const companyKey =
+      this.route.snapshot.queryParamMap.get('company') ||
+      this.route.snapshot.queryParamMap.get('companyId');
+    if (companyKey) {
+      this.companyService.getCompany(companyKey).subscribe({
+        next: (company) => {
+          if (company.isActive) {
+            this.form.patchValue({ companyId: company.id });
+          }
+        },
+      });
+    }
+  }
+
+  cancelLink(): string[] {
+    if (this.isEditMode && this.careHomeRouteKey) {
+      return ['/care-homes', this.careHomeRouteKey, 'dashboard'];
+    }
+    return ['/care-homes'];
   }
 
   private loadCompanies(): void {
@@ -147,6 +180,12 @@ export class CareHomeForm implements OnInit {
       .subscribe({
         next: (careHome) => {
           this.assignedCompanyId.set(careHome.companyId);
+
+          this.breadcrumbs.set([
+            { label: 'Care Homes', routerLink: '/care-homes' },
+            { label: careHome.name, routerLink: ['/care-homes', entityRouteKey(careHome), 'dashboard'] },
+            { label: 'Edit care home' },
+          ]);
 
           this.form.patchValue({
             companyId: careHome.companyId,
@@ -230,7 +269,7 @@ export class CareHomeForm implements OnInit {
         .subscribe({
           next: () => {
             this.toast.success('Care home updated successfully.');
-            this.router.navigate(['/care-homes']);
+            void this.router.navigate(['/care-homes', this.careHomeRouteKey, 'dashboard']);
           },
 
           error: (error) => {
@@ -251,9 +290,22 @@ export class CareHomeForm implements OnInit {
         }),
       )
       .subscribe({
-        next: (careHome) => {
+        next: () => {
+          this.form.reset({
+            companyId: 0,
+            code: '',
+            name: '',
+            bedCapacity: 0,
+            address: '',
+            phone: '',
+            email: '',
+            managerName: '',
+            managerPhone: '',
+            managerEmail: '',
+            isActive: true,
+          });
           this.toast.success('Care home created successfully.');
-          void this.router.navigate(['/care-homes', entityRouteKey(careHome), 'dashboard']);
+          void this.router.navigate(['/care-homes']);
         },
 
         error: (error) => {

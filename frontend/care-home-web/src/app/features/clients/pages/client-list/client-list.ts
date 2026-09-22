@@ -93,7 +93,13 @@ export class ClientList implements OnInit {
     merge(this.route.queryParamMap).subscribe((params) => {
       const companyKey = params.get('company');
       const legacyCompanyId = Number(params.get('companyId') || 0);
+      const careHomeId = Number(params.get('careHomeId') || 0);
       this.page = 1;
+
+      if (careHomeId && !companyKey && !legacyCompanyId) {
+        this.applyCareHomeFilter(careHomeId);
+        return;
+      }
 
       if (companyKey) {
         this.applyCompanyFilterKey(companyKey);
@@ -110,6 +116,29 @@ export class ClientList implements OnInit {
       this.selectedCompanyId = 0;
       this.breadcrumbs.set([{ label: 'Residents' }]);
       this.loadClients();
+    });
+  }
+
+  private applyCareHomeFilter(careHomeId: number): void {
+    this.selectedCareHomeId = careHomeId;
+    this.careHomeService.getCareHomes().subscribe({
+      next: (homes) => {
+        const home = homes.find((h) => h.id === careHomeId);
+        if (home) {
+          this.breadcrumbs.set([
+            { label: 'Care Homes', routerLink: '/care-homes' },
+            { label: home.name, routerLink: ['/care-homes', entityRouteKey(home), 'dashboard'] },
+            { label: 'Residents' },
+          ]);
+        } else {
+          this.breadcrumbs.set([{ label: 'Residents' }]);
+        }
+        this.loadClients();
+      },
+      error: () => {
+        this.breadcrumbs.set([{ label: 'Residents' }]);
+        this.loadClients();
+      },
     });
   }
 
@@ -205,6 +234,10 @@ export class ClientList implements OnInit {
       void this.router.navigate(['/clients']);
       return;
     }
+    if (this.route.snapshot.queryParamMap.get('careHomeId')) {
+      void this.router.navigate(['/clients']);
+      return;
+    }
     this.breadcrumbs.set([{ label: 'Residents' }]);
     this.loadClients();
   }
@@ -222,6 +255,10 @@ export class ClientList implements OnInit {
 
   openClient(client: Client): void {
     void this.router.navigate(['/clients', entityRouteKey(client)]);
+  }
+
+  addResidentQueryParams(): Record<string, number> {
+    return this.selectedCareHomeId ? { careHomeId: this.selectedCareHomeId } : {};
   }
 
   archiveClient(client: Client): void {

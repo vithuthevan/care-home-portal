@@ -50,6 +50,8 @@ namespace CareHome.Api.Dtos.Invoices
 
         public int CareHomeId { get; set; }
 
+        public Guid CareHomePublicId { get; set; }
+
         public int FundingAuthorityId { get; set; }
 
         public int InvoiceCategoryId { get; set; }
@@ -66,6 +68,8 @@ namespace CareHome.Api.Dtos.Invoices
         public int Id { get; set; }
 
         public int ClientId { get; set; }
+
+        public Guid ClientPublicId { get; set; }
 
         public string ClientName { get; set; } = string.Empty;
 

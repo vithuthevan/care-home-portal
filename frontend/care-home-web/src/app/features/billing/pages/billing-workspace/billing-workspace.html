@@ -18,6 +18,19 @@
         Preview billing to see eligible residents and calculated charges.
       }
     </div>
+  } @else if (contextCareHomeScope()) {
+    <div class="alert-banner alert-banner--info">
+      Billing for:
+      @if (selectedCareHomeName()) {
+        <strong>{{ selectedCareHomeName() }}</strong>
+        @if (selectedCompanyName()) {
+          · {{ selectedCompanyName() }}
+        }
+      } @else if (selectedCompanyName()) {
+        <strong>{{ selectedCompanyName() }}</strong>
+      }
+      . Company and care home are preselected for this run.
+    </div>
   }
 
   <section class="panel mb-4">

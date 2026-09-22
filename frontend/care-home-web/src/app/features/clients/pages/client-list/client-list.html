@@ -6,7 +6,7 @@
     >
       <a mat-stroked-button [routerLink]="['/companies', ctx.routeKey]">Back to company</a>
       @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/clients/new">Add resident</a>
+        <a mat-flat-button color="primary" routerLink="/clients/new" [queryParams]="addResidentQueryParams()">Add resident</a>
       }
     </app-page-header>
   } @else {
@@ -15,7 +15,7 @@
       subtitle="Residents across your care homes — open a row to see funding and billing."
     >
       @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/clients/new">Add resident</a>
+        <a mat-flat-button color="primary" routerLink="/clients/new" [queryParams]="addResidentQueryParams()">Add resident</a>
       }
     </app-page-header>
   }
@@ -46,7 +46,7 @@
       @if (hasActiveFilters()) {
         <button mat-stroked-button type="button" (click)="clearFilters()">Clear filters</button>
       } @else if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/clients/new">Add resident</a>
+        <a mat-flat-button color="primary" routerLink="/clients/new" [queryParams]="addResidentQueryParams()">Add resident</a>
       }
       @if (companyContext(); as ctx) {
         <a mat-stroked-button [routerLink]="['/companies', ctx.routeKey]">Back to company</a>
@@ -82,7 +82,7 @@
       </div>
       <div filterActions>
         @if (auth.canWrite()) {
-          <a mat-flat-button color="primary" routerLink="/clients/new">Add resident</a>
+          <a mat-flat-button color="primary" routerLink="/clients/new" [queryParams]="addResidentQueryParams()">Add resident</a>
         }
         <button mat-stroked-button type="button" (click)="clearFilters()">Clear</button>
       </div>

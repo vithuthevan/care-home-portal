@@ -156,6 +156,11 @@ export class ClientForm implements OnInit {
       this.form.controls.referenceNumber.setValidators([Validators.maxLength(20)]);
       this.form.controls.sageId.updateValueAndValidity();
       this.form.controls.referenceNumber.updateValueAndValidity();
+
+      const careHomeId = Number(this.route.snapshot.queryParamMap.get('careHomeId') || 0);
+      if (careHomeId) {
+        this.form.patchValue({ careHomeId });
+      }
     }
   }
 

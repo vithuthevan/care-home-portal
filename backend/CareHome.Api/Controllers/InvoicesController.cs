@@ -154,6 +154,7 @@ namespace CareHome.Api.Controllers
                     InvoiceNumber = x.InvoiceNumber,
                     CompanyId = x.CompanyId,
                     CareHomeId = x.CareHomeId,
+                    CareHomePublicId = x.CareHome.PublicId,
                     FundingAuthorityId = x.FundingAuthorityId,
                     InvoiceCategoryId = x.InvoiceCategoryId,
                     CompanyName = x.SnapshotCompanyName,
@@ -174,6 +175,7 @@ namespace CareHome.Api.Controllers
                     {
                         Id = l.Id,
                         ClientId = l.ClientId,
+                        ClientPublicId = l.Client.PublicId,
                         ClientName = l.SnapshotClientName,
                         ClientReference = l.SnapshotClientReferenceNumber,
                         SageId = l.SnapshotSageId,

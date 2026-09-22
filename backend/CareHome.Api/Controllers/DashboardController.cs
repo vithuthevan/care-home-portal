@@ -52,6 +52,10 @@ namespace CareHome.Api.Controllers
                     PublicId = x.PublicId,
                     InvoiceNumber = x.InvoiceNumber,
                     CareHomeName = x.SnapshotCareHomeName,
+                    ClientName = x.Lines.OrderBy(l => l.Id).Select(l => l.SnapshotClientName).FirstOrDefault()
+                        ?? string.Empty,
+                    PeriodStart = x.PeriodStart,
+                    PeriodEnd = x.PeriodEnd,
                     TotalAmount = x.TotalAmount,
                     Status = x.Status,
                     PaymentStatus = x.PaymentStatus
@@ -129,6 +133,10 @@ namespace CareHome.Api.Controllers
                     PublicId = x.PublicId,
                     InvoiceNumber = x.InvoiceNumber,
                     CareHomeName = x.SnapshotCareHomeName,
+                    ClientName = x.Lines.OrderBy(l => l.Id).Select(l => l.SnapshotClientName).FirstOrDefault()
+                        ?? string.Empty,
+                    PeriodStart = x.PeriodStart,
+                    PeriodEnd = x.PeriodEnd,
                     TotalAmount = x.TotalAmount,
                     Status = x.Status,
                     PaymentStatus = x.PaymentStatus

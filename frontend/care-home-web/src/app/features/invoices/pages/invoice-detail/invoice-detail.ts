@@ -18,6 +18,7 @@ import { LabeledStatusComponent } from '../../../../shared/ui/labeled-status';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
+import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 @Component({
   selector: 'app-invoice-detail',
@@ -43,6 +44,7 @@ export class InvoiceDetailPage implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly breadcrumbs = inject(BreadcrumbService);
   readonly auth = inject(AuthService);
+  readonly entityRouteKey = entityRouteKey;
   readonly invoice = signal<any | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly info = signal<string | null>(null);
@@ -190,6 +192,27 @@ export class InvoiceDetailPage implements OnInit {
   invoiceSubtitle(inv: { invoiceCategoryName?: string; careHomeName?: string }): string {
     const parts = [inv.invoiceCategoryName, inv.careHomeName].filter(Boolean);
     return parts.join(' · ') || 'Invoice document';
+  }
+
+  careHomeDashboardLink(inv: {
+    careHomeId?: number;
+    careHomePublicId?: string;
+  }): string[] | null {
+    if (!inv.careHomeId) {
+      return null;
+    }
+    return [
+      '/care-homes',
+      entityRouteKey({ id: inv.careHomeId, publicId: inv.careHomePublicId }),
+      'dashboard',
+    ];
+  }
+
+  clientProfileLink(line: { clientId?: number; clientPublicId?: string }): string[] | null {
+    if (!line.clientId) {
+      return null;
+    }
+    return ['/clients', entityRouteKey({ id: line.clientId, publicId: line.clientPublicId })];
   }
 
   creditNoteQueryParams(inv: {

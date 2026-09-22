@@ -1,10 +1,9 @@
 import { DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
 import { AuthService } from '../../../../core/auth.service';
@@ -16,12 +15,37 @@ import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
+import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
+import { LabeledStatusComponent } from '../../../../shared/ui/labeled-status';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
 import {
   EntitySummaryItem,
   EntitySummaryStripComponent,
 } from '../../../../shared/ui/entity-summary-strip';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
+
+interface CareHomeDashboardInvoiceRow {
+  id: number;
+  publicId?: string;
+  invoiceNumber: string;
+  clientName?: string;
+  periodStart?: string;
+  periodEnd?: string;
+  totalAmount: number;
+  paymentStatus: string;
+}
+
+interface CareHomeDashboardData {
+  careHomeId: number;
+  name: string;
+  capacity: number;
+  occupied: number;
+  available: number;
+  outstandingAmount: number;
+  managerName?: string | null;
+  recentInvoices: CareHomeDashboardInvoiceRow[];
+}
 
 @Component({
   selector: 'app-care-home-dashboard',
@@ -29,11 +53,12 @@ import { entityRouteKey } from '../../../../shared/routing/entity-route';
     RouterLink,
     DecimalPipe,
     MatButtonModule,
-    MatIconModule,
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
     StatusBadgeComponent,
+    EmptyStateComponent,
+    LabeledStatusComponent,
     EntitySummaryStripComponent,
   ],
   templateUrl: './care-home-dashboard.html',
@@ -41,11 +66,15 @@ import { entityRouteKey } from '../../../../shared/routing/entity-route';
 export class CareHomeDashboardPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly homes = inject(CareHomeService);
   private readonly clientsApi = inject(ClientService);
   private readonly breadcrumbs = inject(BreadcrumbService);
+  private readonly displayDate = new DisplayDatePipe();
   readonly auth = inject(AuthService);
-  readonly data = signal<any | null>(null);
+  readonly entityRouteKey = entityRouteKey;
+
+  readonly data = signal<CareHomeDashboardData | null>(null);
   readonly home = signal<CareHomeLocation | null>(null);
   readonly residents = signal<Client[]>([]);
   readonly isLoading = signal(false);
@@ -67,27 +96,47 @@ export class CareHomeDashboardPage implements OnInit {
       {
         label: 'Occupied',
         value: String(dash.occupied ?? 0),
-        hint: 'Current at this home',
-        tone: 'success',
+        hint: 'Current residents',
+        tone: 'default',
       },
       {
         label: 'Available',
         value: String(dash.available ?? 0),
-        hint: 'Places remaining',
-        tone: dash.available > 0 ? 'success' : 'attention',
+        hint: 'Remaining capacity',
+        tone: dash.available > 0 ? 'default' : 'attention',
       },
       {
         label: 'Outstanding',
         value: `£${outstanding.toFixed(2)}`,
-        hint: outstanding > 0 ? 'Unpaid invoices' : 'Billing up to date',
+        hint: 'Accounts receivable',
         tone: outstanding > 0 ? 'attention' : 'success',
       },
     ];
   });
 
   billingQueryParams(): Record<string, number> {
+    const home = this.home();
+    const dash = this.data();
+    const careHomeId = dash?.careHomeId ?? home?.id;
+    if (!careHomeId) {
+      return {};
+    }
+    const companyId = home?.companyId;
+    return companyId ? { companyId, careHomeId } : { careHomeId };
+  }
+
+  residentsQueryParams(): Record<string, number> {
     const id = this.data()?.careHomeId ?? this.home()?.id;
     return id ? { careHomeId: id } : {};
+  }
+
+  invoicesQueryParams(): Record<string, number> {
+    const id = this.data()?.careHomeId ?? this.home()?.id;
+    return id ? { careHomeId: id } : {};
+  }
+
+  addResidentQueryParams(): Record<string, number> {
+    return this.residentsQueryParams();
   }
 
   ngOnInit(): void {
@@ -112,7 +161,7 @@ export class CareHomeDashboardPage implements OnInit {
               next: (page) => this.residents.set(page.items),
             });
           this.http
-            .get(`/api/dashboard/care-homes/${numericId}`)
+            .get<CareHomeDashboardData>(`/api/dashboard/care-homes/${numericId}`)
             .pipe(finalize(() => this.isLoading.set(false)))
             .subscribe({
               next: (data) => this.data.set(data),
@@ -152,5 +201,24 @@ export class CareHomeDashboardPage implements OnInit {
       return 'Care home occupancy and recent invoices.';
     }
     return `${home.code} · ${home.companyName}`;
+  }
+
+  formatInvoicePeriod(row: CareHomeDashboardInvoiceRow): string {
+    if (!row.periodStart || !row.periodEnd) {
+      return '—';
+    }
+    return `${this.displayDate.transform(row.periodStart)} – ${this.displayDate.transform(row.periodEnd)}`;
+  }
+
+  invoiceLink(row: CareHomeDashboardInvoiceRow): string[] {
+    return ['/invoices', entityRouteKey({ id: row.id, publicId: row.publicId })];
+  }
+
+  navigateToClient(client: Client): void {
+    void this.router.navigate(['/clients', entityRouteKey(client)]);
+  }
+
+  navigateToInvoice(row: CareHomeDashboardInvoiceRow): void {
+    void this.router.navigate(this.invoiceLink(row));
   }
 }

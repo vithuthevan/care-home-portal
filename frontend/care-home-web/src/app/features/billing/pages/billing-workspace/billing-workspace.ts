@@ -176,6 +176,10 @@ export class BillingWorkspacePage implements OnInit {
     return this.selectedClientIds.length === 1;
   }
 
+  contextCareHomeScope(): boolean {
+    return this.careHomeId > 0 && !this.contextClientName();
+  }
+
   hasFullyBilledException(previewData: { exceptions?: { code: string }[] }): boolean {
     return (previewData.exceptions ?? []).some((item) => item.code === 'ALREADY_FULLY_BILLED');
   }

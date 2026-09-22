@@ -18,16 +18,9 @@
 
     <app-entity-summary-strip [items]="summaryStrip()" />
 
-    <div class="mb-4 flex flex-wrap items-center gap-2 text-sm text-[var(--app-text-muted)]">
-      @if (home()) {
-        <app-status-badge [value]="home()!.isActive ? 'Active' : 'Inactive'" />
-        <span>Manager: {{ data.managerName || home()!.managerName || 'Not set' }}</span>
-      }
-    </div>
-
     @if (home(); as location) {
       <section class="panel mt-4">
-        <h2 class="mt-0 text-section">Location</h2>
+        <h2 class="mt-0 text-section">Contact &amp; location</h2>
         <dl class="dl-grid">
           <div>
             <dt>Address</dt>
@@ -43,17 +36,20 @@
           </div>
           <div>
             <dt>Manager</dt>
-            <dd>{{ location.managerName || 'Not set' }}</dd>
+            <dd>{{ location.managerName || data.managerName || 'Not set' }}</dd>
           </div>
         </dl>
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <app-status-badge [value]="location.isActive ? 'Active' : 'Inactive'" />
+        </div>
       </section>
     }
 
     <section class="table-shell mt-4">
       <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--app-border)] px-4 py-3">
         <h2 class="m-0 text-section">Current residents</h2>
-        <a mat-stroked-button routerLink="/clients" [queryParams]="{ careHomeId: data.careHomeId }"
-          >All residents</a
+        <a class="text-sm font-medium no-underline" routerLink="/clients" [queryParams]="residentsQueryParams()"
+          >View all →</a
         >
       </div>
       @if (residents().length) {
@@ -68,10 +64,14 @@
             </thead>
             <tbody>
               @for (resident of residents(); track resident.id) {
-                <tr class="row-clickable" [routerLink]="['/clients', resident.id]">
-                  <td class="font-medium">
-                    {{ resident.firstName }} {{ resident.lastName }}
-                  </td>
+                <tr
+                  class="row-clickable"
+                  [routerLink]="['/clients', entityRouteKey(resident)]"
+                  tabindex="0"
+                  (keydown.enter)="navigateToClient(resident)"
+                  (keydown.space)="$event.preventDefault(); navigateToClient(resident)"
+                >
+                  <td class="font-medium">{{ resident.firstName }} {{ resident.lastName }}</td>
                   <td>{{ resident.referenceNumber }}</td>
                   <td><app-status-badge [value]="resident.status" /></td>
                 </tr>
@@ -80,32 +80,71 @@
           </table>
         </div>
       } @else {
-        <p class="m-0 px-4 py-6 text-sm text-[var(--app-text-muted)]">No current residents.</p>
+        <app-empty-state
+          title="No residents yet"
+          message="Add residents to this care home to begin tracking occupancy, funding and billing."
+        >
+          @if (auth.canWrite()) {
+            <a mat-flat-button color="primary" routerLink="/clients/new" [queryParams]="addResidentQueryParams()"
+              >Add resident</a
+            >
+          }
+        </app-empty-state>
       }
     </section>
 
     <section class="table-shell mt-4">
-      <h2 class="m-0 border-b border-[var(--app-border)] px-4 py-3 text-section">Recent invoices</h2>
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Number</th>
-              <th class="num">Amount</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of data.recentInvoices; track row.id) {
-              <tr class="row-clickable" [routerLink]="['/invoices', row.id]">
-                <td class="font-medium">{{ row.invoiceNumber }}</td>
-                <td class="num">£{{ row.totalAmount | number: '1.2-2' }}</td>
-                <td><app-status-badge [value]="row.status" /></td>
-              </tr>
-            }
-          </tbody>
-        </table>
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--app-border)] px-4 py-3">
+        <h2 class="m-0 text-section">Recent invoices</h2>
+        <a class="text-sm font-medium no-underline" routerLink="/invoices" [queryParams]="invoicesQueryParams()"
+          >View all →</a
+        >
       </div>
+      @if (data.recentInvoices?.length) {
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Invoice</th>
+                <th class="col-hide-sm">Resident</th>
+                <th class="col-hide-sm">Period</th>
+                <th class="num">Amount</th>
+                <th class="col-status">Payment</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of data.recentInvoices; track row.id) {
+                <tr
+                  class="row-clickable"
+                  [routerLink]="invoiceLink(row)"
+                  tabindex="0"
+                  (keydown.enter)="navigateToInvoice(row)"
+                  (keydown.space)="$event.preventDefault(); navigateToInvoice(row)"
+                >
+                  <td class="font-medium">{{ row.invoiceNumber }}</td>
+                  <td class="col-hide-sm">{{ row.clientName || '—' }}</td>
+                  <td class="col-hide-sm">{{ formatInvoicePeriod(row) }}</td>
+                  <td class="num">£{{ row.totalAmount | number: '1.2-2' }}</td>
+                  <td class="col-status">
+                    <app-labeled-status kind="Payment" [value]="row.paymentStatus" />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <app-empty-state
+          title="No invoices yet"
+          message="Invoices generated for this care home will appear here."
+        >
+          @if (auth.canWrite()) {
+            <a mat-flat-button color="primary" routerLink="/billing" [queryParams]="billingQueryParams()"
+              >View billing</a
+            >
+          }
+        </app-empty-state>
+      }
     </section>
   }
 </div>

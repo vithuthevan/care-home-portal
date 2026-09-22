@@ -185,6 +185,11 @@ export class CareHomeList implements OnInit {
       });
   }
 
+  newCareHomeQueryParams(): Record<string, string> {
+    const ctx = this.companyContext();
+    return ctx ? { company: ctx.routeKey } : {};
+  }
+
   deactivateCareHome(careHome: CareHomeLocation): void {
     this.confirm
       .confirm({
