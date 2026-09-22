@@ -23,6 +23,8 @@ import { CareHomePortalSettingsPage } from './features/care-homes/pages/care-hom
 import { ClientList } from './features/clients/pages/client-list/client-list';
 import { ClientForm } from './features/clients/pages/client-form/client-form';
 import { ClientProfilePage } from './features/clients/pages/client-profile/client-profile';
+import { ClientFundingContractForm } from './features/clients/pages/client-funding-contract-form/client-funding-contract-form';
+import { ClientFundingRateForm } from './features/clients/pages/client-funding-rate-form/client-funding-rate-form';
 import { FundingAuthorityList } from './features/funding-authorities/pages/funding-authority-list/funding-authority-list';
 import { FundingAuthorityForm } from './features/funding-authorities/pages/funding-authority-form/funding-authority-form';
 import { InvoiceCategoryList } from './features/invoice-categories/pages/invoice-category-list/invoice-category-list';
@@ -72,6 +74,8 @@ export const routes: Routes = [
   { path: 'care-homes/:id/edit', component: CareHomeForm, canActivate: [authGuard] },
   { path: 'clients', component: ClientList, canActivate: [authGuard] },
   { path: 'clients/new', component: ClientForm, canActivate: [authGuard] },
+  { path: 'clients/:id/funding/rates/new', component: ClientFundingRateForm, canActivate: [authGuard] },
+  { path: 'clients/:id/funding/new', component: ClientFundingContractForm, canActivate: [authGuard] },
   { path: 'clients/:id/edit', component: ClientForm, canActivate: [authGuard] },
   { path: 'clients/:id', component: ClientProfilePage, canActivate: [authGuard] },
   { path: 'funding-authorities', component: FundingAuthorityList, canActivate: [authGuard] },

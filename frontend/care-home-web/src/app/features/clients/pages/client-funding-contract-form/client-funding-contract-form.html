@@ -1,0 +1,91 @@
+<div class="page page--narrow">
+  <app-page-header
+    title="Add funding contract"
+    subtitle="Link this resident to a funding authority, invoice category, and nominal code for billing."
+  />
+
+  <app-api-error [message]="errorMessage()" />
+
+  @if (isLoading()) {
+    <app-loading-state label="Loading resident..." />
+  } @else if (client(); as resident) {
+    <p class="m-0 mb-4 text-sm text-[var(--app-text-muted)]">
+      Resident: <strong>{{ resident.firstName }} {{ resident.lastName }}</strong> ·
+      {{ resident.referenceNumber }} · {{ resident.careHomeName }}
+    </p>
+
+    <form class="panel max-w-4xl" (ngSubmit)="save()">
+      <p class="m-0 mb-4 text-sm text-[var(--app-text-muted)]">
+        Fields marked with <span aria-hidden="true">*</span> are required.
+      </p>
+
+      <section class="form-section">
+        <h2 class="form-section__title">Contract</h2>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <mat-form-field appearance="outline" class="w-full md:col-span-2">
+            <mat-label>Funding authority *</mat-label>
+            <mat-select [(ngModel)]="model.fundingAuthorityId" name="fundingAuthorityId" required>
+              <mat-option [value]="0" disabled>Select authority</mat-option>
+              @for (item of authorities(); track item.id) {
+                <mat-option [value]="item.id">{{ item.name }}</mat-option>
+              }
+            </mat-select>
+            <mat-hint>Organisation or local authority that pays for this placement.</mat-hint>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Invoice category *</mat-label>
+            <mat-select [(ngModel)]="model.invoiceCategoryId" name="invoiceCategoryId" required>
+              <mat-option [value]="0" disabled>Select category</mat-option>
+              @for (item of categories(); track item.id) {
+                <mat-option [value]="item.id">{{ item.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Nominal code *</mat-label>
+            <mat-select [(ngModel)]="model.nominalCodeId" name="nominalCodeId" required>
+              <mat-option [value]="0" disabled>Select nominal</mat-option>
+              @for (item of nominals(); track item.id) {
+                <mat-option [value]="item.id">{{ item.code }} — {{ item.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <app-date-field
+            label="Contract start date *"
+            [(ngModel)]="model.contractStartDate"
+            name="contractStartDate"
+            [required]="true"
+            requiredErrorMessage="Contract start date is required."
+          />
+          <app-date-field
+            label="Contract end date (optional)"
+            [(ngModel)]="model.contractEndDate"
+            name="contractEndDate"
+            hint="Leave blank for an open-ended contract."
+          />
+        </div>
+      </section>
+
+      <div class="form-actions">
+        <a
+          mat-stroked-button
+          [routerLink]="['/clients', clientRouteKey]"
+          [queryParams]="{ tab: 'funding' }"
+          >Cancel</a
+        >
+        <button
+          mat-flat-button
+          color="primary"
+          type="submit"
+          [disabled]="isSaving() || !auth.canWrite()"
+        >
+          @if (isSaving()) {
+            Saving contract...
+          } @else {
+            Save contract
+          }
+        </button>
+      </div>
+    </form>
+  }
+</div>

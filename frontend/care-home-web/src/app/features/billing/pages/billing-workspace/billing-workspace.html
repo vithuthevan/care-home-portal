@@ -10,13 +10,23 @@
 
   @if (contextClientName()) {
     <div class="alert-banner alert-banner--info">
-      Opened from resident profile: <strong>{{ contextClientName() }}</strong>. Company and care
-      home are preselected.
-      @if (isSingleResidentScope()) {
-        Preview and generate apply to this resident within the selected scope.
-      } @else {
-        Preview billing to see eligible residents and calculated charges.
-      }
+      <p class="m-0 font-semibold">Billing for {{ contextClientName() }}</p>
+      <p class="m-0 mt-1 text-sm">
+        @if (selectedCareHomeName()) {
+          {{ selectedCareHomeName() }}
+        }
+        @if (billingPeriodHeading(); as periodLabel) {
+          @if (periodLabel !== 'Billing preview') {
+            · {{ periodLabel }}
+          }
+        }
+      </p>
+      <p class="m-0 mt-2 text-sm text-[var(--app-text-muted)]">
+        Company and care home have been preselected.
+        @if (isSingleResidentScope()) {
+          Preview and generate apply to this resident within the selected scope.
+        }
+      </p>
     </div>
   } @else if (contextCareHomeScope()) {
     <div class="alert-banner alert-banner--info">

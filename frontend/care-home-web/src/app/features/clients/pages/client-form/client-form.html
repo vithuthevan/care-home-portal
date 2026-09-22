@@ -1,7 +1,11 @@
 <div class="page page--narrow">
   <app-page-header
     [title]="isEditMode ? 'Edit resident' : 'Add resident'"
-    subtitle="Create a resident record and placement."
+    [subtitle]="
+      isEditMode
+        ? 'Update resident identity, placement and billing information.'
+        : 'Create a resident record and assign their care-home placement.'
+    "
   />
 
   <app-api-error [message]="errorMessage()" />
@@ -10,8 +14,12 @@
     <app-loading-state label="Loading resident..." />
   } @else {
     <form [formGroup]="form" (ngSubmit)="save()" class="panel">
+      <p class="m-0 mb-4 text-sm text-[var(--app-text-muted)]">
+        Fields marked with <span aria-hidden="true">*</span> are required.
+      </p>
+
       <section class="form-section">
-      <h2 class="form-section__title">Location</h2>
+      <h2 class="form-section__title">Placement</h2>
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <mat-form-field appearance="outline" class="w-full md:col-span-2">
           <mat-label>Care home *</mat-label>
@@ -48,7 +56,7 @@
           }
         </mat-form-field>
         <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Resident reference</mat-label>
+          <mat-label>Resident reference @if (!isEditMode) { (optional) }</mat-label>
           <input matInput formControlName="referenceNumber" [required]="isEditMode" />
           @if (!isEditMode) {
             <mat-hint>Automatically generated from the care home code when left blank.</mat-hint>
@@ -65,7 +73,7 @@
       </section>
 
       <section class="form-section">
-      <h2 class="form-section__title">Personal details</h2>
+      <h2 class="form-section__title">Resident information</h2>
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <mat-form-field appearance="outline" class="w-full">
           <mat-label>Title (optional)</mat-label>
@@ -98,58 +106,7 @@
       </section>
 
       <section class="form-section">
-      <h2 class="form-section__title">Placement</h2>
-      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <mat-form-field appearance="outline" class="w-full">
-          <mat-label>Care type *</mat-label>
-          <mat-select formControlName="careType" required>
-            <mat-option value="">Select</mat-option>
-            <mat-option value="Nursing">Nursing</mat-option>
-            <mat-option value="Residential">Residential</mat-option>
-          </mat-select>
-          @if (form.controls.careType.touched && form.controls.careType.hasError('required')) {
-            <mat-error>Care type is required.</mat-error>
-          }
-        </mat-form-field>
-        <app-date-field
-          formControlName="admissionDate"
-          label="Admission date *"
-          [required]="true"
-          requiredErrorMessage="Admission date is required."
-        />
-
-        @if (isEditMode) {
-          <mat-form-field appearance="outline" class="w-full">
-            <mat-label>Status</mat-label>
-            <mat-select formControlName="status">
-              <mat-option value="Current">Current</mat-option>
-              <mat-option value="Left">Left</mat-option>
-              <mat-option value="Deceased">Deceased</mat-option>
-            </mat-select>
-          </mat-form-field>
-          @if (!isCurrentStatus) {
-            <app-date-field
-              formControlName="dischargeDate"
-              label="Discharge date"
-              [errorText]="
-                form.controls.dischargeDate.touched &&
-                form.controls.dischargeDate.hasError('required')
-                  ? 'Discharge date cannot be earlier than admission date.'
-                  : null
-              "
-            />
-            <mat-form-field appearance="outline" class="w-full md:col-span-2">
-              <mat-label>Discharge reason</mat-label>
-              <input matInput formControlName="dischargeReason" />
-            </mat-form-field>
-          }
-        }
-      </div>
-
-      </section>
-
-      <section class="form-section">
-      <h2 class="form-section__title">Contact information</h2>
+      <h2 class="form-section__title">Contact</h2>
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <mat-form-field appearance="outline" class="w-full">
           <mat-label>Email address (optional)</mat-label>
@@ -170,12 +127,68 @@
 
       </section>
 
-      @if (isEditMode && !isCurrentStatus) {
-        <mat-checkbox formControlName="isArchived">Archived</mat-checkbox>
+      <section class="form-section">
+      <h2 class="form-section__title">Placement details</h2>
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Care type *</mat-label>
+          <mat-select formControlName="careType" required>
+            <mat-option value="">Select</mat-option>
+            <mat-option value="Nursing">Nursing</mat-option>
+            <mat-option value="Residential">Residential</mat-option>
+          </mat-select>
+          @if (form.controls.careType.touched && form.controls.careType.hasError('required')) {
+            <mat-error>Care type is required.</mat-error>
+          }
+        </mat-form-field>
+        <app-date-field
+          formControlName="admissionDate"
+          label="Admission date *"
+          [required]="true"
+          requiredErrorMessage="Admission date is required."
+        />
+
+        </div>
+
+      </section>
+
+      @if (isEditMode) {
+        <section class="form-section">
+        <h2 class="form-section__title">Status</h2>
+        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Status</mat-label>
+            <mat-select formControlName="status">
+              <mat-option value="Current">Current</mat-option>
+              <mat-option value="Left">Left</mat-option>
+              <mat-option value="Deceased">Deceased</mat-option>
+            </mat-select>
+          </mat-form-field>
+          @if (!isCurrentStatus) {
+            <app-date-field
+              formControlName="dischargeDate"
+              label="Discharge date"
+              [errorText]="
+                form.controls.dischargeDate.touched &&
+                form.controls.dischargeDate.hasError('required')
+                  ? 'Discharge date cannot be earlier than admission date.'
+                  : null
+              "
+            />
+            <mat-form-field appearance="outline" class="w-full md:col-span-2">
+              <mat-label>Discharge reason (optional)</mat-label>
+              <input matInput formControlName="dischargeReason" />
+            </mat-form-field>
+          }
+        </div>
+        @if (!isCurrentStatus) {
+          <mat-checkbox formControlName="isArchived">Archived</mat-checkbox>
+        }
+        </section>
       }
 
       <div class="form-actions">
-        <a mat-stroked-button routerLink="/clients">Cancel</a>
+        <a mat-stroked-button [routerLink]="cancelLink()">Cancel</a>
         <button
           mat-flat-button
           color="primary"
