@@ -80,6 +80,15 @@ interface FundingRateView {
 })
 export class ClientProfilePage implements OnInit {
   readonly entityRouteKey = entityRouteKey;
+
+  companyRouteKey(client: Client): string {
+    return entityRouteKey({ id: client.companyId, publicId: client.companyPublicId });
+  }
+
+  careHomeRouteKey(client: Client): string {
+    return entityRouteKey({ id: client.careHomeId, publicId: client.careHomePublicId });
+  }
+
   private readonly route = inject(ActivatedRoute);
   private readonly clients = inject(ClientService);
   private readonly displayDate = new DisplayDatePipe();

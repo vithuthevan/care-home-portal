@@ -1,17 +1,19 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { finalize } from 'rxjs';
+import { finalize, merge } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatIconModule } from '@angular/material/icon';
 
 import { Client } from '../../models/client.model';
 import { ClientService } from '../../services/client.service';
 import { CareHomeLocation } from '../../../care-homes/models/care-home.model';
 import { CareHomeService } from '../../../care-homes/services/care-home.service';
+import { CompanyService } from '../../../companies/services/company.service';
 import { getApiErrorMessage } from '../../../../core/api-error';
 import { AuthService } from '../../../../core/auth.service';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
@@ -25,8 +27,8 @@ import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.servi
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
-import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 @Component({
@@ -39,6 +41,7 @@ import { entityRouteKey } from '../../../../shared/routing/entity-route';
     MatInputModule,
     MatSelectModule,
     MatCheckboxModule,
+    MatIconModule,
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
@@ -48,7 +51,6 @@ import { entityRouteKey } from '../../../../shared/routing/entity-route';
     FilterBarComponent,
     TablePaginationComponent,
     IconActionButtonComponent,
-    MatIconModule,
     MatTooltipModule,
   ],
   templateUrl: './client-list.html',
@@ -59,6 +61,8 @@ export class ClientList implements OnInit {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly careHomeService = inject(CareHomeService);
+  private readonly companyService = inject(CompanyService);
+  private readonly breadcrumbs = inject(BreadcrumbService);
   private readonly confirm = inject(ConfirmDialogService);
   private readonly toast = inject(ToastService);
   readonly auth = inject(AuthService);
@@ -66,28 +70,72 @@ export class ClientList implements OnInit {
   readonly clients = signal<Client[]>([]);
   readonly totalCount = signal(0);
   readonly careHomes = signal<CareHomeLocation[]>([]);
+  readonly companyContext = signal<{ name: string; routeKey: string } | null>(null);
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
   searchText = '';
   selectedCareHomeId = 0;
   selectedCompanyId = 0;
+  companyFilterKey: string | null = null;
   showArchived = false;
   page = 1;
   pageSize = 20;
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
-    const companyId = Number(this.route.snapshot.queryParamMap.get('companyId') || 0);
     const careHomeId = Number(this.route.snapshot.queryParamMap.get('careHomeId') || 0);
-    if (companyId) {
-      this.selectedCompanyId = companyId;
-    }
     if (careHomeId) {
       this.selectedCareHomeId = careHomeId;
     }
     this.loadCareHomes();
-    this.loadClients();
+
+    merge(this.route.queryParamMap).subscribe((params) => {
+      const companyKey = params.get('company');
+      const legacyCompanyId = Number(params.get('companyId') || 0);
+      this.page = 1;
+
+      if (companyKey) {
+        this.applyCompanyFilterKey(companyKey);
+        return;
+      }
+
+      if (legacyCompanyId) {
+        this.applyCompanyFilterKey(String(legacyCompanyId));
+        return;
+      }
+
+      this.companyContext.set(null);
+      this.companyFilterKey = null;
+      this.selectedCompanyId = 0;
+      this.breadcrumbs.set([{ label: 'Residents' }]);
+      this.loadClients();
+    });
+  }
+
+  private applyCompanyFilterKey(key: string): void {
+    this.companyFilterKey = key;
+    this.companyService.getCompany(key).subscribe({
+      next: (company) => {
+        const routeKey = entityRouteKey(company);
+        this.companyContext.set({ name: company.name, routeKey });
+        this.selectedCompanyId = company.id;
+        this.breadcrumbs.set([
+          { label: 'Companies', routerLink: '/companies' },
+          { label: company.name, routerLink: ['/companies', routeKey] },
+          { label: 'Residents' },
+        ]);
+        this.loadClients();
+      },
+      error: () => {
+        this.companyContext.set(null);
+        this.companyFilterKey = null;
+        this.selectedCompanyId = 0;
+        this.breadcrumbs.set([{ label: 'Residents' }]);
+        this.errorMessage.set('Unable to load the selected company.');
+        this.loadClients();
+      },
+    });
   }
 
   loadCareHomes(): void {
@@ -107,7 +155,10 @@ export class ClientList implements OnInit {
         this.showArchived,
         this.page,
         this.pageSize,
-        { companyId: this.selectedCompanyId || undefined },
+        {
+          company: this.companyFilterKey || undefined,
+          companyId: this.companyFilterKey ? undefined : this.selectedCompanyId || undefined,
+        },
       )
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
@@ -129,7 +180,13 @@ export class ClientList implements OnInit {
   }
 
   hasActiveFilters(): boolean {
-    return !!(this.searchText.trim() || this.selectedCareHomeId || this.selectedCompanyId || this.showArchived);
+    return !!(
+      this.searchText.trim() ||
+      this.selectedCareHomeId ||
+      this.selectedCompanyId ||
+      this.companyFilterKey ||
+      this.showArchived
+    );
   }
 
   search(): void {
@@ -140,7 +197,15 @@ export class ClientList implements OnInit {
   clearFilters(): void {
     this.searchText = '';
     this.selectedCareHomeId = 0;
+    this.selectedCompanyId = 0;
+    this.companyFilterKey = null;
+    this.companyContext.set(null);
     this.page = 1;
+    if (this.route.snapshot.queryParamMap.get('company') || this.route.snapshot.queryParamMap.get('companyId')) {
+      void this.router.navigate(['/clients']);
+      return;
+    }
+    this.breadcrumbs.set([{ label: 'Residents' }]);
     this.loadClients();
   }
 

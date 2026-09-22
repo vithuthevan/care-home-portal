@@ -17,6 +17,8 @@ import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
@@ -32,6 +34,8 @@ import { entityRouteKey } from '../../../../shared/routing/entity-route';
     MatFormFieldModule,
     MatInputModule,
     MatIconModule,
+    MatMenuModule,
+    MatTooltipModule,
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
@@ -51,6 +55,7 @@ export class CompanyList implements OnInit {
   readonly auth = inject(AuthService);
 
   readonly companies = signal<Company[]>([]);
+  readonly moreMenuCompany = signal<Company | null>(null);
   readonly totalCount = signal(0);
   readonly searchText = signal('');
   readonly isLoading = signal(false);
@@ -74,6 +79,16 @@ export class CompanyList implements OnInit {
   applySearch(): void {
     this.page = 1;
     this.loadCompanies();
+  }
+
+  clearSearch(): void {
+    this.searchText.set('');
+    this.page = 1;
+    this.loadCompanies();
+  }
+
+  setMoreMenuCompany(company: Company): void {
+    this.moreMenuCompany.set(company);
   }
 
   onPageChange(page: number): void {

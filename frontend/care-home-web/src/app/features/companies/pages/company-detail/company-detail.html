@@ -6,151 +6,118 @@
   }
 
   @if (company(); as co) {
-    <app-page-header
-      [title]="co.name"
-      subtitle="Operating company — care homes and residents roll up here for billing."
-    >
+    <app-page-header [title]="co.name" subtitle="Operating company">
+      <a mat-stroked-button [routerLink]="['/companies', entityRouteKey(co), 'care-homes']">
+        Care homes
+      </a>
       @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" [routerLink]="['/companies', entityRouteKey(co), 'edit']">Edit company</a>
+        <a mat-flat-button color="primary" [routerLink]="['/companies', entityRouteKey(co), 'edit']">
+          Edit company
+        </a>
       }
     </app-page-header>
 
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3 mb-4">
-      <app-kpi-card
-        label="Status"
-        [value]="co.isActive ? 'Active' : 'Inactive'"
-        icon="business"
-        tone="success"
-      />
-      <app-kpi-card
-        label="Care homes"
-        [value]="co.activeCareHomeCount ?? 0"
-        [hint]="(co.careHomeCount ?? 0) + ' total'"
-        icon="home_work"
-        tone="info"
-        routerLink="/care-homes"
-        [queryParams]="{ companyId: co.id }"
-      />
-      <app-kpi-card
-        label="Residents"
-        [value]="co.residentCount ?? 0"
-        hint="On record, not archived"
-        icon="groups"
-        tone="finance"
-        routerLink="/clients"
-        [queryParams]="{ companyId: co.id }"
-      />
+    <div class="profile-hero">
+      <section class="panel">
+        <h2 class="mt-0 text-section">Company information</h2>
+        <dl class="dl-grid">
+          <div>
+            <dt>Company name</dt>
+            <dd>{{ co.name }}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd><app-status-badge [value]="co.isActive ? 'Active' : 'Inactive'" /></dd>
+          </div>
+          <div>
+            <dt>Care homes</dt>
+            <dd>{{ co.activeCareHomeCount ?? 0 }} active · {{ co.careHomeCount ?? 0 }} total</dd>
+          </div>
+          <div>
+            <dt>Residents</dt>
+            <dd>
+              {{ co.residentCount ?? 0 }} on record (not archived)
+              @if ((co.residentCount ?? 0) > 0) {
+                ·
+                <a
+                  class="font-medium"
+                  [routerLink]="['/clients']"
+                  [queryParams]="{ company: entityRouteKey(co) }"
+                  >View residents</a
+                >
+              }
+            </dd>
+          </div>
+        </dl>
+      </section>
     </div>
 
-    <mat-tab-group animationDuration="160ms" class="company-detail-tabs">
-      <mat-tab label="Details">
-        <div class="profile-hero mt-4">
-          <section class="panel">
-            <h2 class="mt-0 text-section">Company</h2>
-            <dl class="dl-grid">
-              <div>
-                <dt>Company name</dt>
-                <dd>{{ co.name }}</dd>
-              </div>
-              <div>
-                <dt>Status</dt>
-                <dd><app-status-badge [value]="co.isActive ? 'Active' : 'Inactive'" /></dd>
-              </div>
-            </dl>
-          </section>
-
-          <section class="panel">
-            <h2 class="mt-0 text-section">Organisation path</h2>
-            <ul class="hierarchy-list">
-              <li><mat-icon>apartment</mat-icon> Organisation</li>
-              <li><mat-icon>south</mat-icon> {{ co.name }}</li>
-              <li><mat-icon>home_work</mat-icon> Care homes</li>
-              <li><mat-icon>groups</mat-icon> Residents</li>
-            </ul>
-          </section>
+    <section class="table-shell mt-4">
+      <div
+        class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-[var(--app-border)]"
+      >
+        <div>
+          <h2 class="m-0 text-section">Care homes</h2>
+          <p class="m-0 mt-1 text-sm text-[var(--app-text-muted)]">
+            Homes operated by {{ co.name }}.
+          </p>
         </div>
-      </mat-tab>
+        @if (careHomes().length) {
+          <a mat-stroked-button [routerLink]="['/companies', entityRouteKey(co), 'care-homes']">
+            View all
+          </a>
+        }
+      </div>
 
-      <mat-tab label="Care homes">
-        <section class="table-shell mt-4">
-          <div class="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-b border-[var(--app-border)]">
-            <p class="m-0 text-sm text-[var(--app-text-muted)]">
-              Homes registered under this company.
-            </p>
-            <a mat-stroked-button [routerLink]="['/care-homes']" [queryParams]="{ companyId: co.id }">
-              View all
+      @if (careHomes().length) {
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th class="col-ref">Code</th>
+                <th>Care home</th>
+                <th class="num">Capacity</th>
+                <th class="col-status">Status</th>
+                <th class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (home of careHomes(); track home.id) {
+                <tr
+                  class="row-clickable"
+                  [routerLink]="['/care-homes', entityRouteKey(home), 'dashboard']"
+                >
+                  <td class="col-ref">{{ home.code }}</td>
+                  <td class="font-medium cell-truncate">{{ home.name }}</td>
+                  <td class="num">{{ home.bedCapacity }}</td>
+                  <td class="col-status">
+                    <app-status-badge [value]="home.isActive ? 'Active' : 'Inactive'" />
+                  </td>
+                  <td class="col-actions" (click)="$event.stopPropagation()">
+                    <app-icon-action
+                      icon="visibility"
+                      ariaLabel="View care home dashboard"
+                      [routerLink]="['/care-homes', entityRouteKey(home), 'dashboard']"
+                    />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <app-empty-state
+          title="No care homes yet"
+          message="This company doesn't have any care homes configured."
+        >
+          @if (auth.canWrite()) {
+            <a mat-flat-button color="primary" routerLink="/care-homes/new">
+              <mat-icon>add</mat-icon>
+              Add care home
             </a>
-          </div>
-          @if (careHomes().length) {
-            <div class="table-container">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th class="col-ref">Code</th>
-                    <th>Care home</th>
-                    <th class="num">Capacity</th>
-                    <th class="col-status">Status</th>
-                    <th class="col-actions">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (home of careHomes(); track home.id) {
-                    <tr class="row-clickable" [routerLink]="['/care-homes', home.id, 'dashboard']">
-                      <td class="col-ref">{{ home.code }}</td>
-                      <td class="font-medium">{{ home.name }}</td>
-                      <td class="num">{{ home.bedCapacity }}</td>
-                      <td class="col-status">
-                        <app-status-badge [value]="home.isActive ? 'Active' : 'Inactive'" />
-                      </td>
-                      <td class="col-actions" (click)="$event.stopPropagation()">
-                        <app-icon-action
-                          icon="dashboard"
-                          ariaLabel="Open care home dashboard"
-                          [routerLink]="['/care-homes', home.id, 'dashboard']"
-                        />
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
-          } @else {
-            <p class="m-0 px-4 py-6 text-sm text-[var(--app-text-muted)]">
-              No care homes linked to this company yet.
-            </p>
           }
-        </section>
-      </mat-tab>
-
-      <mat-tab label="Residents">
-        <section class="panel mt-4">
-          <h2 class="mt-0 text-section">Residents</h2>
-          <p class="text-sm text-[var(--app-text-muted)]">
-            {{ co.residentCount ?? 0 }} resident(s) are associated with care homes under this company.
-          </p>
-          <a
-            mat-flat-button
-            color="primary"
-            class="mt-3"
-            routerLink="/clients"
-            [queryParams]="{ companyId: co.id }"
-            >Open resident list</a
-          >
-        </section>
-      </mat-tab>
-
-      <mat-tab label="Users">
-        <section class="panel mt-4">
-          <h2 class="mt-0 text-section">Users</h2>
-          <p class="text-sm text-[var(--app-text-muted)]">
-            User accounts are managed at organisation level. Open user administration to invite or
-            update access.
-          </p>
-          @if (auth.canManageUsers()) {
-            <a mat-stroked-button routerLink="/users" class="mt-3">Manage users</a>
-          }
-        </section>
-      </mat-tab>
-    </mat-tab-group>
+        </app-empty-state>
+      }
+    </section>
   }
 </div>

@@ -41,7 +41,10 @@ namespace CareHome.Api.Controllers
                     Id = company.Id,
                     PublicId = company.PublicId,
                     Name = company.Name,
-                    IsActive = company.IsActive
+                    IsActive = company.IsActive,
+                    CareHomeCount = company.CareHomes.Count,
+                    ActiveCareHomeCount = company.CareHomes.Count(x => x.IsActive),
+                    ResidentCount = company.CareHomes.SelectMany(x => x.Clients).Count(x => !x.IsArchived),
                 });
 
             if (!Pagination.IsRequested(page, pageSize))

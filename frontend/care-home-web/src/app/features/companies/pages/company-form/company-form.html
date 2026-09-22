@@ -1,7 +1,11 @@
 <div class="page page--narrow">
   <app-page-header
-    [title]="isEditMode ? 'Edit Company' : 'Add Company'"
-    subtitle="Company records are used across care homes and billing."
+    [title]="isEditMode ? 'Edit company' : 'Add company'"
+    [subtitle]="
+      isEditMode
+        ? 'Update company details used across care homes and billing.'
+        : 'Create an organisation that can operate one or more care homes.'
+    "
   />
 
   <app-api-error [message]="errorMessage()" />
@@ -12,10 +16,13 @@
 
   @if (!isLoading()) {
     <form [formGroup]="form" (ngSubmit)="save()" class="panel max-w-3xl">
+      <p class="text-sm text-[var(--app-text-muted)] m-0 mb-4">
+        Fields marked with <span aria-hidden="true">*</span> are required.
+      </p>
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <mat-form-field appearance="outline" class="w-full md:col-span-2">
-          <mat-label>Company name *</mat-label>
-          <input matInput id="name" type="text" formControlName="name" required />
+          <mat-label>Company name</mat-label>
+          <input matInput id="name" type="text" formControlName="name" required autocomplete="organization" />
           @if (form.controls.name.touched && form.controls.name.hasError('required')) {
             <mat-error>Company name is required.</mat-error>
           }
@@ -25,7 +32,14 @@
         </mat-form-field>
 
         @if (isEditMode) {
-          <mat-checkbox formControlName="isActive">Active</mat-checkbox>
+          <div class="md:col-span-2">
+            <p class="m-0 text-sm font-medium text-[var(--app-text)]">Status <span class="font-normal text-[var(--app-text-muted)]">(optional)</span></p>
+            <mat-checkbox formControlName="isActive" class="mt-1">Active</mat-checkbox>
+            <p class="m-0 mt-1 text-sm text-[var(--app-text-muted)]">
+              Inactive companies cannot be assigned to new care homes. Deactivate all care homes
+              first.
+            </p>
+          </div>
         }
       </div>
 

@@ -1,12 +1,24 @@
 <div class="page">
-  <app-page-header
-    title="Residents"
-    subtitle="Residents across your care homes — open a row to see funding and billing."
-  >
-    @if (auth.canWrite()) {
-      <a mat-flat-button color="primary" routerLink="/clients/new">Add resident</a>
-    }
-  </app-page-header>
+  @if (companyContext(); as ctx) {
+    <app-page-header
+      title="Residents"
+      [subtitle]="ctx.name + ' — Residents placed in care homes under this company.'"
+    >
+      <a mat-stroked-button [routerLink]="['/companies', ctx.routeKey]">Back to company</a>
+      @if (auth.canWrite()) {
+        <a mat-flat-button color="primary" routerLink="/clients/new">Add resident</a>
+      }
+    </app-page-header>
+  } @else {
+    <app-page-header
+      title="Residents"
+      subtitle="Residents across your care homes — open a row to see funding and billing."
+    >
+      @if (auth.canWrite()) {
+        <a mat-flat-button color="primary" routerLink="/clients/new">Add resident</a>
+      }
+    </app-page-header>
+  }
 
   <app-api-error [message]="errorMessage()" />
 
@@ -16,17 +28,28 @@
 
   @if (!isLoading() && clients().length === 0) {
     <app-empty-state
-      [title]="hasActiveFilters() ? 'No residents found' : 'No residents yet'"
+      [title]="
+        companyContext() && !searchText.trim() && !selectedCareHomeId && !showArchived
+          ? 'No residents yet'
+          : hasActiveFilters()
+            ? 'No residents found'
+            : 'No residents yet'
+      "
       [message]="
-        hasActiveFilters()
-          ? 'There are no residents matching the current filters.'
-          : 'Add your first resident to begin managing funding and billing.'
+        companyContext() && !searchText.trim() && !selectedCareHomeId && !showArchived
+          ? 'This company has no active residents on record.'
+          : hasActiveFilters()
+            ? 'There are no residents matching the current filters.'
+            : 'Add your first resident to begin managing funding and billing.'
       "
     >
       @if (hasActiveFilters()) {
         <button mat-stroked-button type="button" (click)="clearFilters()">Clear filters</button>
       } @else if (auth.canWrite()) {
         <a mat-flat-button color="primary" routerLink="/clients/new">Add resident</a>
+      }
+      @if (companyContext(); as ctx) {
+        <a mat-stroked-button [routerLink]="['/companies', ctx.routeKey]">Back to company</a>
       }
     </app-empty-state>
   }

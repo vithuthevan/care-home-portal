@@ -14,6 +14,8 @@ import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
+import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 @Component({
   selector: 'app-company-form',
@@ -36,6 +38,7 @@ export class CompanyForm implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+  private readonly breadcrumbs = inject(BreadcrumbService);
   readonly auth = inject(AuthService);
 
   companyRouteKey: string | null = null;
@@ -54,8 +57,17 @@ export class CompanyForm implements OnInit {
     if (id) {
       this.companyRouteKey = id;
       this.isEditMode = true;
+      this.breadcrumbs.set([
+        { label: 'Companies', routerLink: '/companies' },
+        { label: 'Edit company' },
+      ]);
       this.loadCompany();
+      return;
     }
+    this.breadcrumbs.set([
+      { label: 'Companies', routerLink: '/companies' },
+      { label: 'Add company' },
+    ]);
   }
 
   private loadCompany(): void {
@@ -75,6 +87,11 @@ export class CompanyForm implements OnInit {
             name: company.name,
             isActive: company.isActive,
           });
+          this.breadcrumbs.set([
+            { label: 'Companies', routerLink: '/companies' },
+            { label: company.name, routerLink: ['/companies', entityRouteKey(company)] },
+            { label: 'Edit company' },
+          ]);
         },
         error: (error) => {
           logApiFailure(error);
@@ -117,6 +134,7 @@ export class CompanyForm implements OnInit {
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
         next: () => {
+          this.form.reset({ name: '', isActive: true });
           this.toast.success('Company created successfully.');
           void this.router.navigate(['/companies']);
         },

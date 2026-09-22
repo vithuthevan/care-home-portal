@@ -48,10 +48,17 @@ export class BreadcrumbService {
     if (path.startsWith('/companies/new')) {
       return [{ label: 'Companies', routerLink: '/companies' }, { label: 'New company' }];
     }
-    if (/^\/companies\/\d+\/edit/.test(path)) {
+    if (/^\/companies\/[^/]+\/care-homes/.test(path)) {
+      return [
+        { label: 'Companies', routerLink: '/companies' },
+        { label: 'Company' },
+        { label: 'Care homes' },
+      ];
+    }
+    if (/^\/companies\/[^/]+\/edit/.test(path)) {
       return [{ label: 'Companies', routerLink: '/companies' }, { label: 'Edit company' }];
     }
-    if (/^\/companies\/\d+$/.test(path)) {
+    if (/^\/companies\/[^/]+$/.test(path)) {
       return [{ label: 'Companies', routerLink: '/companies' }, { label: 'Company' }];
     }
     if (path.startsWith('/companies')) {

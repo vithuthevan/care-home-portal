@@ -2,7 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
-import { MatTabsModule } from '@angular/material/tabs';
+import { MatIconModule } from '@angular/material/icon';
 
 import { Company } from '../../models/company.model';
 import { CompanyService } from '../../services/company.service';
@@ -14,25 +14,23 @@ import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
+import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
-import { KpiCardComponent } from '../../../../shared/ui/kpi-card';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
-import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-company-detail',
   imports: [
     RouterLink,
     MatButtonModule,
+    MatIconModule,
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
     StatusBadgeComponent,
-    KpiCardComponent,
+    EmptyStateComponent,
     IconActionButtonComponent,
-    MatIconModule,
-    MatTabsModule,
   ],
   templateUrl: './company-detail.html',
 })

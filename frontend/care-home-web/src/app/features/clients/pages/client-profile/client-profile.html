@@ -34,11 +34,11 @@
         </div>
         <p class="mt-3 mb-1 text-supporting">Placement</p>
         <p class="m-0 text-section">
-          <a [routerLink]="['/care-homes', client.careHomeId, 'dashboard']">{{ client.careHomeName }}</a>
+          <a [routerLink]="['/care-homes', careHomeRouteKey(client), 'dashboard']">{{ client.careHomeName }}</a>
         </p>
         <p class="mt-1 mb-0 text-sm text-[var(--app-text-muted)]">
           @if (client.companyId) {
-            <a [routerLink]="['/companies', client.companyId]">{{ client.companyName }}</a>
+            <a [routerLink]="['/companies', companyRouteKey(client)]">{{ client.companyName }}</a>
           } @else {
             {{ client.companyName }}
           }
@@ -157,7 +157,7 @@
               <div>
                 <dt>Care home</dt>
                 <dd>
-                  <a [routerLink]="['/care-homes', client.careHomeId, 'dashboard']">{{
+                  <a [routerLink]="['/care-homes', careHomeRouteKey(client), 'dashboard']">{{
                     client.careHomeName
                   }}</a>
                 </dd>
@@ -166,7 +166,7 @@
                 <dt>Company</dt>
                 <dd>
                   @if (client.companyId) {
-                    <a [routerLink]="['/companies', client.companyId]">{{ client.companyName }}</a>
+                    <a [routerLink]="['/companies', companyRouteKey(client)]">{{ client.companyName }}</a>
                   } @else {
                     {{ client.companyName }}
                   }

@@ -20,6 +20,7 @@ export class ClientService {
     pageSize = 50,
     extra?: {
       companyId?: number;
+      company?: string;
       status?: string;
       fundingAuthorityId?: number;
       contractStatus?: string;
@@ -36,7 +37,9 @@ export class ClientService {
     if (careHomeId) {
       params = params.set('careHomeId', careHomeId);
     }
-    if (extra?.companyId) {
+    if (extra?.company) {
+      params = params.set('company', extra.company);
+    } else if (extra?.companyId) {
       params = params.set('companyId', extra.companyId);
     }
     if (extra?.status) {

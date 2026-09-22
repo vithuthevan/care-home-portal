@@ -3,8 +3,10 @@ export interface Client {
   publicId?: string;
 
   careHomeId: number;
+  careHomePublicId?: string;
   careHomeName: string;
   companyId: number;
+  companyPublicId?: string;
   companyName: string;
 
   sageId: string;

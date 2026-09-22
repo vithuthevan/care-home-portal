@@ -1,7 +1,13 @@
 <div class="page">
-  <app-page-header title="Companies" subtitle="Manage care home operating companies.">
+  <app-page-header
+    title="Companies"
+    subtitle="Manage the organisations that operate your care homes."
+  >
     @if (auth.canWrite()) {
-      <a mat-flat-button color="primary" routerLink="/companies/new">Add Company</a>
+      <a mat-flat-button color="primary" routerLink="/companies/new">
+        <mat-icon>add</mat-icon>
+        Add company
+      </a>
     }
   </app-page-header>
 
@@ -17,7 +23,10 @@
       message="Add a company to group care homes for billing and reporting."
     >
       @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/companies/new">Add Company</a>
+        <a mat-flat-button color="primary" routerLink="/companies/new">
+          <mat-icon>add</mat-icon>
+          Add company
+        </a>
       }
     </app-empty-state>
   }
@@ -26,97 +35,124 @@
     <app-empty-state
       title="No companies found"
       message="There are no companies matching your search."
-    />
+    >
+      <button mat-stroked-button type="button" (click)="clearSearch()">Clear search</button>
+    </app-empty-state>
   }
 
   @if (!isLoading() && companies().length) {
     <div class="table-shell list-view-table--from-md">
-    <app-filter-bar [toolbar]="true">
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-icon matPrefix>search</mat-icon>
-        <mat-label>Search companies</mat-label>
-        <input
-          matInput
-          [ngModel]="searchText()"
-          (ngModelChange)="onSearchChange($event)"
-          (keyup.enter)="applySearch()"
-          placeholder="Search companies..."
-        />
-      </mat-form-field>
-      <div filterActions>
-        @if (auth.canWrite()) {
-          <a mat-flat-button color="primary" routerLink="/companies/new">Add company</a>
-        }
-      </div>
-    </app-filter-bar>
-    <div class="table-container">
-      <table class="data-table data-table--responsive-hide-sm">
-        <thead>
-          <tr>
-            <th>Company</th>
-            <th class="col-status">Status</th>
-            <th class="col-actions">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (company of companies(); track company.id) {
-            <tr [class.inactive-row]="!company.isActive">
-              <td class="font-medium">
-                <a
-                  class="font-medium"
-                  [routerLink]="['/companies', entityRouteKey(company)]"
-                  >{{ company.name }}</a
-                >
-              </td>
-              <td class="col-status"><app-status-badge [value]="company.isActive ? 'Active' : 'Inactive'" /></td>
-              <td class="actions-cell col-actions">
-                <span class="table-actions">
-                  <app-icon-action
-                    icon="home_work"
-                    ariaLabel="View care homes for company"
-                    [routerLink]="['/care-homes']"
-                    [queryParams]="{ companyId: company.id }"
-                  />
-                  @if (auth.canWrite()) {
-                    <app-icon-action
-                      icon="edit"
-                      ariaLabel="Edit company"
-                      [routerLink]="['/companies', entityRouteKey(company), 'edit']"
-                    />
-                    @if (company.isActive) {
-                      <app-icon-action
-                        icon="block"
-                        ariaLabel="Deactivate company"
-                        [warn]="true"
-                        (action)="deactivateCompany(company)"
-                      />
-                    }
-                  }
-                </span>
-              </td>
+      <app-filter-bar [toolbar]="true">
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-icon matPrefix>search</mat-icon>
+          <mat-label>Search companies</mat-label>
+          <input
+            matInput
+            [ngModel]="searchText()"
+            (ngModelChange)="onSearchChange($event)"
+            (keyup.enter)="applySearch()"
+            placeholder="Search by company name..."
+          />
+        </mat-form-field>
+      </app-filter-bar>
+      <div class="table-container">
+        <table class="data-table data-table--responsive-hide-sm">
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th class="num col-narrow">Care homes</th>
+              <th class="num col-narrow">Residents</th>
+              <th class="col-status">Status</th>
+              <th class="col-actions">Actions</th>
             </tr>
-          }
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            @for (company of companies(); track company.id) {
+              <tr [class.inactive-row]="!company.isActive">
+                <td class="font-medium cell-truncate">
+                  <a
+                    class="font-medium"
+                    [routerLink]="['/companies', entityRouteKey(company)]"
+                    >{{ company.name }}</a
+                  >
+                </td>
+                <td class="num">{{ company.activeCareHomeCount ?? company.careHomeCount ?? 0 }}</td>
+                <td class="num">{{ company.residentCount ?? 0 }}</td>
+                <td class="col-status">
+                  <app-status-badge [value]="company.isActive ? 'Active' : 'Inactive'" />
+                </td>
+                <td class="actions-cell col-actions">
+                  <span class="table-actions">
+                    <app-icon-action
+                      icon="visibility"
+                      ariaLabel="View company"
+                      [routerLink]="['/companies', entityRouteKey(company)]"
+                    />
+                    @if (auth.canWrite()) {
+                      <app-icon-action
+                        icon="edit"
+                        ariaLabel="Edit company"
+                        [routerLink]="['/companies', entityRouteKey(company), 'edit']"
+                      />
+                      <button
+                        mat-icon-button
+                        type="button"
+                        [matMenuTriggerFor]="companyMoreMenu"
+                        aria-label="More company actions"
+                        matTooltip="More"
+                        (click)="setMoreMenuCompany(company)"
+                      >
+                        <mat-icon>more_vert</mat-icon>
+                      </button>
+                    }
+                  </span>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
     </div>
-    </div>
+
+    <mat-menu #companyMoreMenu="matMenu">
+      @if (moreMenuCompany(); as selected) {
+        <a
+          mat-menu-item
+          [routerLink]="['/companies', entityRouteKey(selected), 'care-homes']"
+        >
+          <mat-icon>home_work</mat-icon>
+          <span>Care homes</span>
+        </a>
+        @if (selected.isActive) {
+          <button mat-menu-item type="button" (click)="deactivateCompany(selected)">
+            <mat-icon>block</mat-icon>
+            <span>Deactivate</span>
+          </button>
+        }
+      }
+    </mat-menu>
 
     <div class="mobile-card-list mobile-card-list--breakpoint-md">
       @for (company of companies(); track company.id) {
         <article class="mobile-data-card" [class.inactive-row]="!company.isActive">
-          <a class="text-lg font-semibold no-underline" [routerLink]="['/companies', entityRouteKey(company)]">{{
-            company.name
-          }}</a>
+          <a
+            class="text-lg font-semibold no-underline cell-truncate"
+            [routerLink]="['/companies', entityRouteKey(company)]"
+            >{{ company.name }}</a
+          >
+          <div class="mt-2 flex flex-wrap gap-3 text-sm text-[var(--app-text-muted)]">
+            <span>{{ company.activeCareHomeCount ?? company.careHomeCount ?? 0 }} care homes</span>
+            <span>{{ company.residentCount ?? 0 }} residents</span>
+          </div>
           <div class="mt-2">
             <app-status-badge [value]="company.isActive ? 'Active' : 'Inactive'" />
           </div>
           <div class="mobile-data-card__actions">
             <span class="table-actions">
               <app-icon-action
-                icon="home_work"
-                ariaLabel="View care homes for company"
-                [routerLink]="['/care-homes']"
-                [queryParams]="{ companyId: company.id }"
+                icon="visibility"
+                ariaLabel="View company"
+                [routerLink]="['/companies', entityRouteKey(company)]"
               />
               @if (auth.canWrite()) {
                 <app-icon-action

@@ -23,6 +23,7 @@ namespace CareHome.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<PagedResult<ClientDto>>> GetClients(
             string? search = null,
+            string? company = null,
             int? companyId = null,
             int? careHomeId = null,
             int? fundingAuthorityId = null,
@@ -45,7 +46,25 @@ namespace CareHome.Api.Controllers
                 query = query.Where(x => !x.IsArchived);
             }
 
-            if (companyId.HasValue)
+            if (!string.IsNullOrWhiteSpace(company))
+            {
+                if (!EntityRouteKey.TryParse(company.Trim(), out var companyPublicId, out var parsedCompanyId))
+                {
+                    return Ok(new PagedResult<ClientDto>
+                    {
+                        Items = [],
+                        TotalCount = 0,
+                        Page = page,
+                        PageSize = pageSize
+                    });
+                }
+
+                query = query.Where(x =>
+                    companyPublicId != default
+                        ? x.CareHome.Company.PublicId == companyPublicId
+                        : x.CareHome.CompanyId == parsedCompanyId);
+            }
+            else if (companyId.HasValue)
             {
                 query = query.Where(x => x.CareHome.CompanyId == companyId.Value);
             }
@@ -456,7 +475,9 @@ namespace CareHome.Api.Controllers
                 Id = x.Id,
                 PublicId = x.PublicId,
                 CareHomeId = x.CareHomeId,
+                CareHomePublicId = x.CareHome.PublicId,
                 CompanyId = x.CareHome.CompanyId,
+                CompanyPublicId = x.CareHome.Company.PublicId,
                 CareHomeName = x.CareHome.Name,
                 CompanyName = x.CareHome.Company.Name,
                 SageId = x.SageId,
