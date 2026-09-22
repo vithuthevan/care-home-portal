@@ -1,11 +1,5 @@
-import {
-  Component,
-  forwardRef,
-  input,
-  Optional,
-  Self,
-} from '@angular/core';
-import { ControlValueAccessor, FormsModule, NG_VALUE_ACCESSOR, NgControl } from '@angular/forms';
+import { Component, input, Optional, Self } from '@angular/core';
+import { ControlValueAccessor, FormsModule, NgControl } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -55,13 +49,6 @@ export function formatIsoDateString(date: Date | null): string {
     MatDatepickerModule,
     MatButtonModule,
     MatIconModule,
-  ],
-  providers: [
-    {
-      provide: NG_VALUE_ACCESSOR,
-      useExisting: forwardRef(() => AppDateFieldComponent),
-      multi: true,
-    },
   ],
   template: `
     <mat-form-field appearance="outline" class="w-full">
