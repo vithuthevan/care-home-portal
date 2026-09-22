@@ -16,6 +16,12 @@ namespace CareHome.Api.Controllers
         [Authorize(Policy = CareHomePolicies.CanViewFinancialReports)]
         public async Task<ActionResult<BillingPreviewResponse>> Preview(BillingPreviewRequest request)
         {
+            var validationError = BillingPreviewRequestValidator.Validate(request);
+            if (validationError is not null)
+            {
+                return BadRequest(new { message = validationError });
+            }
+
             return Ok(await billing.PreviewAsync(tenantContext.TenantId, request));
         }
 
@@ -23,6 +29,12 @@ namespace CareHome.Api.Controllers
         [Authorize(Policy = CareHomePolicies.CanManageBilling)]
         public async Task<ActionResult<BillingGenerateResponse>> Generate(BillingPreviewRequest request)
         {
+            var validationError = BillingPreviewRequestValidator.Validate(request);
+            if (validationError is not null)
+            {
+                return BadRequest(new { message = validationError });
+            }
+
             var (result, error) = await billing.GenerateAsync(tenantContext.TenantId, request);
             if (error is not null && result is null)
             {
