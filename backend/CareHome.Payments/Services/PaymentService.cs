@@ -132,16 +132,43 @@ public sealed class PaymentService(
         }
 
         var total = await query.CountAsync(cancellationToken);
-        var payments = await query
+        var rows = await query
             .OrderByDescending(p => p.ReceivedDate)
             .ThenByDescending(p => p.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Include(p => p.FundingAuthority)
-            .Include(p => p.Allocations.Where(a => !a.IsReversed))
+            .Select(p => new
+            {
+                p.PublicId,
+                p.ReceivedDate,
+                p.Reference,
+                PayerName = p.FundingAuthority != null ? p.FundingAuthority.Name : null,
+                p.Amount,
+                AllocatedAmount = p.Allocations.Where(a => !a.IsReversed).Sum(a => (decimal?)a.AllocatedAmount) ?? 0m,
+                p.Currency,
+                p.Status,
+                p.Source
+            })
             .ToListAsync(cancellationToken);
 
-        var items = payments.Select(MapList).ToList();
+        var items = rows.Select(p =>
+        {
+            var allocated = Money.Round(p.AllocatedAmount);
+            return new PaymentListDto
+            {
+                PublicId = p.PublicId,
+                ReceivedDate = p.ReceivedDate,
+                Reference = p.Reference,
+                PayerName = p.PayerName,
+                Amount = p.Amount,
+                AllocatedAmount = allocated,
+                UnappliedAmount = Money.Round(Math.Max(0m, p.Amount - allocated)),
+                Currency = p.Currency,
+                Status = p.Status,
+                Source = p.Source
+            };
+        }).ToList();
+
         return (items, total);
     }
 
@@ -156,7 +183,7 @@ public sealed class PaymentService(
             .FirstOrDefaultAsync(p => p.TenantId == tenantId && p.PublicId == paymentPublicId, cancellationToken)
             ?? throw new InvalidOperationException("Payment not found.");
 
-        await AllocateInternalAsync(tenantId, payment, request.Allocations, actorUserId, cancellationToken);
+        await AllocateInternalAsync(tenantId, payment, request.Allocations ?? [], actorUserId, cancellationToken);
 
         return await MapDetailAsync(tenantId, paymentPublicId, cancellationToken)
             ?? throw new InvalidOperationException("Payment not found after allocation.");
@@ -463,9 +490,9 @@ public sealed class PaymentService(
                 i.InvoiceNumber,
                 i.TotalAmount,
                 i.PaymentStatus,
-                ResidentName = i.Lines.OrderBy(l => l.Id).Select(l => l.SnapshotClientName).FirstOrDefault(),
+                ResidentName = i.Lines.Select(l => l.SnapshotClientName).FirstOrDefault(),
                 i.SnapshotCareHomeName,
-                FunderName = i.FundingAuthority.Name
+                FunderName = i.SnapshotFundingAuthorityName
             })
             .ToListAsync(cancellationToken);
 
@@ -580,10 +607,11 @@ public sealed class PaymentService(
     private async Task AllocateInternalAsync(
         int tenantId,
         Payment payment,
-        IReadOnlyList<PaymentAllocationLineRequest> lines,
+        IReadOnlyList<PaymentAllocationLineRequest>? lines,
         string? actorUserId,
         CancellationToken cancellationToken)
     {
+        lines ??= [];
         if (lines.Count == 0)
         {
             throw new InvalidOperationException("At least one allocation line is required.");
@@ -870,31 +898,77 @@ public sealed class PaymentService(
         CancellationToken cancellationToken)
     {
         var payment = await dbContext.Payments.AsNoTracking()
-            .Include(p => p.FundingAuthority)
-            .Include(p => p.Allocations)
-            .ThenInclude(a => a.Invoice)
-            .ThenInclude(i => i.Lines)
-            .FirstOrDefaultAsync(p => p.TenantId == tenantId && p.PublicId == publicId, cancellationToken);
+            .Where(p => p.TenantId == tenantId && p.PublicId == publicId)
+            .Select(p => new
+            {
+                p.PublicId,
+                p.ReceivedDate,
+                p.Reference,
+                PayerName = p.FundingAuthority != null ? p.FundingAuthority.Name : null,
+                p.Amount,
+                p.Currency,
+                p.Status,
+                p.Source,
+                p.FundingAuthorityId,
+                p.CareHomeId,
+                p.ExternalReference,
+                p.Notes,
+                p.CreatedAt,
+                p.ReversedAt,
+                p.ReversalReason,
+                Allocations = p.Allocations
+                    .Where(a => !a.IsReversed && a.Invoice != null)
+                    .Select(a => new
+                    {
+                        a.PublicId,
+                        a.InvoiceId,
+                        a.AllocatedAmount,
+                        a.IsReversed,
+                        a.AllocatedAt,
+                        InvoicePublicId = a.Invoice.PublicId,
+                        InvoiceNumber = a.Invoice.InvoiceNumber,
+                        CareHomeName = a.Invoice.SnapshotCareHomeName,
+                        InvoiceTotal = a.Invoice.TotalAmount,
+                        PaymentStatus = a.Invoice.PaymentStatus,
+                        InvoiceDbId = a.Invoice.Id
+                    })
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
         if (payment is null)
         {
             return null;
         }
 
-        var activeAllocations = payment.Allocations.Where(a => !a.IsReversed).ToList();
+        var activeAllocations = payment.Allocations.ToList();
         var invoiceIds = activeAllocations.Select(a => a.InvoiceId).Distinct().ToList();
         var credits = await LoadCreditTotalsAsync(tenantId, invoiceIds, cancellationToken);
         var allocatedBefore = await LoadActiveAllocationTotalsAsync(tenantId, invoiceIds, cancellationToken);
 
+        Dictionary<int, string?> residentNames = [];
+        if (invoiceIds.Count > 0)
+        {
+            var lineNames = await dbContext.InvoiceLines.AsNoTracking()
+                .Where(l => invoiceIds.Contains(l.InvoiceId))
+                .Select(l => new { l.InvoiceId, l.Id, l.SnapshotClientName })
+                .ToListAsync(cancellationToken);
+            residentNames = lineNames
+                .GroupBy(l => l.InvoiceId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.OrderBy(x => x.Id).Select(x => x.SnapshotClientName).FirstOrDefault());
+        }
+
+        var allocatedAmount = Money.Round(activeAllocations.Sum(a => a.AllocatedAmount));
         var dto = new PaymentDetailDto
         {
             PublicId = payment.PublicId,
             ReceivedDate = payment.ReceivedDate,
             Reference = payment.Reference,
-            PayerName = payment.FundingAuthority?.Name,
+            PayerName = payment.PayerName,
             Amount = payment.Amount,
-            AllocatedAmount = Money.Round(activeAllocations.Sum(a => a.AllocatedAmount)),
-            UnappliedAmount = await GetUnappliedAmountAsync(payment, cancellationToken),
+            AllocatedAmount = allocatedAmount,
+            UnappliedAmount = Money.Round(Math.Max(0m, payment.Amount - allocatedAmount)),
             Currency = payment.Currency,
             Status = payment.Status,
             Source = payment.Source,
@@ -909,28 +983,27 @@ public sealed class PaymentService(
 
         foreach (var alloc in activeAllocations.OrderBy(a => a.AllocatedAt))
         {
-            var inv = alloc.Invoice;
-            var credited = credits.GetValueOrDefault(inv.Id);
-            var totalAlloc = allocatedBefore.GetValueOrDefault(inv.Id);
+            var credited = credits.GetValueOrDefault(alloc.InvoiceDbId);
+            var totalAlloc = allocatedBefore.GetValueOrDefault(alloc.InvoiceDbId);
             var outstandingBefore = InvoiceAllocationCapacity.RemainingCollectible(
-                inv.TotalAmount,
+                alloc.InvoiceTotal,
                 credited,
-                inv.PaymentStatus,
+                alloc.PaymentStatus,
                 totalAlloc - alloc.AllocatedAmount);
             var outstandingAfter = InvoiceAllocationCapacity.RemainingCollectible(
-                inv.TotalAmount,
+                alloc.InvoiceTotal,
                 credited,
-                inv.PaymentStatus,
+                alloc.PaymentStatus,
                 totalAlloc);
 
             dto.Allocations.Add(new PaymentAllocationDto
             {
                 PublicId = alloc.PublicId,
-                InvoicePublicId = inv.PublicId,
-                InvoiceNumber = inv.InvoiceNumber,
-                ResidentName = inv.Lines.OrderBy(l => l.Id).Select(l => l.SnapshotClientName).FirstOrDefault(),
-                CareHomeName = inv.SnapshotCareHomeName,
-                InvoiceTotal = inv.TotalAmount,
+                InvoicePublicId = alloc.InvoicePublicId,
+                InvoiceNumber = alloc.InvoiceNumber,
+                ResidentName = residentNames.GetValueOrDefault(alloc.InvoiceId),
+                CareHomeName = alloc.CareHomeName,
+                InvoiceTotal = alloc.InvoiceTotal,
                 OutstandingBefore = outstandingBefore,
                 AllocatedAmount = alloc.AllocatedAmount,
                 OutstandingAfter = outstandingAfter,
@@ -940,23 +1013,5 @@ public sealed class PaymentService(
         }
 
         return dto;
-    }
-
-    private static PaymentListDto MapList(Payment payment)
-    {
-        var allocated = Money.Round(payment.Allocations.Where(a => !a.IsReversed).Sum(a => a.AllocatedAmount));
-        return new PaymentListDto
-        {
-            PublicId = payment.PublicId,
-            ReceivedDate = payment.ReceivedDate,
-            Reference = payment.Reference,
-            PayerName = payment.FundingAuthority?.Name,
-            Amount = payment.Amount,
-            AllocatedAmount = allocated,
-            UnappliedAmount = Money.Round(Math.Max(0m, payment.Amount - allocated)),
-            Currency = payment.Currency,
-            Status = payment.Status,
-            Source = payment.Source
-        };
     }
 }
