@@ -155,7 +155,18 @@ jobs:
             rm -f /tmp/carehome-deploy.tar.gz
 
             echo "Applying database migrations..."
-            bash /home/ubuntu/api/scripts/apply-database-migrations-on-host.sh /home/ubuntu/api
+
+            if ! bash /home/ubuntu/api/scripts/apply-database-migrations-on-host.sh /home/ubuntu/api; then
+              echo "Database migration failed."
+
+              echo "Restarting CareHome API so the site is not left offline..."
+              sudo systemctl start carehome-api || true
+
+              echo "Recent application logs:"
+              sudo journalctl -u carehome-api -n 100 --no-pager || true
+
+              exit 1
+            fi
 
             echo "Starting CareHome API..."
             sudo systemctl start carehome-api
