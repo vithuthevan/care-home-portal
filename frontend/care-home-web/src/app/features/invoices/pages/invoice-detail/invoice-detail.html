@@ -97,7 +97,41 @@
     } @else {
       <section class="panel panel--flat payment-status-panel" aria-labelledby="payment-status-heading">
         <h2 id="payment-status-heading" class="payment-status-panel__heading m-0">Payment status</h2>
-        <app-labeled-status kind="Payment" [value]="inv.paymentStatus" />
+        <div class="payment-status-panel__row">
+          <app-status-badge [value]="inv.paymentStatus" />
+          @if (showPaymentStatusActions()) {
+            <div class="payment-status-panel__actions">
+              @if (isPaymentPaid()) {
+                <button
+                  mat-stroked-button
+                  type="button"
+                  (click)="confirmPay('NotPaid')"
+                  [disabled]="isPaying()"
+                >
+                  @if (isPaying()) {
+                    Updating...
+                  } @else {
+                    Mark as unpaid
+                  }
+                </button>
+              } @else {
+                <button
+                  mat-flat-button
+                  color="primary"
+                  type="button"
+                  (click)="confirmPay('Paid')"
+                  [disabled]="isPaying()"
+                >
+                  @if (isPaying()) {
+                    Updating...
+                  } @else {
+                    Mark as paid
+                  }
+                </button>
+              }
+            </div>
+          }
+        </div>
       </section>
     }
 
@@ -132,12 +166,6 @@
           <mat-icon>more_vert</mat-icon>
         </button>
         <mat-menu #invoiceMore="matMenu">
-          @if (showLegacyPaymentStatusActions()) {
-            <button mat-menu-item type="button" (click)="confirmPay('Paid')" [disabled]="isPaying()">
-              <mat-icon>flag</mat-icon>
-              <span>Legacy: mark as paid (status only)</span>
-            </button>
-          }
           <button mat-menu-item type="button" (click)="voidInvoice()">
             <mat-icon>block</mat-icon>
             <span>Void invoice</span>

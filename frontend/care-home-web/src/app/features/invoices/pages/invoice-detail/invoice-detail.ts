@@ -15,6 +15,7 @@ import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
 import { LabeledStatusComponent } from '../../../../shared/ui/labeled-status';
+import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
@@ -35,6 +36,7 @@ import { COMMERCIAL_REVENUE_ENABLED } from '../../../../core/commercial-revenue.
     LoadingStateComponent,
     DisplayDatePipe,
     LabeledStatusComponent,
+    StatusBadgeComponent,
   ],
   templateUrl: './invoice-detail.html',
 })
@@ -56,14 +58,21 @@ export class InvoiceDetailPage implements OnInit {
   readonly isSending = signal(false);
   readonly isPaying = signal(false);
 
-  /** Legacy manual flag only — hidden when real payment allocations drive collection status. */
-  showLegacyPaymentStatusActions(): boolean {
+  /** Manual payment status only — hidden when allocations drive collection status. */
+  showPaymentStatusActions(): boolean {
     const inv = this.invoice();
-    if (!inv || !this.auth.canWrite()) {
+    if (this.commercialRevenueEnabled || !inv || !this.auth.canWrite()) {
+      return false;
+    }
+    if (inv.status === 'Void') {
       return false;
     }
     const paid = inv.paidAmount ?? 0;
-    return paid <= 0 && inv.paymentStatus !== 'Paid';
+    return paid <= 0;
+  }
+
+  isPaymentPaid(): boolean {
+    return this.invoice()?.paymentStatus === 'Paid';
   }
 
   ngOnInit(): void {
@@ -148,20 +157,20 @@ export class InvoiceDetailPage implements OnInit {
 
   confirmPay(status: string): void {
     const current = this.invoice();
-    if (!current || current.paymentStatus === status) {
+    if (!current || current.paymentStatus === status || this.isPaying()) {
       return;
     }
 
     const number = current.invoiceNumber || 'this invoice';
-    const message =
-      status === 'Paid'
-        ? `Mark ${number} as paid without recording a payment? This updates the invoice payment flag only — it does not create a payment or allocation. To record cash received, use Payments.`
-        : `Mark ${number} as not paid? This updates the invoice payment flag only.`;
+    const markingPaid = status === 'Paid';
+    const message = markingPaid
+      ? `Mark ${number} as paid? This updates payment status only. It does not record a bank receipt.`
+      : `Mark ${number} as unpaid? This updates payment status only.`;
     this.confirm
       .confirm({
-        title: 'Legacy: payment status flag',
+        title: 'Update payment status',
         message,
-        confirmLabel: status === 'Paid' ? 'Mark as paid' : 'Mark as not paid',
+        confirmLabel: markingPaid ? 'Mark as paid' : 'Mark as unpaid',
       })
       .subscribe((ok) => {
         if (!ok) {
@@ -173,22 +182,33 @@ export class InvoiceDetailPage implements OnInit {
 
   private pay(status: string): void {
     const current = this.invoice();
-    if (!current) {
+    if (!current || this.isPaying()) {
       return;
     }
 
     this.isPaying.set(true);
+    this.errorMessage.set(null);
     this.http
       .post(`/api/invoices/${current.id}/payment-status`, { paymentStatus: status })
       .pipe(finalize(() => this.isPaying.set(false)))
       .subscribe({
         next: () => {
           this.invoice.set({ ...current, paymentStatus: status });
-          this.toast.success('Payment status updated.');
+          this.toast.success(
+            status === 'Paid' ? 'Invoice marked as paid.' : 'Invoice marked as unpaid.',
+          );
+          const key = this.route.snapshot.paramMap.get('id') ?? String(current.id);
+          this.refreshInvoice(key);
         },
         error: (error) =>
           this.errorMessage.set(getApiErrorMessage(error, 'Payment update failed.')),
       });
+  }
+
+  private refreshInvoice(key: string): void {
+    this.http.get(`/api/invoices/${key}`).subscribe({
+      next: (invoice: any) => this.invoice.set(invoice),
+    });
   }
 
   careHomeDashboardLink(inv: {

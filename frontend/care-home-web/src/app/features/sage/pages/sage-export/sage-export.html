@@ -1,43 +1,69 @@
 <div class="page">
   <app-page-header
     title="Sage Export"
-    subtitle="Provisional CSV mapping. Final Sage import layout needs stakeholder confirmation."
+    subtitle="Export invoices as a Sage 50 CSV file for a date range. Validate first, then export."
   />
   <app-api-error [message]="errorMessage()" />
+  @if (infoMessage(); as info) {
+    <div class="alert-banner" [class.alert-banner--success]="info.tone === 'success'" [class.alert-banner--warning]="info.tone === 'warning'">
+      {{ info.text }}
+    </div>
+  }
   <section class="panel mb-4">
+    <p class="mt-0 mb-3 text-sm text-[var(--app-text-muted)]">
+      This export marks the selected invoices as exported, then produces a Sage 50 CSV file.
+      Invoice export, the export batch, and whether the CSV file is available are separate.
+      If the file is missing, invoices remain exported — use Retry CSV to regenerate the file.
+    </p>
     <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
       <app-date-field label="Date from" [(ngModel)]="dateFrom" />
       <app-date-field label="Date to" [(ngModel)]="dateTo" />
       <div class="flex flex-wrap items-center gap-2">
-        <button mat-stroked-button type="button" (click)="runPreview()">Validate</button>
+        <button mat-stroked-button type="button" (click)="runPreview()" [disabled]="isPreviewing()">
+          @if (isPreviewing()) {
+            Validating...
+          } @else {
+            Validate
+          }
+        </button>
         @if (auth.canWrite()) {
           <button
             mat-flat-button
             color="primary"
             type="button"
-            [disabled]="!preview()?.canExport"
+            [disabled]="!preview()?.canExport || isExporting()"
             (click)="exportNow()"
           >
-            Export CSV
+            @if (isExporting()) {
+              Exporting...
+            } @else {
+              Export CSV
+            }
           </button>
         }
       </div>
     </div>
   </section>
   @if (preview(); as preview) {
-    <p>Eligible {{ preview.eligibleCount }} · Blocked {{ preview.blockedCount }}</p>
+    <p>Ready to export {{ preview.eligibleCount }} · Blocked {{ preview.blockedCount }}</p>
     @for (err of preview.errors; track err) {
       <app-api-error [message]="err" />
     }
   }
   <section class="panel">
     <h2 class="mt-0 text-lg font-semibold">Previous exports</h2>
+    <p class="mt-0 mb-3 text-sm text-[var(--app-text-muted)]">
+      Each row is an export batch. A completed batch has a downloadable CSV. File unavailable
+      means the export was recorded but the CSV cannot be downloaded until you retry.
+    </p>
     <div class="table-container">
       <table class="data-table">
         <thead>
           <tr>
             <th>When</th>
             <th>File</th>
+            <th>Export</th>
+            <th>CSV file</th>
             <th class="num">Records</th>
             <th class="col-actions">Actions</th>
           </tr>
@@ -46,14 +72,41 @@
           @for (batch of batches(); track batch.id) {
             <tr>
               <td>{{ batch.exportedAt }}</td>
-              <td>{{ batch.fileName }}</td>
+              <td>{{ batch.fileName || '—' }}</td>
+              <td>{{ invoiceExportLabel(batch) }}</td>
+              <td>
+                <div>{{ csvAvailabilityLabel(batch) }}</div>
+                @if (isFileMissing(batch)) {
+                  <p class="mt-1 mb-0 text-sm text-[var(--app-text-muted)]">
+                    Export recorded, but the CSV file is unavailable.
+                  </p>
+                }
+              </td>
               <td class="num">{{ batch.recordCount }}</td>
               <td class="actions-cell col-actions">
-                <app-icon-action
-                  icon="download"
-                  ariaLabel="Download Sage export file"
-                  (action)="download(batch.id)"
-                />
+                <span class="table-actions">
+                  @if (!isFileMissing(batch)) {
+                    <app-icon-action
+                      icon="download"
+                      ariaLabel="Download Sage export file"
+                      (action)="download(batch)"
+                    />
+                  }
+                  @if (isFileMissing(batch) && auth.canWrite()) {
+                    <button
+                      mat-stroked-button
+                      type="button"
+                      (click)="retryFile(batch)"
+                      [disabled]="isRetrying(batch)"
+                    >
+                      @if (isRetrying(batch)) {
+                        Retrying...
+                      } @else {
+                        Retry CSV
+                      }
+                    </button>
+                  }
+                </span>
               </td>
             </tr>
           }

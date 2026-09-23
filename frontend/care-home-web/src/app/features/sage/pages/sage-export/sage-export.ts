@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { finalize } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
 import { AuthService } from '../../../../core/auth.service';
@@ -13,6 +14,15 @@ import { PagedResult } from '../../../../core/models';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
+import { ToastService } from '../../../../shared/ui/toast.service';
+
+interface SageExportBatch {
+  id: number;
+  exportedAt?: string;
+  fileName?: string;
+  status?: string;
+  recordCount?: number;
+}
 
 @Component({
   selector: 'app-sage-export',
@@ -31,13 +41,18 @@ import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 })
 export class SageExportPage implements OnInit {
   private readonly http = inject(HttpClient);
+  private readonly toast = inject(ToastService);
   readonly auth = inject(AuthService);
   dateFrom = '';
   dateTo = '';
   readonly preview = signal<any | null>(null);
-  readonly batches = signal<any[]>([]);
+  readonly batches = signal<SageExportBatch[]>([]);
   readonly totalCount = signal(0);
   readonly errorMessage = signal<string | null>(null);
+  readonly infoMessage = signal<{ text: string; tone: 'success' | 'warning' } | null>(null);
+  readonly isPreviewing = signal(false);
+  readonly isExporting = signal(false);
+  readonly retryingId = signal<number | null>(null);
   page = 1;
   pageSize = 20;
 
@@ -45,9 +60,25 @@ export class SageExportPage implements OnInit {
     this.loadBatches();
   }
 
+  isFileMissing(batch: SageExportBatch): boolean {
+    return batch.status === 'FileMissing';
+  }
+
+  isRetrying(batch: SageExportBatch): boolean {
+    return this.retryingId() === batch.id;
+  }
+
+  invoiceExportLabel(_batch: SageExportBatch): string {
+    return 'Invoices exported';
+  }
+
+  csvAvailabilityLabel(batch: SageExportBatch): string {
+    return this.isFileMissing(batch) ? 'Unavailable' : 'Available';
+  }
+
   loadBatches(): void {
     const params = new HttpParams().set('page', this.page).set('pageSize', this.pageSize);
-    this.http.get<PagedResult<any>>('/api/sage-exports', { params }).subscribe({
+    this.http.get<PagedResult<SageExportBatch>>('/api/sage-exports', { params }).subscribe({
       next: (x) => {
         this.batches.set(x.items);
         this.totalCount.set(x.totalCount);
@@ -69,31 +100,99 @@ export class SageExportPage implements OnInit {
 
   runPreview(): void {
     this.errorMessage.set(null);
+    this.infoMessage.set(null);
+    this.isPreviewing.set(true);
     this.http
       .post('/api/sage-exports/preview', { dateFrom: this.dateFrom, dateTo: this.dateTo })
+      .pipe(finalize(() => this.isPreviewing.set(false)))
       .subscribe({
         next: (preview) => this.preview.set(preview),
-        error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Preview failed.')),
+        error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Validation failed.')),
       });
   }
 
   exportNow(): void {
+    if (this.isExporting() || !this.preview()?.canExport) {
+      return;
+    }
+
     this.errorMessage.set(null);
+    this.infoMessage.set(null);
+    this.isExporting.set(true);
     this.http
-      .post<any>('/api/sage-exports', { dateFrom: this.dateFrom, dateTo: this.dateTo })
+      .post<SageExportBatch>('/api/sage-exports', { dateFrom: this.dateFrom, dateTo: this.dateTo })
+      .pipe(finalize(() => this.isExporting.set(false)))
       .subscribe({
-        next: () => this.loadBatches(),
-        error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Export failed.')),
+        next: (batch) => {
+          this.loadBatches();
+          if (this.isFileMissing(batch)) {
+            this.infoMessage.set({
+              tone: 'warning',
+              text: 'Export recorded, but the CSV file is unavailable. Invoices in this export remain marked as exported. Use Retry CSV to regenerate the file.',
+            });
+          } else {
+            this.infoMessage.set({
+              tone: 'success',
+              text: 'Sage 50 CSV exported successfully. The file is available to download from previous exports.',
+            });
+            this.toast.success('Sage CSV exported. The file is ready to download.');
+          }
+        },
+        error: (error) => {
+          this.loadBatches();
+          this.errorMessage.set(getApiErrorMessage(error, 'Export failed.'));
+        },
       });
   }
 
-  download(id: number): void {
-    this.http.get(`/api/sage-exports/${id}/file`, { responseType: 'blob' }).subscribe((blob) => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `sage-export-${id}.csv`;
-      a.click();
+  download(batch: SageExportBatch): void {
+    this.errorMessage.set(null);
+    this.http.get(`/api/sage-exports/${batch.id}/file`, { responseType: 'blob' }).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = batch.fileName || 'sage-export.csv';
+        a.click();
+      },
+      error: (error) =>
+        this.errorMessage.set(
+          getApiErrorMessage(
+            error,
+            'The CSV file is unavailable. If the export was recorded, use Retry CSV.',
+          ),
+        ),
     });
+  }
+
+  retryFile(batch: SageExportBatch): void {
+    if (!this.auth.canWrite() || this.retryingId() !== null) {
+      return;
+    }
+    this.errorMessage.set(null);
+    this.infoMessage.set(null);
+    this.retryingId.set(batch.id);
+    this.http
+      .post<SageExportBatch>(`/api/sage-exports/${batch.id}/retry-file`, {})
+      .pipe(finalize(() => this.retryingId.set(null)))
+      .subscribe({
+        next: (updated) => {
+          this.loadBatches();
+          if (this.isFileMissing(updated)) {
+            this.infoMessage.set({
+              tone: 'warning',
+              text: 'Export recorded, but the CSV file is still unavailable. Try Retry CSV again.',
+            });
+          } else {
+            this.infoMessage.set({
+              tone: 'success',
+              text: 'CSV file regenerated. The file is available to download.',
+            });
+            this.toast.success('CSV file is available to download.');
+          }
+        },
+        error: (error) =>
+          this.errorMessage.set(getApiErrorMessage(error, 'Could not regenerate the CSV file.')),
+      });
   }
 }

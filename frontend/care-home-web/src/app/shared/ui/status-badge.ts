@@ -16,7 +16,7 @@ export class StatusBadgeComponent {
       return 'Unknown';
     }
     if (value === 'NotPaid') {
-      return 'Not Paid';
+      return 'Unpaid';
     }
     return value.replace(/([a-z])([A-Z])/g, '$1 $2');
   }
@@ -40,7 +40,7 @@ export class StatusBadgeComponent {
     if (['sent', 'simulated', 'draft', 'info'].includes(key)) {
       return 'badge-info';
     }
-    if (['left', 'due', 'warning', 'pending', 'not paid', 'notpaid'].includes(key)) {
+    if (['left', 'due', 'warning', 'pending', 'not paid', 'notpaid', 'unpaid'].includes(key)) {
       return 'badge-warning';
     }
     if (

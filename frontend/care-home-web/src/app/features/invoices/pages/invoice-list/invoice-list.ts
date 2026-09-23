@@ -21,6 +21,7 @@ import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
 import { LabeledStatusComponent } from '../../../../shared/ui/labeled-status';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
+import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { PagedResult } from '../../../../core/models';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
@@ -63,9 +64,11 @@ export class InvoiceListPage implements OnInit {
   private readonly breadcrumbs = inject(BreadcrumbService);
   readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
+  private readonly confirm = inject(ConfirmDialogService);
   readonly items = signal<any[]>([]);
   readonly totalCount = signal(0);
   readonly isLoading = signal(false);
+  readonly isBulkPaying = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly bulkMessage = signal<string | null>(null);
   page = 1;
@@ -78,7 +81,10 @@ export class InvoiceListPage implements OnInit {
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
   ngOnInit(): void {
-    this.breadcrumbs.set([{ label: 'Invoices' }]);
+    this.breadcrumbs.set([
+      { label: 'Billing', routerLink: '/billing' },
+      { label: 'Invoices' },
+    ]);
     this.route.queryParamMap.subscribe((params) => {
       const payment = params.get('paymentStatus');
       const number = params.get('invoiceNumber');
@@ -88,15 +94,45 @@ export class InvoiceListPage implements OnInit {
       if (number) {
         this.invoiceNumber = number;
       }
+      const careHomeKey = params.get('careHome');
       const careHomeId = Number(params.get('careHomeId') || 0);
-      this.filterCareHomeId = careHomeId;
-      if (careHomeId) {
-        this.applyCareHomeBreadcrumb(careHomeId);
+      if (careHomeKey) {
+        this.applyCareHomeFilterKey(careHomeKey);
       } else {
-        this.breadcrumbs.set([{ label: 'Invoices' }]);
+        this.filterCareHomeId = careHomeId;
+        if (careHomeId) {
+          this.applyCareHomeBreadcrumb(careHomeId);
+        } else {
+          this.breadcrumbs.set([
+      { label: 'Billing', routerLink: '/billing' },
+      { label: 'Invoices' },
+    ]);
+        }
       }
       this.page = 1;
       this.load();
+    });
+  }
+
+  private applyCareHomeFilterKey(key: string): void {
+    this.careHomesApi.getCareHome(key).subscribe({
+      next: (home) => {
+        this.filterCareHomeId = home.id;
+        this.breadcrumbs.set([
+          { label: 'Care Homes', routerLink: '/care-homes' },
+          { label: home.name, routerLink: ['/care-homes', entityRouteKey(home), 'dashboard'] },
+          { label: 'Invoices' },
+        ]);
+        this.load();
+      },
+      error: () => {
+        this.filterCareHomeId = 0;
+        this.breadcrumbs.set([
+      { label: 'Billing', routerLink: '/billing' },
+      { label: 'Invoices' },
+    ]);
+        this.load();
+      },
     });
   }
 
@@ -111,7 +147,10 @@ export class InvoiceListPage implements OnInit {
             { label: 'Invoices' },
           ]);
         } else {
-          this.breadcrumbs.set([{ label: 'Invoices' }]);
+          this.breadcrumbs.set([
+      { label: 'Billing', routerLink: '/billing' },
+      { label: 'Invoices' },
+    ]);
         }
       },
       error: () => this.breadcrumbs.set([{ label: 'Invoices' }]),
@@ -152,11 +191,17 @@ export class InvoiceListPage implements OnInit {
     this.paymentStatus = '';
     this.filterCareHomeId = 0;
     this.page = 1;
-    if (this.route.snapshot.queryParamMap.get('careHomeId')) {
+    if (
+      this.route.snapshot.queryParamMap.get('careHomeId') ||
+      this.route.snapshot.queryParamMap.get('careHome')
+    ) {
       void this.router.navigate(['/invoices']);
       return;
     }
-    this.breadcrumbs.set([{ label: 'Invoices' }]);
+    this.breadcrumbs.set([
+      { label: 'Billing', routerLink: '/billing' },
+      { label: 'Invoices' },
+    ]);
     this.load();
   }
 
@@ -218,15 +263,43 @@ export class InvoiceListPage implements OnInit {
   }
 
   bulkPay(status: string): void {
-    this.http
-      .post('/api/invoices/bulk-payment-status', {
-        invoiceIds: [...this.selected],
-        paymentStatus: status,
+    if (this.isBulkPaying()) {
+      return;
+    }
+
+    const markingPaid = status === 'Paid';
+    const count = this.selected.size;
+    const message = markingPaid
+      ? `Mark ${count} selected invoice(s) as paid? This updates payment status only. It does not record a bank receipt.`
+      : `Mark ${count} selected invoice(s) as unpaid? This updates payment status only.`;
+    this.confirm
+      .confirm({
+        title: 'Update payment status',
+        message,
+        confirmLabel: markingPaid ? 'Mark as paid' : 'Mark as unpaid',
       })
-      .subscribe({
-        next: () => this.load(),
-        error: (error) =>
-          this.errorMessage.set(getApiErrorMessage(error, 'Bulk payment update failed.')),
+      .subscribe((ok) => {
+        if (!ok) {
+          return;
+        }
+        this.isBulkPaying.set(true);
+        this.errorMessage.set(null);
+        this.http
+          .post('/api/invoices/bulk-payment-status', {
+            invoiceIds: [...this.selected],
+            paymentStatus: status,
+          })
+          .pipe(finalize(() => this.isBulkPaying.set(false)))
+          .subscribe({
+            next: () => {
+              this.toast.success(
+                markingPaid ? 'Selected invoices marked as paid.' : 'Selected invoices marked as unpaid.',
+              );
+              this.load();
+            },
+            error: (error) =>
+              this.errorMessage.set(getApiErrorMessage(error, 'Payment update failed.')),
+          });
       });
   }
 }

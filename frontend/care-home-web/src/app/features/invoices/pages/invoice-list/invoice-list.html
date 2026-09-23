@@ -37,10 +37,10 @@
           </mat-select>
         </mat-form-field>
         <mat-form-field appearance="outline">
-          <mat-label>Payment</mat-label>
+          <mat-label>Payment status</mat-label>
           <mat-select [(ngModel)]="paymentStatus" (selectionChange)="page = 1; load()">
-            <mat-option value="">All payment</mat-option>
-            <mat-option value="NotPaid">Not paid</mat-option>
+            <mat-option value="">All</mat-option>
+            <mat-option value="NotPaid">Unpaid</mat-option>
             <mat-option value="Paid">Paid</mat-option>
           </mat-select>
         </mat-form-field>
@@ -50,12 +50,33 @@
               Email selected
             </button>
             @if (canMarkPaid()) {
-              <button mat-flat-button color="primary" type="button" (click)="bulkPay('Paid')">
-                Mark paid
+              <button
+                mat-flat-button
+                color="primary"
+                type="button"
+                (click)="bulkPay('Paid')"
+                [disabled]="isBulkPaying()"
+              >
+                @if (isBulkPaying()) {
+                  Updating...
+                } @else {
+                  Mark as paid
+                }
               </button>
             }
             @if (canMarkUnpaid()) {
-              <button mat-stroked-button type="button" (click)="bulkPay('NotPaid')">Mark unpaid</button>
+              <button
+                mat-stroked-button
+                type="button"
+                (click)="bulkPay('NotPaid')"
+                [disabled]="isBulkPaying()"
+              >
+                @if (isBulkPaying()) {
+                  Updating...
+                } @else {
+                  Mark as unpaid
+                }
+              </button>
             }
           }
         </div>
@@ -73,7 +94,7 @@
                 <th>Care home</th>
                 <th class="col-hide-sm">Funding</th>
                 <th>Status</th>
-                <th>Payment</th>
+                <th>Payment status</th>
                 <th class="num">Total</th>
               </tr>
             </thead>

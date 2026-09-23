@@ -1,7 +1,7 @@
 <div class="page">
   <app-page-header
     title="Users"
-    subtitle="Manage who can access this organisation. Roles are enforced in the API."
+    subtitle="Manage who can access this organisation. Assigned roles control what each person can do, even if a button is visible."
   >
     @if (auth.canWrite()) {
       <a mat-flat-button color="primary" routerLink="/users/new">Add user</a>
