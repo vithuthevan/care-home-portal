@@ -40,4 +40,30 @@ public class FundingContractOverlapTests
 
         Assert.True(FundingContractOverlap.PeriodsOverlap(first.Start, first.End, second.Start, second.End));
     }
+
+    [Fact]
+    public void Billing_user_message_uses_business_context_not_contract_ids()
+    {
+        var message = FundingContractOverlap.BillingUserMessage(
+            "Jane Smith",
+            "Hampshire County Council",
+            "General care",
+            new DateOnly(2026, 8, 1),
+            new DateOnly(2026, 8, 31));
+
+        Assert.Contains("Jane Smith", message);
+        Assert.Contains("Hampshire County Council", message);
+        Assert.Contains("General care", message);
+        Assert.Contains("1 Aug 2026", message);
+        Assert.DoesNotContain("Contract IDs", message, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("42", message);
+    }
+
+    [Fact]
+    public void Conflict_message_does_not_name_internal_client_ids()
+    {
+        Assert.Contains("resident", FundingContractOverlap.ConflictMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("client", FundingContractOverlap.ConflictMessage, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("Id", FundingContractOverlap.ConflictMessage, StringComparison.Ordinal);
+    }
 }
