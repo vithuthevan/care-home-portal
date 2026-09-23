@@ -1,3 +1,5 @@
+import { MasterDataUsage } from '../../../shared/format/master-data-usage';
+
 export interface InvoiceTemplate {
   id: number;
   name: string;
@@ -22,6 +24,7 @@ export interface InvoiceTemplate {
   emailSubjectTemplate?: string | null;
   emailBodyTemplate?: string | null;
   isActive: boolean;
+  usage?: MasterDataUsage | null;
 }
 
 export interface UpsertInvoiceTemplateRequest {

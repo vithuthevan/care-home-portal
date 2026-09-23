@@ -13,6 +13,13 @@
         Fields marked with <span aria-hidden="true">*</span> are required.
       </p>
 
+      @if (isEditMode && isSystemDefaultCategory) {
+        <p class="m-0 mb-4 flex flex-wrap items-center gap-2 text-sm text-[var(--app-text-muted)]">
+          <app-configuration-source-badge source="SystemDefault" />
+          <span>Code cannot be changed for system default categories.</span>
+        </p>
+      }
+
       <section class="form-section">
         <h2 class="form-section__title">Basic information</h2>
         <div class="form-grid form-grid--2">
@@ -33,12 +40,18 @@
           <mat-form-field appearance="outline" class="w-full md:col-span-2">
             <mat-label>Description</mat-label>
             <textarea matInput rows="3" formControlName="description"></textarea>
+            <mat-hint>Optional</mat-hint>
           </mat-form-field>
         </div>
       </section>
 
-      @if (isEditMode) {
+      @if (isEditMode && !isSystemDefaultCategory) {
         <mat-checkbox formControlName="isActive">Active</mat-checkbox>
+      }
+      @if (isEditMode && isSystemDefaultCategory) {
+        <p class="m-0 text-sm text-[var(--app-text-muted)]">
+          System default categories stay active so billing can use them.
+        </p>
       }
 
       <div class="form-actions">

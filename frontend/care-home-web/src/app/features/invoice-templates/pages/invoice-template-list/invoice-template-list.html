@@ -39,8 +39,8 @@
           <thead>
             <tr>
               <th>Template</th>
-              <th class="col-hide-sm">Authority</th>
-              <th class="col-hide-sm">Care home</th>
+              <th class="col-hide-sm">Category</th>
+              <th>Usage</th>
               <th class="col-status">Status</th>
               <th class="col-actions">Actions</th>
             </tr>
@@ -54,8 +54,8 @@
                     <span class="table-cell-stack__secondary">{{ item.invoiceCategoryName }}</span>
                   </div>
                 </td>
-                <td class="col-hide-sm">{{ item.fundingAuthorityName || 'Any' }}</td>
-                <td class="col-hide-sm">{{ item.careHomeName || 'Any' }}</td>
+                <td class="col-hide-sm">{{ item.invoiceCategoryName }}</td>
+                <td class="text-sm text-[var(--app-text-muted)]">{{ usageLabel(item.usage) }}</td>
                 <td class="col-status">
                   <app-status-badge [value]="item.isActive ? 'Active' : 'Inactive'" />
                 </td>
@@ -93,8 +93,8 @@
             <span class="table-cell-stack__secondary">{{ item.invoiceCategoryName }}</span>
           </div>
           <div class="mobile-data-card__row">
-            <span class="mobile-data-card__label">Authority</span>
-            <span>{{ item.fundingAuthorityName || 'Any' }}</span>
+            <span class="mobile-data-card__label">Usage</span>
+            <span>{{ usageLabel(item.usage) }}</span>
           </div>
           <div class="mobile-data-card__row">
             <span class="mobile-data-card__label">Status</span>

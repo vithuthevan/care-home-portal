@@ -44,6 +44,7 @@
           <thead>
             <tr>
               <th>Category</th>
+              <th>Usage</th>
               <th class="col-status">Status</th>
               <th class="col-actions">Actions</th>
             </tr>
@@ -55,7 +56,11 @@
                   <div class="table-cell-stack">
                     <span class="table-cell-stack__primary">{{ category.name }}</span>
                     <span class="table-cell-stack__secondary">{{ category.code }}</span>
+                    <app-configuration-source-badge [source]="category.configurationSource" />
                   </div>
+                </td>
+                <td class="text-sm text-[var(--app-text-muted)]">
+                  {{ categoryUsageLabel(category.usage) }}
                 </td>
                 <td class="col-status">
                   <app-status-badge [value]="category.isActive ? 'Active' : 'Inactive'" />
@@ -68,7 +73,7 @@
                         ariaLabel="Edit invoice category"
                         [routerLink]="['/invoice-categories', category.id, 'edit']"
                       />
-                      @if (category.isActive) {
+                      @if (category.isActive && !isSystemDefault(category)) {
                         <app-icon-action
                           icon="block"
                           ariaLabel="Deactivate invoice category"
@@ -92,6 +97,11 @@
           <div class="table-cell-stack">
             <span class="table-cell-stack__primary">{{ category.name }}</span>
             <span class="table-cell-stack__secondary">{{ category.code }}</span>
+            <app-configuration-source-badge [source]="category.configurationSource" />
+          </div>
+          <div class="mobile-data-card__row">
+            <span class="mobile-data-card__label">Usage</span>
+            <span>{{ categoryUsageLabel(category.usage) }}</span>
           </div>
           <div class="mobile-data-card__row">
             <span class="mobile-data-card__label">Status</span>
@@ -105,7 +115,7 @@
                   ariaLabel="Edit invoice category"
                   [routerLink]="['/invoice-categories', category.id, 'edit']"
                 />
-                @if (category.isActive) {
+                @if (category.isActive && !isSystemDefault(category)) {
                   <app-icon-action
                     icon="block"
                     ariaLabel="Deactivate invoice category"

@@ -14,6 +14,10 @@ import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { InvoiceTemplate } from '../../models/invoice-template.model';
+import {
+  deactivateInvoiceTemplateMessage,
+  invoiceTemplateUsageLabel,
+} from '../../../../shared/format/master-data-usage';
 
 @Component({
   selector: 'app-invoice-template-list',
@@ -54,11 +58,13 @@ export class InvoiceTemplateListPage implements OnInit {
       });
   }
 
+  usageLabel = invoiceTemplateUsageLabel;
+
   deactivateTemplate(template: InvoiceTemplate): void {
     this.confirm
       .confirm({
         title: 'Deactivate invoice template?',
-        message: `${template.name} will no longer be available for future use.`,
+        message: deactivateInvoiceTemplateMessage(template.name, template.usage),
         confirmLabel: 'Deactivate',
       })
       .subscribe((ok) => {

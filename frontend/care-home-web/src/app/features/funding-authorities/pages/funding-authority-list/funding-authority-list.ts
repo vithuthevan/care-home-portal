@@ -16,6 +16,10 @@ import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.servi
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import {
+  deactivateFundingAuthorityMessage,
+  fundingAuthorityUsageLabel,
+} from '../../../../shared/format/master-data-usage';
 
 @Component({
   selector: 'app-funding-authority-list',
@@ -81,11 +85,13 @@ export class FundingAuthorityList implements OnInit {
       });
   }
 
+  usageLabel = fundingAuthorityUsageLabel;
+
   deactivateFundingAuthority(authority: FundingAuthority): void {
     this.confirm
       .confirm({
         title: 'Deactivate funding authority?',
-        message: `${authority.name} will no longer be available for future use.`,
+        message: deactivateFundingAuthorityMessage(authority.name, authority.usage),
         confirmLabel: 'Deactivate',
       })
       .subscribe((ok) => {

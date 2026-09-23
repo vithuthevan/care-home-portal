@@ -39,9 +39,10 @@
           <thead>
             <tr>
               <th>Funding authority</th>
+              <th class="col-hide-md">Code</th>
               <th>Type</th>
-              <th>Billing frequency</th>
-              <th class="col-hide-sm">Contact</th>
+              <th class="col-hide-sm">Billing frequency</th>
+              <th>Usage</th>
               <th class="col-status">Status</th>
               <th class="col-actions">Actions</th>
             </tr>
@@ -50,14 +51,14 @@
             @for (authority of fundingAuthorities(); track authority.id) {
               <tr [class.inactive-row]="!authority.isActive">
                 <td>
-                  <div class="table-cell-stack">
-                    <span class="table-cell-stack__primary">{{ authority.name }}</span>
-                    <span class="table-cell-stack__secondary">{{ authority.code }}</span>
-                  </div>
+                  <span class="table-cell-stack__primary">{{ authority.name }}</span>
                 </td>
+                <td class="col-hide-md text-sm text-[var(--app-text-muted)]">{{ authority.code }}</td>
                 <td>{{ authority.type }}</td>
-                <td>{{ authority.billingFrequency }}</td>
-                <td class="col-hide-sm">{{ authority.contactName || '—' }}</td>
+                <td class="col-hide-sm">{{ authority.billingFrequency }}</td>
+                <td class="text-sm text-[var(--app-text-muted)]">
+                  {{ usageLabel(authority.usage) }}
+                </td>
                 <td class="col-status">
                   <app-status-badge [value]="authority.isActive ? 'Active' : 'Inactive'" />
                 </td>
@@ -93,6 +94,10 @@
           <div class="table-cell-stack">
             <span class="table-cell-stack__primary">{{ authority.name }}</span>
             <span class="table-cell-stack__secondary">{{ authority.code }} · {{ authority.type }}</span>
+          </div>
+          <div class="mobile-data-card__row">
+            <span class="mobile-data-card__label">Usage</span>
+            <span>{{ usageLabel(authority.usage) }}</span>
           </div>
           <div class="mobile-data-card__row">
             <span class="mobile-data-card__label">Frequency</span>

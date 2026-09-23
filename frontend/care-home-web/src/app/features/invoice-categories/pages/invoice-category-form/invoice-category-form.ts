@@ -13,6 +13,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
+import { ConfigurationSourceBadgeComponent } from '../../../../shared/ui/configuration-source-badge';
 
 @Component({
   selector: 'app-invoice-category-form',
@@ -26,6 +27,7 @@ import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
+    ConfigurationSourceBadgeComponent,
   ],
   templateUrl: './invoice-category-form.html',
 })
@@ -37,6 +39,7 @@ export class InvoiceCategoryForm implements OnInit {
   readonly auth = inject(AuthService);
 
   invoiceCategoryId: number | null = null;
+  isSystemDefaultCategory = false;
 
   isEditMode = false;
   readonly isLoading = signal(false);
@@ -77,12 +80,16 @@ export class InvoiceCategoryForm implements OnInit {
       )
       .subscribe({
         next: (category) => {
+          this.isSystemDefaultCategory = category.configurationSource === 'SystemDefault';
           this.form.patchValue({
             code: category.code,
             name: category.name,
             description: category.description ?? '',
             isActive: category.isActive,
           });
+          if (this.isSystemDefaultCategory) {
+            this.form.controls.code.disable();
+          }
         },
 
         error: (error) => {
@@ -105,7 +112,7 @@ export class InvoiceCategoryForm implements OnInit {
     const value = this.form.getRawValue();
 
     const request = {
-      code: value.code,
+      code: (value.code || this.form.controls.code.value) as string,
       name: value.name,
       description: value.description,
     };

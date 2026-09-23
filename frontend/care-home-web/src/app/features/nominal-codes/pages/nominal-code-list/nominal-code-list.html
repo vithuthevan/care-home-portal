@@ -39,6 +39,7 @@
           <thead>
             <tr>
               <th>Nominal code</th>
+              <th>Usage</th>
               <th class="col-status">Status</th>
               <th class="col-actions">Actions</th>
             </tr>
@@ -50,7 +51,13 @@
                   <div class="table-cell-stack">
                     <span class="table-cell-stack__primary">{{ nominalCode.name }}</span>
                     <span class="table-cell-stack__secondary">{{ nominalCode.code }}</span>
+                    @if (nominalCode.description) {
+                      <span class="table-cell-stack__secondary">{{ nominalCode.description }}</span>
+                    }
                   </div>
+                </td>
+                <td class="text-sm text-[var(--app-text-muted)]">
+                  {{ usageLabel(nominalCode.usage) || '—' }}
                 </td>
                 <td class="col-status">
                   <app-status-badge [value]="nominalCode.isActive ? 'Active' : 'Inactive'" />

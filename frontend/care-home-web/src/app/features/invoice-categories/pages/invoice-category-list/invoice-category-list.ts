@@ -14,6 +14,11 @@ import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
+import {
+  deactivateMasterDataMessage,
+  invoiceCategoryUsageLabel,
+} from '../../../../shared/format/master-data-usage';
+import { ConfigurationSourceBadgeComponent } from '../../../../shared/ui/configuration-source-badge';
 
 @Component({
   selector: 'app-invoice-category-list',
@@ -26,6 +31,7 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
     StatusBadgeComponent,
     IconActionButtonComponent,
     EmptyStateComponent,
+    ConfigurationSourceBadgeComponent,
   ],
   templateUrl: './invoice-category-list.html',
 })
@@ -61,11 +67,23 @@ export class InvoiceCategoryList implements OnInit {
       });
   }
 
+  categoryUsageLabel = invoiceCategoryUsageLabel;
+
+  isSystemDefault(category: InvoiceCategory): boolean {
+    return category.configurationSource === 'SystemDefault';
+  }
+
   deactivateInvoiceCategory(category: InvoiceCategory): void {
+    if (this.isSystemDefault(category)) {
+      this.errorMessage.set(
+        'Default invoice categories cannot be deactivated because billing depends on them.',
+      );
+      return;
+    }
     this.confirm
       .confirm({
         title: 'Deactivate invoice category?',
-        message: `${category.name} will no longer be available for future use.`,
+        message: deactivateMasterDataMessage(category.name, category.usage),
         confirmLabel: 'Deactivate',
       })
       .subscribe((ok) => {

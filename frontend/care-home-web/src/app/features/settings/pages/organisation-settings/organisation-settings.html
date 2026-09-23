@@ -43,6 +43,10 @@
     </section>
 
     <form [formGroup]="form" (ngSubmit)="save()" class="grid gap-4">
+      <p class="m-0 text-sm text-[var(--app-text-muted)]">
+        Fields marked with <span aria-hidden="true">*</span> are required. Other fields are optional
+        unless noted.
+      </p>
       <section class="panel">
         <h2 class="mt-0 text-lg font-semibold">Organisation details</h2>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

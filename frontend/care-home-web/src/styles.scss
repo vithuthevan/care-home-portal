@@ -1526,6 +1526,19 @@ app-root {
   border-color: var(--app-border);
 }
 
+.config-source-badge {
+  display: inline-block;
+  margin-top: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--app-text-muted);
+  background: var(--app-surface-alt);
+  border: 1px solid var(--app-border);
+  border-radius: 4px;
+}
+
 .badge-info {
   color: var(--app-info);
   background: var(--app-info-light);

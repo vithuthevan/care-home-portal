@@ -1,3 +1,5 @@
+import { MasterDataUsage } from '../../../shared/format/master-data-usage';
+
 export interface FundingAuthority {
   id: number;
   publicId?: string;
@@ -14,6 +16,8 @@ export interface FundingAuthority {
   billingIntervalDays: number | null;
 
   isActive: boolean;
+  configurationSource?: string;
+  usage?: MasterDataUsage | null;
 }
 
 export interface CreateFundingAuthorityRequest {
