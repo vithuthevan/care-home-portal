@@ -47,10 +47,16 @@ read_env_file() {
 load_env_files() {
   local show=""
   show="$(systemctl show "$UNIT" --property=EnvironmentFiles --value 2>/dev/null || true)"
+
   if [ -z "$show" ]; then
     show="$(systemctl show "$UNIT" --property=EnvironmentFile --value 2>/dev/null || true)"
   fi
   [ -z "$show" ] && return 0
+
+  # systemctl appends metadata such as "(ignore_errors=no)" to each
+  # EnvironmentFiles entry. Remove that metadata before treating entries
+  # as file paths.
+  show="$(printf '%s\n' "$show" | sed -E 's/ \(ignore_errors=(yes|no)\)//g')"
 
   local path
   for path in $show; do
