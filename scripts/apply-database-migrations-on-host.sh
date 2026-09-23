@@ -18,6 +18,32 @@ set -eo pipefail
 UNIT="$1"
 API_DIR="$2"
 
+# systemd EnvironmentFile values (e.g. SQL connection strings with ";Initial Catalog=")
+# must not be loaded with bash "source" — unquoted ";" runs extra commands.
+read_env_file() {
+  local path="$1"
+  local line key val
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line#"${line%%[![:space:]]*}"}"
+    line="${line%"${line##*[![:space:]]}"}"
+    [[ -z "$line" || "$line" == \#* ]] && continue
+
+    key="${line%%=*}"
+    val="${line#*=}"
+    key="${key#"${key%%[![:space:]]*}"}"
+    key="${key%"${key##*[![:space:]]}"}"
+    [[ -z "$key" ]] && continue
+
+    if [[ "$val" == \"*\" ]]; then
+      val="${val:1}"
+      val="${val%\"}"
+    fi
+
+    printf -v "$key" '%s' "$val"
+    export "$key"
+  done < "$path"
+}
+
 load_env_files() {
   local show=""
   show="$(systemctl show "$UNIT" --property=EnvironmentFiles --value 2>/dev/null || true)"
@@ -40,10 +66,7 @@ load_env_files() {
         fi
         ;;
     esac
-    set -a
-    # shellcheck disable=SC1090
-    . "$path"
-    set +a
+    read_env_file "$path"
   done
 }
 
