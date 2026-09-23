@@ -58,7 +58,7 @@ namespace CareHome.Api.Services
                 var key = $"{row.ClientId}|{row.UsedDate:yyyy-MM-dd}|{row.Description}|{row.Amount:0.00}";
                 if (!seen.Add(key))
                 {
-                    return (null, $"Duplicate charge in import: client {row.ClientId}, {row.UsedDate}, '{row.Description}', {row.Amount:0.00}.");
+                    return (null, $"Duplicate charge in import: {row.ClientName ?? row.Raw.ClientReference}, {row.UsedDate}, '{row.Description}', {row.Amount:0.00}.");
                 }
             }
 
@@ -99,7 +99,7 @@ namespace CareHome.Api.Services
             }
             catch (DbUpdateException)
             {
-                return (null, "One or more charges already exist (same client, date, description and amount). Nothing was saved.");
+                return (null, "One or more charges already exist (same resident, date, description and amount). Nothing was saved.");
             }
 
             await audit.LogAsync(
@@ -171,7 +171,7 @@ namespace CareHome.Api.Services
             if (string.IsNullOrWhiteSpace(row.ClientReference))
             {
                 result.IsValid = false;
-                result.Error = "Client reference is required.";
+                result.Error = "Resident reference is required.";
                 return result;
             }
 
@@ -181,7 +181,7 @@ namespace CareHome.Api.Services
             if (client is null)
             {
                 result.IsValid = false;
-                result.Error = $"Unknown client reference '{row.ClientReference}'.";
+                result.Error = $"Unknown resident reference '{row.ClientReference}'.";
                 return result;
             }
 
@@ -218,7 +218,7 @@ namespace CareHome.Api.Services
             if (existingDuplicateKeys.Contains(dupKey))
             {
                 result.IsValid = false;
-                result.Error = "Duplicate charge: same client, date, description and amount already imported.";
+                result.Error = "Duplicate charge: same resident, date, description and amount already imported.";
                 return result;
             }
 

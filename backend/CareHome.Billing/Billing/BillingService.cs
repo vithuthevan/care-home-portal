@@ -422,18 +422,27 @@ namespace CareHome.Api.Billing
                     var ids = streamContracts.Select(c => c.Id).Distinct().OrderBy(id => id).ToList();
                     var authorityName = streamContracts[0].FundingAuthority.Name;
                     var categoryName = streamContracts[0].InvoiceCategory.Name;
-                    var overlapText = overlapStart is null
-                        ? "unknown"
-                        : $"{overlapStart:yyyy-MM-dd} to {FundingContractOverlap.FormatOpenEnded(overlapEnd)}";
+
+                    logger.LogWarning(
+                        "Overlapping funding contracts blocked billing. TenantId={TenantId} ClientId={ClientId} ContractIds={ContractIds} Authority={Authority} Category={Category} Overlap={OverlapStart}/{OverlapEnd}",
+                        tenantId,
+                        client.Id,
+                        string.Join(",", ids),
+                        authorityName,
+                        categoryName,
+                        overlapStart,
+                        overlapEnd);
 
                     exceptions.Add(new BillingExceptionDto
                     {
                         Severity = "Error",
                         Code = FundingContractOverlap.BillingCode,
-                        Message =
-                            $"Overlapping funding contracts for {FormatName(client)} / {authorityName} / {categoryName}. " +
-                            $"Contract IDs: {string.Join(", ", ids)}. Overlapping dates: {overlapText}. " +
-                            "Billing is blocked until the overlap is resolved.",
+                        Message = FundingContractOverlap.BillingUserMessage(
+                            FormatName(client),
+                            authorityName,
+                            categoryName,
+                            overlapStart,
+                            overlapEnd),
                         ClientId = client.Id,
                         ClientName = FormatName(client),
                         CareHomeId = client.CareHomeId,

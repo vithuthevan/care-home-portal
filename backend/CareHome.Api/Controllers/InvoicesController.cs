@@ -306,7 +306,7 @@ namespace CareHome.Api.Controllers
 
             if (request.PaymentStatus is not "Paid" and not "NotPaid")
             {
-                return BadRequest(new { message = "Payment status must be Paid or NotPaid." });
+                return BadRequest(new { message = "Payment status must be paid or unpaid." });
             }
 
             if (invoice.Status == "Void")
@@ -326,7 +326,7 @@ namespace CareHome.Api.Controllers
         {
             if (request.PaymentStatus is not "Paid" and not "NotPaid")
             {
-                return BadRequest(new { message = "Payment status must be Paid or NotPaid." });
+                return BadRequest(new { message = "Payment status must be paid or unpaid." });
             }
 
             var homes = await userAccess.GetScopedCareHomeIdsAsync(tenantContext.TenantId);

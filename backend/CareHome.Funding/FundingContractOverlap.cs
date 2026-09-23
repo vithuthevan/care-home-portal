@@ -1,3 +1,4 @@
+using System.Globalization;
 using CareHome.Api.Common;
 using CareHome.Api.Models;
 
@@ -16,7 +17,7 @@ public static class FundingContractOverlap
     public const string BillingCode = "OVERLAPPING_FUNDING_CONTRACTS";
 
     public const string ConflictMessage =
-        "This client already has an overlapping funding contract for the selected funding authority and invoice category.";
+        "This resident already has an overlapping funding arrangement for the selected funding authority and invoice category.";
 
     public static bool PeriodsOverlap(
         DateOnly startA,
@@ -51,4 +52,26 @@ public static class FundingContractOverlap
         => end is null || end.Value == DateRanges.OpenEnded
             ? "open"
             : end.Value.ToString("yyyy-MM-dd");
+
+    public static string BillingUserMessage(
+        string residentName,
+        string authorityName,
+        string categoryName,
+        DateOnly? overlapStart,
+        DateOnly? overlapEnd)
+    {
+        var dates = overlapStart is null
+            ? "this billing period"
+            : $"{FormatBusinessDate(overlapStart)} to {FormatBusinessDate(overlapEnd)}";
+
+        return
+            $"Overlapping funding arrangements found for {residentName} " +
+            $"({authorityName} / {categoryName}). Overlapping dates: {dates}. " +
+            "Billing is blocked until the overlap is resolved.";
+    }
+
+    public static string FormatBusinessDate(DateOnly? date)
+        => date is null || date.Value == DateRanges.OpenEnded
+            ? "open-ended"
+            : date.Value.ToString("d MMM yyyy", CultureInfo.InvariantCulture);
 }

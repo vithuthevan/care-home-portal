@@ -48,7 +48,7 @@ namespace CareHome.Api.Billing
                 if (requested > remaining)
                 {
                     exceptions.Add(
-                        $"Credit for invoice line {line.Id} cannot exceed the remaining invoiced amount of {remaining:0.00}.");
+                        $"Credit for invoice {line.Invoice.InvoiceNumber} ({line.Description}) cannot exceed the remaining invoiced amount of {remaining:0.00}.");
                 }
 
                 if (requested <= 0)
@@ -76,7 +76,7 @@ namespace CareHome.Api.Billing
             if (lines.Select(x => x.InvoiceNumber).Distinct().Count() > 1)
             {
                 exceptions.Add(
-                    "A credit note cannot span more than one invoice. Narrow the client or period so only one invoice is included.");
+                    "A credit note cannot span more than one invoice. Narrow the resident or period so only one invoice is included.");
             }
 
             return new CreditNotePreviewResponse
@@ -130,7 +130,7 @@ namespace CareHome.Api.Billing
             if (invoiceIds.Count != 1)
             {
                 await transaction.RollbackAsync(cancellationToken);
-                return (null, "Credit lines must belong to a single invoice. Narrow the client or period and generate again.");
+                return (null, "Credit lines must belong to a single invoice. Narrow the resident or period and generate again.");
             }
 
             var invoice = freshLines[0].Invoice;
@@ -148,7 +148,7 @@ namespace CareHome.Api.Billing
                 {
                     await transaction.RollbackAsync(cancellationToken);
                     return (null,
-                        $"Credit for invoice line {previewLine.InvoiceLineId} cannot exceed the remaining invoiced amount of {remaining:0.00}.");
+                        $"Credit for invoice {invoice.InvoiceNumber} ({fresh.Description}) cannot exceed the remaining invoiced amount of {remaining:0.00}.");
                 }
             }
 
