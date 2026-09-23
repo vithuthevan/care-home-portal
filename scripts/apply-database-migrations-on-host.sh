@@ -90,5 +90,25 @@ load_env_files
 load_inline_environment
 
 cd "$API_DIR"
-exec dotnet CareHome.Api.dll --apply-migrations
+
+MAX_ATTEMPTS=12
+SLEEP_SECONDS=15
+
+for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+  echo "Database migration attempt $attempt/$MAX_ATTEMPTS..."
+
+  if dotnet CareHome.Api.dll --apply-migrations; then
+    echo "Database migrations completed successfully."
+    exit 0
+  fi
+
+  if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+    echo "Migration attempt failed. Waiting ${SLEEP_SECONDS}s before retry..."
+    sleep "$SLEEP_SECONDS"
+  fi
+done
+
+echo "Database migrations failed after $MAX_ATTEMPTS attempts." >&2
+exit 1
+
 EOS
