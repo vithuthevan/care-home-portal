@@ -90,10 +90,10 @@ export class DashboardPage implements OnInit {
   private readonly http = inject(HttpClient);
   readonly auth = inject(AuthService);
   readonly commercialRevenueEnabled = COMMERCIAL_REVENUE_ENABLED;
-  readonly outstandingKpiLink = COMMERCIAL_REVENUE_ENABLED ? '/receivables' : '/invoices';
+  readonly outstandingKpiLink = COMMERCIAL_REVENUE_ENABLED ? '/receivables' : '/reports';
   readonly outstandingKpiQueryParams = COMMERCIAL_REVENUE_ENABLED
     ? null
-    : { paymentStatus: 'NotPaid' };
+    : { report: 'outstanding' };
   private readonly router = inject(Router);
   readonly dashboard = signal<DashboardDto | null>(null);
   readonly errorMessage = signal<string | null>(null);

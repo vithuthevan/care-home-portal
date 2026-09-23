@@ -27,6 +27,7 @@ import { ClientService } from '../../../clients/services/client.service';
 import { PagedResult } from '../../../../core/models';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
+import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 @Component({
   selector: 'app-credit-note-workspace',
@@ -152,6 +153,16 @@ export class CreditNoteWorkspacePage implements OnInit {
     return client.referenceNumber ? `${name} — ${client.referenceNumber}` : name;
   }
 
+  invoiceLink(note: {
+    invoiceId: number;
+    invoicePublicId?: string;
+  }): (string | number)[] {
+    return [
+      '/invoices',
+      entityRouteKey({ id: note.invoiceId, publicId: note.invoicePublicId ?? null }),
+    ];
+  }
+
   onResidentQueryChange(value: string | Client | null): void {
     if (value && typeof value === 'object') {
       this.onResidentSelected(value);
@@ -166,6 +177,11 @@ export class CreditNoteWorkspacePage implements OnInit {
   }
 
   runPreview(): void {
+    const validationError = this.validateCreateForm();
+    if (validationError) {
+      this.errorMessage.set(validationError);
+      return;
+    }
     this.errorMessage.set(null);
     this.isWorking.set(true);
     this.http
@@ -178,14 +194,29 @@ export class CreditNoteWorkspacePage implements OnInit {
   }
 
   generate(): void {
+    const validationError = this.validateCreateForm();
+    if (validationError) {
+      this.errorMessage.set(validationError);
+      return;
+    }
     this.errorMessage.set(null);
     this.isWorking.set(true);
     this.http
       .post('/api/credit-notes/generate', this.body())
       .pipe(finalize(() => this.isWorking.set(false)))
       .subscribe({
-        next: () => {
-          this.toast.success('Credit note generated successfully.');
+        next: (result: { id?: number; creditNoteNumber?: string }) => {
+          const label = result?.creditNoteNumber ? ` (${result.creditNoteNumber})` : '';
+          this.toast.success(`Credit note generated successfully${label}.`);
+          this.preview.set(null);
+          this.reason = '';
+          this.residentQuery.set('');
+          this.selectedClientId = null;
+          this.periodStart = '';
+          this.periodEnd = '';
+          this.sourceInvoiceNumber.set(null);
+          this.sourceResidentName.set(null);
+          this.sourceClientReference.set(null);
           this.loadNotes();
         },
         error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Generate failed.')),
@@ -196,6 +227,22 @@ export class CreditNoteWorkspacePage implements OnInit {
     this.http.get(`/api/credit-notes/${id}/pdf`, { responseType: 'blob' }).subscribe((blob) => {
       window.open(URL.createObjectURL(blob), '_blank');
     });
+  }
+
+  private validateCreateForm(): string | null {
+    if (!this.periodStart?.trim()) {
+      return 'Period start is required.';
+    }
+    if (!this.periodEnd?.trim()) {
+      return 'Period end is required.';
+    }
+    if (this.periodEnd < this.periodStart) {
+      return 'Period end cannot be before period start.';
+    }
+    if (!this.reason?.trim()) {
+      return 'A reason is required before previewing or generating a credit note.';
+    }
+    return null;
   }
 
   private body() {

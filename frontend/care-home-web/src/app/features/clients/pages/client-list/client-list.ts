@@ -93,8 +93,14 @@ export class ClientList implements OnInit {
     merge(this.route.queryParamMap).subscribe((params) => {
       const companyKey = params.get('company');
       const legacyCompanyId = Number(params.get('companyId') || 0);
+      const careHomeKey = params.get('careHome');
       const careHomeId = Number(params.get('careHomeId') || 0);
       this.page = 1;
+
+      if (careHomeKey && !companyKey && !legacyCompanyId) {
+        this.applyCareHomeFilterKey(careHomeKey);
+        return;
+      }
 
       if (careHomeId && !companyKey && !legacyCompanyId) {
         this.applyCareHomeFilter(careHomeId);
@@ -119,8 +125,31 @@ export class ClientList implements OnInit {
     });
   }
 
-  private applyCareHomeFilter(careHomeId: number): void {
+  private applyCareHomeFilterKey(key: string): void {
+    this.careHomeService.getCareHome(key).subscribe({
+      next: (home) => this.applyCareHomeFilter(home.id, home),
+      error: () => {
+        this.breadcrumbs.set([{ label: 'Residents' }]);
+        this.errorMessage.set('Unable to load the selected care home.');
+        this.loadClients();
+      },
+    });
+  }
+
+  private applyCareHomeFilter(careHomeId: number, homeFromKey?: CareHomeLocation): void {
     this.selectedCareHomeId = careHomeId;
+    if (homeFromKey) {
+      this.breadcrumbs.set([
+        { label: 'Care Homes', routerLink: '/care-homes' },
+        {
+          label: homeFromKey.name,
+          routerLink: ['/care-homes', entityRouteKey(homeFromKey), 'dashboard'],
+        },
+        { label: 'Residents' },
+      ]);
+      this.loadClients();
+      return;
+    }
     this.careHomeService.getCareHomes().subscribe({
       next: (homes) => {
         const home = homes.find((h) => h.id === careHomeId);
@@ -234,7 +263,10 @@ export class ClientList implements OnInit {
       void this.router.navigate(['/clients']);
       return;
     }
-    if (this.route.snapshot.queryParamMap.get('careHomeId')) {
+    if (
+      this.route.snapshot.queryParamMap.get('careHomeId') ||
+      this.route.snapshot.queryParamMap.get('careHome')
+    ) {
       void this.router.navigate(['/clients']);
       return;
     }

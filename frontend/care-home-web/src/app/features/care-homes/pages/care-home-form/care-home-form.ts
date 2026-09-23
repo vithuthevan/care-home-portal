@@ -290,7 +290,7 @@ export class CareHomeForm implements OnInit {
         }),
       )
       .subscribe({
-        next: () => {
+        next: (careHome) => {
           this.form.reset({
             companyId: 0,
             code: '',
@@ -305,7 +305,7 @@ export class CareHomeForm implements OnInit {
             isActive: true,
           });
           this.toast.success('Care home created successfully.');
-          void this.router.navigate(['/care-homes']);
+          void this.router.navigate(['/care-homes', entityRouteKey(careHome), 'dashboard']);
         },
 
         error: (error) => {

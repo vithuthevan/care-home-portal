@@ -161,6 +161,20 @@
 
   @if (preview(); as previewData) {
     <section class="billing-status-summary panel mb-4" aria-live="polite">
+      @if (previewData.canGenerate) {
+        <div class="alert-banner alert-banner--success mb-4">
+          <strong>Ready to bill</strong>
+          @if (previewAttentionCount(previewData) > 0) {
+            — some residents have informational notices; generation is still allowed for billable lines.
+          } @else {
+            — preview found billable lines with no blocking exceptions.
+          }
+        </div>
+      } @else {
+        <div class="alert-banner alert-banner--warning mb-4">
+          <strong>Requires attention</strong> — resolve blocking exceptions below before generating invoices.
+        </div>
+      }
       <div>
         <p class="billing-status-summary__title">{{ billingPeriodHeading() }}</p>
         <p class="billing-status-summary__scope">

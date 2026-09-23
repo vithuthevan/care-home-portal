@@ -268,9 +268,9 @@ export class ClientProfilePage implements OnInit {
   billingQueryParams(client: Client): Record<string, string | number> {
     const period = this.suggestedBillingPeriod();
     return {
-      companyId: client.companyId,
-      careHomeId: client.careHomeId,
-      clientId: client.id,
+      company: entityRouteKey({ id: client.companyId, publicId: client.companyPublicId }),
+      careHome: entityRouteKey({ id: client.careHomeId, publicId: client.careHomePublicId }),
+      client: entityRouteKey(client),
       clientName: `${client.firstName} ${client.lastName}`.trim(),
       periodStart: period.start,
       periodEnd: period.end,

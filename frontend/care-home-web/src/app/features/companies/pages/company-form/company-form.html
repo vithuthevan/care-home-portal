@@ -49,7 +49,7 @@
           mat-flat-button
           color="primary"
           type="submit"
-          [disabled]="isSaving() || !auth.canWrite()"
+          [disabled]="isSaving() || form.invalid || !auth.canWrite()"
         >
           @if (isSaving()) {
             Saving...

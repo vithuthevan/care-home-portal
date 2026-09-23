@@ -66,6 +66,38 @@ describe('ClientProfilePage', () => {
     fixture.detectChanges();
   });
 
+  it('loads resident when route key is a public UUID', async () => {
+    const publicId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [ClientProfilePage],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        {
+          provide: ActivatedRoute,
+          useValue: { paramMap: of(convertToParamMap({ id: publicId })) },
+        },
+      ],
+    }).compileComponents();
+
+    const localHttp = TestBed.inject(HttpTestingController);
+    const localFixture = TestBed.createComponent(ClientProfilePage);
+    localFixture.detectChanges();
+
+    localHttp.expectOne('/api/funding-authorities?activeOnly=true').flush([]);
+    localHttp.expectOne('/api/invoice-categories?activeOnly=true').flush([]);
+    localHttp.expectOne('/api/nominal-codes?activeOnly=true').flush([]);
+    localHttp.expectOne(`/api/clients/${publicId}`).flush({ ...client, publicId });
+    localHttp.expectOne(`/api/clients/1/funding-contracts`).flush([]);
+    localHttp.expectOne((req) => req.url === '/api/invoices').flush({ items: [] });
+    await localFixture.whenStable();
+    expect(localFixture.nativeElement.textContent).toContain('Alice Brown');
+  });
+
   it('should render profile hero, funding summary, and workflow tabs', () => {
     const el: HTMLElement = fixture.nativeElement;
     expect(el.querySelector('mat-tab-group')).toBeTruthy();

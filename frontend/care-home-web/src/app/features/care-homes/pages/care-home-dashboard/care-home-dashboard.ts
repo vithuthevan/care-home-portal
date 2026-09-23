@@ -114,29 +114,27 @@ export class CareHomeDashboardPage implements OnInit {
     ];
   });
 
-  billingQueryParams(): Record<string, number> {
+  billingQueryParams(): Record<string, string> {
     const home = this.home();
-    const dash = this.data();
-    const careHomeId = dash?.careHomeId ?? home?.id;
-    if (!careHomeId) {
+    if (!home) {
       return {};
     }
-    const companyId = home?.companyId;
-    return companyId ? { companyId, careHomeId } : { careHomeId };
+    return { careHome: entityRouteKey(home) };
   }
 
-  residentsQueryParams(): Record<string, number> {
-    const id = this.data()?.careHomeId ?? this.home()?.id;
-    return id ? { careHomeId: id } : {};
+  residentsQueryParams(): Record<string, string> {
+    const home = this.home();
+    return home ? { careHome: entityRouteKey(home) } : {};
   }
 
-  invoicesQueryParams(): Record<string, number> {
-    const id = this.data()?.careHomeId ?? this.home()?.id;
-    return id ? { careHomeId: id } : {};
+  invoicesQueryParams(): Record<string, string> {
+    const home = this.home();
+    return home ? { careHome: entityRouteKey(home) } : {};
   }
 
   addResidentQueryParams(): Record<string, number> {
-    return this.residentsQueryParams();
+    const id = this.home()?.id;
+    return id ? { careHomeId: id } : {};
   }
 
   ngOnInit(): void {

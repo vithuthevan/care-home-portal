@@ -493,37 +493,88 @@ export class BillingWorkspacePage implements OnInit {
 
   private applyQueryContext(): void {
     const params = this.route.snapshot.queryParamMap;
+    const careHomeKey = params.get('careHome');
+    const companyKey = params.get('company');
+    const clientKey = params.get('client');
     const careHomeId = Number(params.get('careHomeId') || 0);
     const companyId = Number(params.get('companyId') || 0);
     const clientId = Number(params.get('clientId') || 0);
     const periodStart = this.toDateInput(params.get('periodStart'));
     const periodEnd = this.toDateInput(params.get('periodEnd'));
 
-    if (careHomeId) {
+    if (careHomeKey) {
+      const cached = this.careHomes().find((item) => entityRouteKey(item) === careHomeKey);
+      if (cached) {
+        this.careHomeId = cached.id;
+        this.companyId = cached.companyId;
+      } else {
+        this.homesApi.getCareHome(careHomeKey).subscribe({
+          next: (home) => {
+            this.careHomeId = home.id;
+            this.companyId = home.companyId;
+          },
+        });
+      }
+    } else if (careHomeId) {
       this.careHomeId = careHomeId;
       const home = this.careHomes().find((item) => item.id === careHomeId);
       if (home) {
         this.companyId = home.companyId;
       }
+    } else if (companyKey) {
+      const cached = this.companies().find((item) => entityRouteKey(item) === companyKey);
+      if (cached) {
+        this.companyId = cached.id;
+      } else {
+        this.companiesApi.getCompany(companyKey).subscribe({
+          next: (company) => {
+            this.companyId = company.id;
+          },
+        });
+      }
     } else if (companyId) {
       this.companyId = companyId;
     }
+
     if (periodStart) {
       this.periodStart = periodStart;
     }
     if (periodEnd) {
       this.periodEnd = periodEnd;
     }
-    if (clientId) {
-      this.selectedClientIds = [clientId];
+
+    if (clientKey) {
+      const cached = this.clients().find((item) => entityRouteKey(item) === clientKey);
+      if (cached) {
+        this.applyClientContext(cached);
+      } else {
+        this.clientsApi.getClient(clientKey).subscribe({
+          next: (client) => this.applyClientContext(client),
+          error: () => {
+            const name = params.get('clientName');
+            this.contextClientName.set(name?.trim() || null);
+          },
+        });
+      }
+    } else if (clientId) {
       const client = this.clients().find((item) => item.id === clientId);
-      this.contextClientName.set(
-        client ? `${client.firstName} ${client.lastName}`.trim() : params.get('clientName'),
-      );
+      if (client) {
+        this.applyClientContext(client);
+      } else {
+        this.selectedClientIds = [clientId];
+        this.contextClientName.set(params.get('clientName')?.trim() || null);
+      }
     } else {
       this.selectedClientIds = [];
       this.contextClientName.set(null);
     }
+  }
+
+  private applyClientContext(client: Client): void {
+    this.selectedClientIds = [client.id];
+    this.careHomeId = client.careHomeId;
+    this.companyId = client.companyId;
+    this.contextClientName.set(`${client.firstName} ${client.lastName}`.trim());
   }
 
   private toDateInput(value: string | null): string {

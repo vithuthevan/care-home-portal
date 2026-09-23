@@ -111,7 +111,12 @@
           message="This company doesn't have any care homes configured."
         >
           @if (auth.canWrite()) {
-            <a mat-flat-button color="primary" routerLink="/care-homes/new">
+            <a
+              mat-flat-button
+              color="primary"
+              routerLink="/care-homes/new"
+              [queryParams]="{ company: entityRouteKey(co) }"
+            >
               <mat-icon>add</mat-icon>
               Add care home
             </a>

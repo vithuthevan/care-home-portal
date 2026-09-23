@@ -24,22 +24,29 @@ export class BreadcrumbService {
     if (path.startsWith('/clients/new')) {
       return [{ label: 'Residents', routerLink: '/clients' }, { label: 'New resident' }];
     }
-    if (/^\/clients\/\d+\/edit/.test(path)) {
+    if (/^\/clients\/[^/]+\/edit/.test(path)) {
       return [{ label: 'Residents', routerLink: '/clients' }, { label: 'Edit resident' }];
     }
-    if (/^\/clients\/\d+/.test(path)) {
+    if (/^\/clients\/[^/]+/.test(path) && path !== '/clients/new') {
       return [{ label: 'Residents', routerLink: '/clients' }, { label: 'Resident' }];
     }
     if (path.startsWith('/clients')) {
       return [{ label: 'Residents' }];
     }
-    if (/^\/care-homes\/\d+\/dashboard/.test(path)) {
+    if (/^\/care-homes\/[^/]+\/dashboard/.test(path)) {
       return [{ label: 'Care Homes', routerLink: '/care-homes' }, { label: 'Care home' }];
+    }
+    if (/^\/care-homes\/[^/]+\/settings/.test(path)) {
+      return [
+        { label: 'Care Homes', routerLink: '/care-homes' },
+        { label: 'Care home' },
+        { label: 'Portal settings' },
+      ];
     }
     if (path.startsWith('/care-homes/new')) {
       return [{ label: 'Care Homes', routerLink: '/care-homes' }, { label: 'New care home' }];
     }
-    if (/^\/care-homes\/\d+\/edit/.test(path)) {
+    if (/^\/care-homes\/[^/]+\/edit/.test(path)) {
       return [{ label: 'Care Homes', routerLink: '/care-homes' }, { label: 'Edit care home' }];
     }
     if (path.startsWith('/care-homes')) {
@@ -131,7 +138,7 @@ export class BreadcrumbService {
         { label: 'Add category' },
       ];
     }
-    if (/^\/invoice-categories\/\d+\/edit/.test(path)) {
+    if (/^\/invoice-categories\/[^/]+\/edit/.test(path)) {
       return [
         { label: 'Invoice Categories', routerLink: '/invoice-categories' },
         { label: 'Edit category' },
@@ -146,7 +153,7 @@ export class BreadcrumbService {
         { label: 'Add nominal code' },
       ];
     }
-    if (/^\/nominal-codes\/\d+\/edit/.test(path)) {
+    if (/^\/nominal-codes\/[^/]+\/edit/.test(path)) {
       return [
         { label: 'Nominal Codes', routerLink: '/nominal-codes' },
         { label: 'Edit nominal code' },
@@ -161,7 +168,7 @@ export class BreadcrumbService {
         { label: 'Add template' },
       ];
     }
-    if (/^\/invoice-templates\/\d+\/edit/.test(path)) {
+    if (/^\/invoice-templates\/[^/]+\/edit/.test(path)) {
       return [
         { label: 'Invoice Templates', routerLink: '/invoice-templates' },
         { label: 'Edit template' },

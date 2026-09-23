@@ -14,15 +14,30 @@
       <app-filter-bar [toolbar]="true" [compact]="true">
         <mat-form-field appearance="outline" class="w-full">
           <mat-label>Entity type</mat-label>
-          <mat-select [(ngModel)]="entityType" (selectionChange)="load()">
+          <mat-select [(ngModel)]="entityType" (selectionChange)="page = 1; load()">
             <mat-option value="">All types</mat-option>
             @for (type of entityTypeOptions; track type.value) {
               <mat-option [value]="type.value">{{ type.label }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Action</mat-label>
+          <mat-select [(ngModel)]="action" (selectionChange)="page = 1; load()">
+            <mat-option value="">All actions</mat-option>
+            @for (opt of actionOptions; track opt.value) {
+              <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
         <div filterActions>
-          <button mat-stroked-button type="button" (click)="entityType = ''; load()">Clear</button>
+          <button
+            mat-stroked-button
+            type="button"
+            (click)="entityType = ''; action = ''; page = 1; load()"
+          >
+            Clear
+          </button>
         </div>
       </app-filter-bar>
 
@@ -38,6 +53,7 @@
                 <th>Actor</th>
                 <th>Action</th>
                 <th>Entity</th>
+                <th>Reference</th>
                 <th>When</th>
               </tr>
             </thead>
@@ -54,6 +70,15 @@
                     }
                     @if (item.entityType) {
                       <span class="badge badge-neutral">{{ entityTypeLabel(item.entityType) }}</span>
+                    } @else {
+                      —
+                    }
+                  </td>
+                  <td>
+                    @if (entityRoute(item); as link) {
+                      <a [routerLink]="link">{{ entityReference(item) }}</a>
+                    } @else if (entityReference(item); as ref) {
+                      {{ ref }}
                     } @else {
                       —
                     }
