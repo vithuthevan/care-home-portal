@@ -4,6 +4,7 @@ using CareHome.Api.Data;
 using CareHome.Api.Dtos.NominalCodes;
 using CareHome.Api.Models;
 using CareHome.Api.Security;
+using CareHome.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,7 +16,8 @@ namespace CareHome.Api.Controllers
     public class NominalCodesController(
         CareHomeDbContext dbContext,
         ITenantContext tenantContext,
-        AuditService audit) : ControllerBase
+        AuditService audit,
+        MasterDataUsageService usage) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<List<NominalCodeDto>>> GetNominalCodes(
@@ -29,17 +31,12 @@ namespace CareHome.Api.Controllers
                 query = query.Where(x => x.IsActive);
             }
 
-            var codes = await query
-                .OrderBy(x => x.Name)
-                .Select(x => new NominalCodeDto
-                {
-                    Id = x.Id,
-                    Code = x.Code,
-                    Name = x.Name,
-                    Description = x.Description,
-                    IsActive = x.IsActive
-                })
-                .ToListAsync();
+            var entities = await query.OrderBy(x => x.Name).ToListAsync();
+            var usageMap = await usage.GetNominalCodeUsagesAsync(
+                tenantContext.TenantId,
+                entities.Select(x => (x.Id, x.Code)).ToList());
+
+            var codes = entities.Select(x => ToDto(x, usageMap.GetValueOrDefault(x.Id))).ToList();
 
             return Ok(codes);
         }
@@ -47,25 +44,21 @@ namespace CareHome.Api.Controllers
         [HttpGet("{id:int}")]
         public async Task<ActionResult<NominalCodeDto>> GetNominalCode(int id)
         {
-            var code = await dbContext.NominalCodes
+            var entity = await dbContext.NominalCodes
                 .AsNoTracking()
-                .Where(x => x.Id == id && x.TenantId == tenantContext.TenantId)
-                .Select(x => new NominalCodeDto
-                {
-                    Id = x.Id,
-                    Code = x.Code,
-                    Name = x.Name,
-                    Description = x.Description,
-                    IsActive = x.IsActive
-                })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
 
-            if (code is null)
+            if (entity is null)
             {
                 return NotFound();
             }
 
-            return Ok(code);
+            var usageDto = await usage.GetNominalCodeUsageAsync(
+                tenantContext.TenantId,
+                entity.Id,
+                entity.Code);
+
+            return Ok(ToDto(entity, usageDto));
         }
 
         [HttpPost]
@@ -102,7 +95,7 @@ namespace CareHome.Api.Controllers
             return CreatedAtAction(
                 nameof(GetNominalCode),
                 new { id = nominalCode.Id },
-                ToDto(nominalCode));
+                ToDto(nominalCode, new()));
         }
 
         [HttpPut("{id:int}")]
@@ -142,7 +135,12 @@ namespace CareHome.Api.Controllers
             await dbContext.SaveChangesAsync();
             await audit.LogAsync("NominalCode", nominalCode.Id.ToString(), "Update", null, request, "Updated nominal code.");
 
-            return Ok(ToDto(nominalCode));
+            var usageDto = await usage.GetNominalCodeUsageAsync(
+                tenantContext.TenantId,
+                nominalCode.Id,
+                nominalCode.Code);
+
+            return Ok(ToDto(nominalCode, usageDto));
         }
 
         [HttpDelete("{id:int}")]
@@ -164,7 +162,7 @@ namespace CareHome.Api.Controllers
             return NoContent();
         }
 
-        private static NominalCodeDto ToDto(NominalCode nominalCode)
+        private static NominalCodeDto ToDto(NominalCode nominalCode, Dtos.Common.MasterDataUsageDto? usageDto)
         {
             return new NominalCodeDto
             {
@@ -172,7 +170,9 @@ namespace CareHome.Api.Controllers
                 Code = nominalCode.Code,
                 Name = nominalCode.Name,
                 Description = nominalCode.Description,
-                IsActive = nominalCode.IsActive
+                IsActive = nominalCode.IsActive,
+                ConfigurationSource = "Organisation",
+                Usage = usageDto
             };
         }
     }

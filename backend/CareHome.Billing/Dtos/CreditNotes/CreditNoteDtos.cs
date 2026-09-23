@@ -61,6 +61,8 @@ namespace CareHome.Api.Dtos.CreditNotes
 
         public int InvoiceId { get; set; }
 
+        public Guid InvoicePublicId { get; set; }
+
         public string InvoiceNumber { get; set; } = string.Empty;
 
         public DateOnly CreditNoteDate { get; set; }

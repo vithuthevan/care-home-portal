@@ -1,3 +1,5 @@
+using CareHome.Api.Dtos.Common;
+
 namespace CareHome.Api.Dtos.NominalCodes
 {
     public class NominalCodeDto
@@ -11,5 +13,10 @@ namespace CareHome.Api.Dtos.NominalCodes
         public string? Description { get; set; }
 
         public bool IsActive { get; set; }
+
+        /// <summary>Organisation-defined nominal; not a platform-wide accounting standard.</summary>
+        public string ConfigurationSource { get; set; } = "Organisation";
+
+        public MasterDataUsageDto? Usage { get; set; }
     }
 }

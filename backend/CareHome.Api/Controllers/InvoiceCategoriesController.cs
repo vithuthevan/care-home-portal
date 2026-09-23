@@ -4,6 +4,7 @@ using CareHome.Api.Data;
 using CareHome.Api.Dtos.InvoiceCategories;
 using CareHome.Api.Models;
 using CareHome.Api.Security;
+using CareHome.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,7 +16,8 @@ namespace CareHome.Api.Controllers
     public class InvoiceCategoriesController(
         CareHomeDbContext dbContext,
         ITenantContext tenantContext,
-        AuditService audit) : ControllerBase
+        AuditService audit,
+        MasterDataUsageService usage) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<List<InvoiceCategoryDto>>> GetInvoiceCategories(
@@ -29,17 +31,14 @@ namespace CareHome.Api.Controllers
                 query = query.Where(x => x.IsActive);
             }
 
-            var categories = await query
-                .OrderBy(x => x.Name)
-                .Select(x => new InvoiceCategoryDto
-                {
-                    Id = x.Id,
-                    Code = x.Code,
-                    Name = x.Name,
-                    Description = x.Description,
-                    IsActive = x.IsActive
-                })
-                .ToListAsync();
+            var entities = await query.OrderBy(x => x.Name).ToListAsync();
+            var usageMap = await usage.GetInvoiceCategoryUsagesAsync(
+                tenantContext.TenantId,
+                entities.Select(x => x.Id).ToList());
+
+            var categories = entities
+                .Select(x => ToDto(x, usageMap.GetValueOrDefault(x.Id)))
+                .ToList();
 
             return Ok(categories);
         }
@@ -47,25 +46,17 @@ namespace CareHome.Api.Controllers
         [HttpGet("{id:int}")]
         public async Task<ActionResult<InvoiceCategoryDto>> GetInvoiceCategory(int id)
         {
-            var category = await dbContext.InvoiceCategories
+            var entity = await dbContext.InvoiceCategories
                 .AsNoTracking()
-                .Where(x => x.Id == id && x.TenantId == tenantContext.TenantId)
-                .Select(x => new InvoiceCategoryDto
-                {
-                    Id = x.Id,
-                    Code = x.Code,
-                    Name = x.Name,
-                    Description = x.Description,
-                    IsActive = x.IsActive
-                })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
 
-            if (category is null)
+            if (entity is null)
             {
                 return NotFound();
             }
 
-            return Ok(category);
+            var usageDto = await usage.GetInvoiceCategoryUsageAsync(tenantContext.TenantId, entity.Id);
+            return Ok(ToDto(entity, usageDto));
         }
 
         [HttpPost]
@@ -102,7 +93,7 @@ namespace CareHome.Api.Controllers
             return CreatedAtAction(
                 nameof(GetInvoiceCategory),
                 new { id = category.Id },
-                ToDto(category));
+                ToDto(category, new()));
         }
 
         [HttpPut("{id:int}")]
@@ -119,6 +110,16 @@ namespace CareHome.Api.Controllers
             }
 
             var code = request.Code.Trim();
+
+            if (DefaultInvoiceCategories.IsSystemDefaultCode(category.Code)
+                && !string.Equals(category.Code, code, StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "The code of a default invoice category cannot be changed because it is required for billing."
+                });
+            }
 
             var duplicateCode = await dbContext.InvoiceCategories
                 .AnyAsync(x =>
@@ -142,7 +143,8 @@ namespace CareHome.Api.Controllers
             await dbContext.SaveChangesAsync();
             await audit.LogAsync("InvoiceCategory", category.Id.ToString(), "Update", null, request, "Updated invoice category.");
 
-            return Ok(ToDto(category));
+            var usageDto = await usage.GetInvoiceCategoryUsageAsync(tenantContext.TenantId, category.Id);
+            return Ok(ToDto(category, usageDto));
         }
 
         [HttpDelete("{id:int}")]
@@ -156,6 +158,15 @@ namespace CareHome.Api.Controllers
                 return NotFound();
             }
 
+            if (DefaultInvoiceCategories.IsSystemDefaultCode(category.Code))
+            {
+                return BadRequest(new
+                {
+                    message =
+                        "This invoice category is part of the organisation default billing setup and cannot be deactivated."
+                });
+            }
+
             category.IsActive = false;
 
             await dbContext.SaveChangesAsync();
@@ -164,7 +175,9 @@ namespace CareHome.Api.Controllers
             return NoContent();
         }
 
-        private static InvoiceCategoryDto ToDto(InvoiceCategory category)
+        private static InvoiceCategoryDto ToDto(
+            InvoiceCategory category,
+            Dtos.Common.MasterDataUsageDto? usageDto)
         {
             return new InvoiceCategoryDto
             {
@@ -172,7 +185,11 @@ namespace CareHome.Api.Controllers
                 Code = category.Code,
                 Name = category.Name,
                 Description = category.Description,
-                IsActive = category.IsActive
+                IsActive = category.IsActive,
+                ConfigurationSource = DefaultInvoiceCategories.IsSystemDefaultCode(category.Code)
+                    ? "SystemDefault"
+                    : "Organisation",
+                Usage = usageDto
             };
         }
     }

@@ -4,6 +4,7 @@ using CareHome.Api.Data;
 using CareHome.Api.Dtos.FundingAuthorities;
 using CareHome.Api.Models;
 using CareHome.Api.Security;
+using CareHome.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,7 +16,8 @@ namespace CareHome.Api.Controllers
     public class FundingAuthoritiesController(
         CareHomeDbContext dbContext,
         ITenantContext tenantContext,
-        AuditService audit) : ControllerBase
+        AuditService audit,
+        MasterDataUsageService usage) : ControllerBase
     {
         private static readonly string[] AllowedTypes =
         [
@@ -48,32 +50,22 @@ namespace CareHome.Api.Controllers
                 query = query.Where(x => x.IsActive);
             }
 
-            var projected = query
-                .OrderBy(x => x.Name)
-                .Select(x => new FundingAuthorityDto
-                {
-                    Id = x.Id,
-                    PublicId = x.PublicId,
-                    Code = x.Code,
-                    Name = x.Name,
-                    Type = x.Type,
-                    ContactName = x.ContactName,
-                    Phone = x.Phone,
-                    Email = x.Email,
-                    Address = x.Address,
-                    BillingFrequency = x.BillingFrequency,
-                    BillingIntervalDays = x.BillingIntervalDays,
-                    IsActive = x.IsActive
-                });
+            var entities = await query.OrderBy(x => x.Name).ToListAsync();
+            var usageMap = await usage.GetFundingAuthorityUsagesAsync(
+                tenantContext.TenantId,
+                entities.Select(x => x.Id).ToList());
+            var dtos = entities
+                .Select(x => MapToDto(x, usageMap.GetValueOrDefault(x.Id)))
+                .ToList();
 
             if (!Pagination.IsRequested(page, pageSize))
             {
-                return Ok(await projected.ToListAsync());
+                return Ok(dtos);
             }
 
             var (p, ps) = Pagination.Normalize(page, pageSize);
-            var total = await projected.CountAsync();
-            var items = await projected.Skip((p - 1) * ps).Take(ps).ToListAsync();
+            var total = dtos.Count;
+            var items = dtos.Skip((p - 1) * ps).Take(ps).ToList();
             return Ok(new PagedResult<FundingAuthorityDto>
             {
                 Items = items,
@@ -91,33 +83,19 @@ namespace CareHome.Api.Controllers
                 return NotFound();
             }
 
-            var authority = await dbContext.FundingAuthorities
+            var entity = await dbContext.FundingAuthorities
                 .AsNoTracking()
                 .Where(x => x.TenantId == tenantContext.TenantId)
                 .Where(x => publicId != default ? x.PublicId == publicId : x.Id == id)
-                .Select(x => new FundingAuthorityDto
-                {
-                    Id = x.Id,
-                    PublicId = x.PublicId,
-                    Code = x.Code,
-                    Name = x.Name,
-                    Type = x.Type,
-                    ContactName = x.ContactName,
-                    Phone = x.Phone,
-                    Email = x.Email,
-                    Address = x.Address,
-                    BillingFrequency = x.BillingFrequency,
-                    BillingIntervalDays = x.BillingIntervalDays,
-                    IsActive = x.IsActive
-                })
                 .FirstOrDefaultAsync();
 
-            if (authority is null)
+            if (entity is null)
             {
                 return NotFound();
             }
 
-            return Ok(authority);
+            var usageDto = await usage.GetFundingAuthorityUsageAsync(tenantContext.TenantId, entity.Id);
+            return Ok(MapToDto(entity, usageDto));
         }
 
         [HttpPost]
@@ -181,7 +159,7 @@ namespace CareHome.Api.Controllers
             return CreatedAtAction(
                 nameof(GetFundingAuthority),
                 new { key = authority.PublicId.ToString() },
-                MapToDto(authority));
+                MapToDto(authority, new()));
         }
 
         [HttpPut("{key}")]
@@ -254,7 +232,8 @@ namespace CareHome.Api.Controllers
             await dbContext.SaveChangesAsync();
             await audit.LogAsync("FundingAuthority", authority.Id.ToString(), "Update", null, request, "Updated funding authority.");
 
-            return Ok(MapToDto(authority));
+            var usageDto = await usage.GetFundingAuthorityUsageAsync(tenantContext.TenantId, authority.Id);
+            return Ok(MapToDto(authority, usageDto));
         }
 
         [HttpDelete("{id:int}")]
@@ -320,7 +299,9 @@ namespace CareHome.Api.Controllers
             return null;
         }
 
-        private static FundingAuthorityDto MapToDto(FundingAuthority authority)
+        private static FundingAuthorityDto MapToDto(
+            FundingAuthority authority,
+            Dtos.Common.MasterDataUsageDto? usageDto)
         {
             return new FundingAuthorityDto
             {
@@ -335,7 +316,9 @@ namespace CareHome.Api.Controllers
                 Address = authority.Address,
                 BillingFrequency = authority.BillingFrequency,
                 BillingIntervalDays = authority.BillingIntervalDays,
-                IsActive = authority.IsActive
+                IsActive = authority.IsActive,
+                ConfigurationSource = "Organisation",
+                Usage = usageDto
             };
         }
     }

@@ -242,6 +242,7 @@ builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailO
 builder.Services.AddScoped<IEmailSender, ConfigurableEmailSender>();
 builder.Services.AddScoped<Sage50ColumnMap>();
 builder.Services.AddScoped<SageExportService>();
+builder.Services.AddScoped<MasterDataUsageService>();
 builder.Services.AddScoped<MiscChargeImportService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<IdentitySeeder>();

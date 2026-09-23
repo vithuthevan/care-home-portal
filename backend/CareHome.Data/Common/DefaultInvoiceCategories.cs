@@ -11,4 +11,7 @@ public static class DefaultInvoiceCategories
     ];
 
     public const string MiscellaneousCode = "MISC";
+
+    public static bool IsSystemDefaultCode(string code) =>
+        All.Any(x => string.Equals(x.Code, code.Trim(), StringComparison.OrdinalIgnoreCase));
 }
