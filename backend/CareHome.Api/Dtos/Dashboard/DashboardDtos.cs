@@ -67,6 +67,9 @@ namespace CareHome.Api.Dtos.Dashboard
 
         public decimal TotalAmount { get; set; }
 
+        /// <summary>Sum of net line amounts (after non-void credits), aligned with Sage export and invoice reports.</summary>
+        public decimal NetBilledAmount { get; set; }
+
         public string Status { get; set; } = string.Empty;
 
         public string PaymentStatus { get; set; } = string.Empty;

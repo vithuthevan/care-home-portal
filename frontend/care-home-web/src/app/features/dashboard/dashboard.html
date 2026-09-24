@@ -174,7 +174,7 @@
                   <tr>
                     <th>Invoice</th>
                     <th class="col-hide-sm">Home</th>
-                    <th class="num">Amount</th>
+                    <th class="num">Net billed</th>
                     <th>Status</th>
                     <th class="col-hide-sm">Payment</th>
                   </tr>
@@ -186,7 +186,7 @@
                         <a class="invoice-link" [routerLink]="invoiceDetailLink(row)">{{ row.invoiceNumber }}</a>
                       </td>
                       <td class="col-hide-sm">{{ row.careHomeName }}</td>
-                      <td class="num">£{{ row.totalAmount | number: '1.2-2' }}</td>
+                      <td class="num">£{{ (row.netBilledAmount ?? row.totalAmount) | number: '1.2-2' }}</td>
                       <td><app-status-badge [value]="row.status" /></td>
                       <td class="col-hide-sm">
                         <app-labeled-status kind="Payment" [value]="row.paymentStatus" />

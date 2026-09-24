@@ -30,8 +30,8 @@ namespace CareHome.Api.Export
             {
                 foreach (var line in invoice.Lines)
                 {
-                    var netAmount = NetLineAmount(line);
-                    if (netAmount == 0m)
+                    var netAmount = InvoiceLineNetAmount.FromLine(line);
+                    if (!InvoiceLineNetAmount.IsNonZeroExportable(netAmount))
                     {
                         continue;
                     }
@@ -54,13 +54,21 @@ namespace CareHome.Api.Export
             return builder.ToString();
         }
 
-        public static decimal NetLineAmount(InvoiceLine line)
+        public int CountExportableLines(IEnumerable<Invoice> invoices)
         {
-            var credited = line.CreditNoteLines
-                .Where(c => c.CreditNote.Status != CreditNoteStatuses.Void)
-                .Sum(c => c.Amount);
+            var count = 0;
+            foreach (var invoice in invoices)
+            {
+                foreach (var line in invoice.Lines)
+                {
+                    if (InvoiceLineNetAmount.IsNonZeroExportable(InvoiceLineNetAmount.FromLine(line)))
+                    {
+                        count++;
+                    }
+                }
+            }
 
-            return Money.Round(line.LineAmount + credited);
+            return count;
         }
 
         private static string Csv(string? value, bool neutralizeFormula)

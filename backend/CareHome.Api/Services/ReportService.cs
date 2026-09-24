@@ -129,7 +129,7 @@ namespace CareHome.Api.Services
                 ClientName = x.SnapshotClientName,
                 CareHomeName = x.SnapshotCareHomeName,
                 Category = x.SnapshotInvoiceCategoryName,
-                Amount = Money.Round(x.LineAmount + x.Credits),
+                Amount = InvoiceLineNetAmount.FromParts(x.LineAmount, x.Credits),
                 PaymentStatus = x.PaymentStatus,
                 Status = x.Status
             }).ToList();

@@ -50,6 +50,7 @@ interface DashboardDto {
     invoiceNumber: string;
     careHomeName: string;
     totalAmount: number;
+    netBilledAmount?: number;
     status: string;
     paymentStatus: string;
   }[];

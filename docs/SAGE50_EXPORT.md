@@ -20,7 +20,7 @@ File-based CSV only. The API never writes to a Sage database.
 | InvoiceNumber | Invoice number |
 | InvoiceDate | yyyy-MM-dd |
 | Details | Line description |
-| NetAmount | Line amount |
+| NetAmount | Net line amount after non-void credit note lines (fully credited lines omitted from CSV) |
 | TaxCode | `T0` (placeholder — VAT not agreed) |
 | Department | Care home code snapshot |
 

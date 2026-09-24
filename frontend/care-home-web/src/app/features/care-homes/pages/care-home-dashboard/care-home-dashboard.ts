@@ -33,6 +33,7 @@ interface CareHomeDashboardInvoiceRow {
   periodStart?: string;
   periodEnd?: string;
   totalAmount: number;
+  netBilledAmount?: number;
   paymentStatus: string;
 }
 

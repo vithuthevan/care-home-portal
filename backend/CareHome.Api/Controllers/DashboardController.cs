@@ -60,25 +60,30 @@ namespace CareHome.Api.Controllers
                     HttpContext.RequestAborted);
             }
 
-            var recent = await dbContext.Invoices.AsNoTracking()
+            var recentEntities = await dbContext.Invoices.AsNoTracking()
+                .Include(x => x.Lines)
+                    .ThenInclude(l => l.CreditNoteLines)
+                    .ThenInclude(c => c.CreditNote)
                 .Where(x => homes.Contains(x.CareHomeId))
                 .OrderByDescending(x => x.GeneratedAt)
                 .Take(8)
-                .Select(x => new RecentInvoiceDto
-                {
-                    Id = x.Id,
-                    PublicId = x.PublicId,
-                    InvoiceNumber = x.InvoiceNumber,
-                    CareHomeName = x.SnapshotCareHomeName,
-                    ClientName = x.Lines.OrderBy(l => l.Id).Select(l => l.SnapshotClientName).FirstOrDefault()
-                        ?? string.Empty,
-                    PeriodStart = x.PeriodStart,
-                    PeriodEnd = x.PeriodEnd,
-                    TotalAmount = x.TotalAmount,
-                    Status = x.Status,
-                    PaymentStatus = x.PaymentStatus
-                })
                 .ToListAsync();
+
+            var recent = recentEntities.Select(x => new RecentInvoiceDto
+            {
+                Id = x.Id,
+                PublicId = x.PublicId,
+                InvoiceNumber = x.InvoiceNumber,
+                CareHomeName = x.SnapshotCareHomeName,
+                ClientName = x.Lines.OrderBy(l => l.Id).Select(l => l.SnapshotClientName).FirstOrDefault()
+                    ?? string.Empty,
+                PeriodStart = x.PeriodStart,
+                PeriodEnd = x.PeriodEnd,
+                TotalAmount = x.TotalAmount,
+                NetBilledAmount = Money.Round(x.Lines.Sum(InvoiceLineNetAmount.FromLine)),
+                Status = x.Status,
+                PaymentStatus = x.PaymentStatus
+            }).ToList();
 
             var exceptions = await dbContext.BillingExceptionLogs.AsNoTracking()
                 .Where(x => x.TenantId == tenantContext.TenantId)
@@ -155,25 +160,30 @@ namespace CareHome.Api.Controllers
                     HttpContext.RequestAborted);
             }
 
-            var recent = await dbContext.Invoices.AsNoTracking()
+            var recentEntities = await dbContext.Invoices.AsNoTracking()
+                .Include(x => x.Lines)
+                    .ThenInclude(l => l.CreditNoteLines)
+                    .ThenInclude(c => c.CreditNote)
                 .Where(x => x.CareHomeId == id)
                 .OrderByDescending(x => x.GeneratedAt)
                 .Take(8)
-                .Select(x => new RecentInvoiceDto
-                {
-                    Id = x.Id,
-                    PublicId = x.PublicId,
-                    InvoiceNumber = x.InvoiceNumber,
-                    CareHomeName = x.SnapshotCareHomeName,
-                    ClientName = x.Lines.OrderBy(l => l.Id).Select(l => l.SnapshotClientName).FirstOrDefault()
-                        ?? string.Empty,
-                    PeriodStart = x.PeriodStart,
-                    PeriodEnd = x.PeriodEnd,
-                    TotalAmount = x.TotalAmount,
-                    Status = x.Status,
-                    PaymentStatus = x.PaymentStatus
-                })
                 .ToListAsync();
+
+            var recent = recentEntities.Select(x => new RecentInvoiceDto
+            {
+                Id = x.Id,
+                PublicId = x.PublicId,
+                InvoiceNumber = x.InvoiceNumber,
+                CareHomeName = x.SnapshotCareHomeName,
+                ClientName = x.Lines.OrderBy(l => l.Id).Select(l => l.SnapshotClientName).FirstOrDefault()
+                    ?? string.Empty,
+                PeriodStart = x.PeriodStart,
+                PeriodEnd = x.PeriodEnd,
+                TotalAmount = x.TotalAmount,
+                NetBilledAmount = Money.Round(x.Lines.Sum(InvoiceLineNetAmount.FromLine)),
+                Status = x.Status,
+                PaymentStatus = x.PaymentStatus
+            }).ToList();
 
             return Ok(new CareHomeDashboardDto
             {

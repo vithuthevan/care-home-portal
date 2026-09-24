@@ -108,7 +108,7 @@
                 <th>Invoice</th>
                 <th class="col-hide-sm">Resident</th>
                 <th class="col-hide-sm">Period</th>
-                <th class="num">Amount</th>
+                <th class="num">Net billed</th>
                 <th class="col-status">Payment</th>
               </tr>
             </thead>
@@ -124,7 +124,7 @@
                   <td class="font-medium">{{ row.invoiceNumber }}</td>
                   <td class="col-hide-sm">{{ row.clientName || '—' }}</td>
                   <td class="col-hide-sm">{{ formatInvoicePeriod(row) }}</td>
-                  <td class="num">£{{ row.totalAmount | number: '1.2-2' }}</td>
+                  <td class="num">£{{ (row.netBilledAmount ?? row.totalAmount) | number: '1.2-2' }}</td>
                   <td class="col-status">
                     <app-labeled-status kind="Payment" [value]="row.paymentStatus" />
                   </td>

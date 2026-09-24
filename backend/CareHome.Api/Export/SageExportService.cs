@@ -73,7 +73,7 @@ namespace CareHome.Api.Export
                 DateFrom = request.DateFrom,
                 DateTo = request.DateTo,
                 CompanyId = request.CompanyId,
-                RecordCount = eligibleInvoices.Sum(x => x.Lines.Count),
+                RecordCount = columnMap.CountExportableLines(eligibleInvoices),
                 FileName = fileName,
                 FilePath = string.Empty,
                 Status = "Completed"
@@ -157,6 +157,8 @@ namespace CareHome.Api.Export
 
             var invoices = await dbContext.Invoices
                 .Include(x => x.Lines)
+                    .ThenInclude(l => l.CreditNoteLines)
+                    .ThenInclude(c => c.CreditNote)
                 .Where(x => x.TenantId == tenantId && x.SageExportBatchId == batchId)
                 .OrderBy(x => x.InvoiceNumber)
                 .ToListAsync(cancellationToken);
@@ -294,7 +296,7 @@ namespace CareHome.Api.Export
                         errors.Add($"{lineRef}: {string.Join(" ", issues)}");
                     }
 
-                    var netAmount = Sage50ColumnMap.NetLineAmount(line);
+                    var netAmount = InvoiceLineNetAmount.FromLine(line);
                     if (netAmount == 0m)
                     {
                         continue;
