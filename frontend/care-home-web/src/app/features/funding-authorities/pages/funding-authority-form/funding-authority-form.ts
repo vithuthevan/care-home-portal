@@ -5,6 +5,7 @@ import { finalize } from 'rxjs';
 
 import { FundingAuthorityService } from '../../services/funding-authority.service';
 import { getApiErrorMessage, logApiFailure } from '../../../../core/api-error';
+import { optionalEmail } from '../../../../shared/format/optional-email';
 import { AuthService } from '../../../../core/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -150,7 +151,7 @@ export class FundingAuthorityForm implements OnInit {
       type: value.type,
       contactName: value.contactName,
       phone: value.phone,
-      email: value.email,
+      email: optionalEmail(value.email),
       address: value.address,
       billingFrequency: value.billingFrequency,
       billingIntervalDays:

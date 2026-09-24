@@ -168,10 +168,10 @@ namespace CareHome.Api.Controllers
                 BedCapacity = request.BedCapacity,
                 Address = request.Address?.Trim(),
                 Phone = request.Phone?.Trim(),
-                Email = request.Email?.Trim(),
+                Email = OptionalContactFields.NormalizeEmail(request.Email),
                 ManagerName = request.ManagerName?.Trim(),
                 ManagerPhone = request.ManagerPhone?.Trim(),
-                ManagerEmail = request.ManagerEmail?.Trim(),
+                ManagerEmail = OptionalContactFields.NormalizeEmail(request.ManagerEmail),
                 IsActive = true
             };
 
@@ -258,10 +258,10 @@ namespace CareHome.Api.Controllers
             careHome.BedCapacity = request.BedCapacity;
             careHome.Address = request.Address?.Trim();
             careHome.Phone = request.Phone?.Trim();
-            careHome.Email = request.Email?.Trim();
+            careHome.Email = OptionalContactFields.NormalizeEmail(request.Email);
             careHome.ManagerName = request.ManagerName?.Trim();
             careHome.ManagerPhone = request.ManagerPhone?.Trim();
-            careHome.ManagerEmail = request.ManagerEmail?.Trim();
+            careHome.ManagerEmail = OptionalContactFields.NormalizeEmail(request.ManagerEmail);
             careHome.IsActive = request.IsActive;
 
             await dbContext.SaveChangesAsync();

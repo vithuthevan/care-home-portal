@@ -1,4 +1,5 @@
 using System.Text;
+using CareHome.Api.Common;
 using CareHome.Api.Models;
 
 namespace CareHome.Api.Export
@@ -29,6 +30,12 @@ namespace CareHome.Api.Export
             {
                 foreach (var line in invoice.Lines)
                 {
+                    var netAmount = NetLineAmount(line);
+                    if (netAmount == 0m)
+                    {
+                        continue;
+                    }
+
                     var values = new[]
                     {
                         Csv(line.SnapshotSageId, neutralizeFormula: false),
@@ -36,7 +43,7 @@ namespace CareHome.Api.Export
                         Csv(invoice.InvoiceNumber, neutralizeFormula: false),
                         Csv(invoice.InvoiceDate.ToString("yyyy-MM-dd"), neutralizeFormula: false),
                         Csv(line.Description, neutralizeFormula: true),
-                        Csv(line.LineAmount.ToString("0.00"), neutralizeFormula: false),
+                        Csv(netAmount.ToString("0.00"), neutralizeFormula: false),
                         Csv("T0", neutralizeFormula: false),
                         Csv(invoice.SnapshotCareHomeCode, neutralizeFormula: false)
                     };
@@ -45,6 +52,15 @@ namespace CareHome.Api.Export
             }
 
             return builder.ToString();
+        }
+
+        public static decimal NetLineAmount(InvoiceLine line)
+        {
+            var credited = line.CreditNoteLines
+                .Where(c => c.CreditNote.Status != CreditNoteStatuses.Void)
+                .Sum(c => c.Amount);
+
+            return Money.Round(line.LineAmount + credited);
         }
 
         private static string Csv(string? value, bool neutralizeFormula)

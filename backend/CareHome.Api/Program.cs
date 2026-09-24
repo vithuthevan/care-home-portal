@@ -248,6 +248,7 @@ builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<IdentitySeeder>();
 builder.Services.AddScoped<DevelopmentMasterDataSeeder>();
 builder.Services.AddScoped<EmptyTenantMasterDataSeeder>();
+builder.Services.AddScoped<TenantNominalCodeSeeder>();
 builder.Services.AddSingleton<LoginPasswordCipher>();
 
 var app = builder.Build();
@@ -345,6 +346,9 @@ using (var scope = app.Services.CreateScope())
 
         var emptyTenantSeeder = scope.ServiceProvider.GetRequiredService<EmptyTenantMasterDataSeeder>();
         await emptyTenantSeeder.SeedAsync();
+
+        var nominalCodeSeeder = scope.ServiceProvider.GetRequiredService<TenantNominalCodeSeeder>();
+        await nominalCodeSeeder.BackfillAllTenantsAsync();
     }
     catch (InvalidOperationException ex) when (ex.Message.Contains("Development platform admin", StringComparison.Ordinal))
     {

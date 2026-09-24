@@ -32,6 +32,12 @@ namespace CareHome.Api.Billing
                 exceptions.Add("Period end cannot be before start.");
             }
 
+            if (request.InvoiceId.HasValue && eligible.Count == 0)
+            {
+                exceptions.Add(
+                    "No invoice lines on the selected invoice match this period, or the invoice cannot be credited.");
+            }
+
             var lines = new List<CreditNotePreviewLineDto>();
             foreach (var line in eligible)
             {
@@ -134,7 +140,7 @@ namespace CareHome.Api.Billing
             }
 
             var invoice = freshLines[0].Invoice;
-            if (invoice.Status == CreditNoteStatuses.Void)
+            if (invoice.Status == InvoiceStatuses.Void)
             {
                 await transaction.RollbackAsync(cancellationToken);
                 return (null, "Cannot credit a void invoice.");
@@ -216,8 +222,13 @@ namespace CareHome.Api.Billing
                 .Include(x => x.CreditNoteLines)
                     .ThenInclude(x => x.CreditNote)
                 .Where(x => x.Invoice.TenantId == tenantId)
-                .Where(x => x.Invoice.Status != CreditNoteStatuses.Void)
+                .Where(x => x.Invoice.Status != InvoiceStatuses.Void)
                 .Where(x => x.ServicePeriodStart <= request.PeriodEnd && x.ServicePeriodEnd >= request.PeriodStart);
+
+            if (request.InvoiceId.HasValue)
+            {
+                query = query.Where(x => x.InvoiceId == request.InvoiceId.Value);
+            }
 
             var allowedHomes = await userAccess.GetAllowedCareHomeIdsAsync(cancellationToken);
             if (allowedHomes is not null)

@@ -13,6 +13,7 @@ import { CompanyService } from '../../../companies/services/company.service';
 import { CareHomeService } from '../../services/care-home.service';
 
 import { getApiErrorMessage, logApiFailure } from '../../../../core/api-error';
+import { optionalEmail } from '../../../../shared/format/optional-email';
 import { AuthService } from '../../../../core/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -246,13 +247,13 @@ export class CareHomeForm implements OnInit {
 
       phone: value.phone,
 
-      email: value.email,
+      email: optionalEmail(value.email),
 
       managerName: value.managerName,
 
       managerPhone: value.managerPhone,
 
-      managerEmail: value.managerEmail,
+      managerEmail: optionalEmail(value.managerEmail),
     };
 
     if (this.isEditMode && this.careHomeRouteKey !== null) {

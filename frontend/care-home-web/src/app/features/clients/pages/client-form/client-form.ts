@@ -13,6 +13,7 @@ import { CareHomeService } from '../../../care-homes/services/care-home.service'
 import { ClientService } from '../../services/client.service';
 
 import { getApiErrorMessage, logApiFailure } from '../../../../core/api-error';
+import { optionalEmail } from '../../../../shared/format/optional-email';
 import { AuthService } from '../../../../core/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -314,7 +315,7 @@ export class ClientForm implements OnInit {
 
       admissionDate: value.admissionDate,
 
-      email: value.email,
+      email: optionalEmail(value.email),
 
       phone: value.phone,
 

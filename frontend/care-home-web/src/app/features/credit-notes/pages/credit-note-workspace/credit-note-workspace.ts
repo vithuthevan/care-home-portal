@@ -69,6 +69,7 @@ export class CreditNoteWorkspacePage implements OnInit {
   notesPageSize = 20;
   readonly errorMessage = signal<string | null>(null);
   readonly isWorking = signal(false);
+  readonly sourceInvoiceId = signal<number | null>(null);
   readonly sourceInvoiceNumber = signal<string | null>(null);
   readonly sourceResidentName = signal<string | null>(null);
   readonly sourceClientReference = signal<string | null>(null);
@@ -214,6 +215,7 @@ export class CreditNoteWorkspacePage implements OnInit {
           this.selectedClientId = null;
           this.periodStart = '';
           this.periodEnd = '';
+          this.sourceInvoiceId.set(null);
           this.sourceInvoiceNumber.set(null);
           this.sourceResidentName.set(null);
           this.sourceClientReference.set(null);
@@ -247,6 +249,7 @@ export class CreditNoteWorkspacePage implements OnInit {
 
   private body() {
     return {
+      invoiceId: this.sourceInvoiceId() ?? null,
       clientId: this.selectedClientId || null,
       periodStart: this.periodStart,
       periodEnd: this.periodEnd,
@@ -257,12 +260,19 @@ export class CreditNoteWorkspacePage implements OnInit {
 
   private applyQueryContext(): void {
     const params = this.route.snapshot.queryParamMap;
+    const invoiceId = Number(params.get('invoiceId') || 0);
     const clientId = Number(params.get('clientId') || 0);
     const invoiceNumber = params.get('invoiceNumber')?.trim() || '';
     const clientName = params.get('clientName')?.trim() || '';
     const clientReference = params.get('clientReference')?.trim() || '';
     const periodStart = this.toDateInput(params.get('periodStart'));
     const periodEnd = this.toDateInput(params.get('periodEnd'));
+
+    if (invoiceId > 0) {
+      this.sourceInvoiceId.set(invoiceId);
+    } else {
+      this.sourceInvoiceId.set(null);
+    }
 
     if (invoiceNumber) {
       this.sourceInvoiceNumber.set(invoiceNumber);

@@ -216,6 +216,8 @@ namespace CareHome.Api.Export
 
             var query = dbContext.Invoices
                 .Include(x => x.Lines)
+                    .ThenInclude(l => l.CreditNoteLines)
+                    .ThenInclude(c => c.CreditNote)
                 .Where(x => x.TenantId == tenantId)
                 .Where(x => x.Status != "Void")
                 .Where(x => x.InvoiceDate >= request.DateFrom && x.InvoiceDate <= request.DateTo);
@@ -292,13 +294,19 @@ namespace CareHome.Api.Export
                         errors.Add($"{lineRef}: {string.Join(" ", issues)}");
                     }
 
+                    var netAmount = Sage50ColumnMap.NetLineAmount(line);
+                    if (netAmount == 0m)
+                    {
+                        continue;
+                    }
+
                     rows.Add(new SageExportRowDto
                     {
                         InvoiceId = invoice.Id,
                         InvoiceNumber = invoice.InvoiceNumber,
                         SageId = line.SnapshotSageId,
                         NominalCode = line.SnapshotNominalCode,
-                        Amount = line.LineAmount,
+                        Amount = netAmount,
                         Eligible = eligible,
                         Reason = eligible ? null : string.Join(" ", issues)
                     });

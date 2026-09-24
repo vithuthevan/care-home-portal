@@ -144,7 +144,7 @@ namespace CareHome.Api.Controllers
                 Type = request.Type.Trim(),
                 ContactName = request.ContactName?.Trim(),
                 Phone = request.Phone?.Trim(),
-                Email = request.Email?.Trim(),
+                Email = OptionalContactFields.NormalizeEmail(request.Email),
                 Address = request.Address?.Trim(),
                 BillingFrequency = billingFrequency,
                 BillingIntervalDays = billingIntervalDays,
@@ -220,7 +220,7 @@ namespace CareHome.Api.Controllers
             authority.Type = request.Type.Trim();
             authority.ContactName = request.ContactName?.Trim();
             authority.Phone = request.Phone?.Trim();
-            authority.Email = request.Email?.Trim();
+            authority.Email = OptionalContactFields.NormalizeEmail(request.Email);
             authority.Address = request.Address?.Trim();
             authority.BillingFrequency = billingFrequency;
             authority.BillingIntervalDays =

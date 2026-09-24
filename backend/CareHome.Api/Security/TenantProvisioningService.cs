@@ -12,6 +12,7 @@ namespace CareHome.Api.Security
         CareHomeDbContext dbContext,
         UserManager<ApplicationUser> userManager,
         IEmailSender emailSender,
+        TenantNominalCodeSeeder nominalCodeSeeder,
         IConfiguration configuration,
         ILogger<TenantProvisioningService> logger)
     {
@@ -79,6 +80,8 @@ namespace CareHome.Api.Security
             });
 
             await dbContext.SaveChangesAsync(cancellationToken);
+
+            await nominalCodeSeeder.EnsureStarterCodesAsync(tenant.Id, cancellationToken);
 
             var result = new TenantProvisionResult { Tenant = tenant };
             if (!string.IsNullOrWhiteSpace(request.AdminEmail))

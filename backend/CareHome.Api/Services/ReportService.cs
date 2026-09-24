@@ -1,5 +1,7 @@
+using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.Reports;
+using CareHome.Api.Models;
 using CareHome.Api.Receivables.Contracts;
 using CareHome.Api.Receivables.Dtos;
 using CareHome.Api.Security;
@@ -88,7 +90,7 @@ namespace CareHome.Api.Services
         {
             var homes = await AllowedHomes(tenantId, null, null, cancellationToken);
             var query = dbContext.InvoiceLines.AsNoTracking()
-                .Where(x => x.Invoice.TenantId == tenantId && homes.Contains(x.Invoice.CareHomeId) && x.Invoice.Status != "Void");
+                .Where(x => x.Invoice.TenantId == tenantId && homes.Contains(x.Invoice.CareHomeId) && x.Invoice.Status != InvoiceStatuses.Void);
 
             if (clientId.HasValue)
             {
@@ -105,17 +107,32 @@ namespace CareHome.Api.Services
                 query = query.Where(x => x.Invoice.InvoiceDate <= to);
             }
 
-            return await query.Select(x => new InvoiceReportRowDto
+            var rows = await query.Select(x => new
             {
-                InvoiceNumber = x.Invoice.InvoiceNumber,
-                InvoiceDate = x.Invoice.InvoiceDate,
+                x.Invoice.InvoiceNumber,
+                x.Invoice.InvoiceDate,
+                x.SnapshotClientName,
+                x.SnapshotCareHomeName,
+                x.SnapshotInvoiceCategoryName,
+                x.LineAmount,
+                Credits = x.CreditNoteLines
+                    .Where(c => c.CreditNote.Status != CreditNoteStatuses.Void)
+                    .Sum(c => c.Amount),
+                x.Invoice.PaymentStatus,
+                x.Invoice.Status
+            }).ToListAsync(cancellationToken);
+
+            return rows.Select(x => new InvoiceReportRowDto
+            {
+                InvoiceNumber = x.InvoiceNumber,
+                InvoiceDate = x.InvoiceDate,
                 ClientName = x.SnapshotClientName,
                 CareHomeName = x.SnapshotCareHomeName,
                 Category = x.SnapshotInvoiceCategoryName,
-                Amount = x.LineAmount,
-                PaymentStatus = x.Invoice.PaymentStatus,
-                Status = x.Invoice.Status
-            }).ToListAsync(cancellationToken);
+                Amount = Money.Round(x.LineAmount + x.Credits),
+                PaymentStatus = x.PaymentStatus,
+                Status = x.Status
+            }).ToList();
         }
 
         public async Task<List<InvoiceReportRowDto>> InvoicesByCareHomeAsync(
@@ -139,19 +156,29 @@ namespace CareHome.Api.Services
             int tenantId, DateOnly from, DateOnly to, CancellationToken cancellationToken)
         {
             var homes = await AllowedHomes(tenantId, null, null, cancellationToken);
-            return await dbContext.InvoiceLines.AsNoTracking()
+            var lines = await dbContext.InvoiceLines.AsNoTracking()
                 .Where(x => x.Invoice.TenantId == tenantId
                     && homes.Contains(x.Invoice.CareHomeId)
-                    && x.Invoice.Status != "Void"
+                    && x.Invoice.Status != InvoiceStatuses.Void
                     && x.Invoice.InvoiceDate >= from
                     && x.Invoice.InvoiceDate <= to)
+                .Select(x => new
+                {
+                    x.SnapshotInvoiceCategoryName,
+                    Net = x.LineAmount + x.CreditNoteLines
+                        .Where(c => c.CreditNote.Status != CreditNoteStatuses.Void)
+                        .Sum(c => c.Amount)
+                })
+                .ToListAsync(cancellationToken);
+
+            return lines
                 .GroupBy(x => x.SnapshotInvoiceCategoryName)
                 .Select(g => new IncomeByCategoryRowDto
                 {
                     Category = g.Key,
-                    Amount = g.Sum(x => x.LineAmount)
+                    Amount = Money.Round(g.Sum(x => x.Net))
                 })
-                .ToListAsync(cancellationToken);
+                .ToList();
         }
 
         public async Task<List<OccupancyRowDto>> OccupancyAsync(int tenantId, int? companyId, CancellationToken cancellationToken)

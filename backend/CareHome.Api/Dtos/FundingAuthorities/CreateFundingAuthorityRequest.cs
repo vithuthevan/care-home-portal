@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using CareHome.Api.Common;
 
 namespace CareHome.Api.Dtos.FundingAuthorities
 {
@@ -23,7 +24,7 @@ namespace CareHome.Api.Dtos.FundingAuthorities
         public string? Phone { get; set; }
 
         [MaxLength(150)]
-        [EmailAddress]
+        [OptionalEmailAddress]
         public string? Email { get; set; }
 
         [MaxLength(300)]

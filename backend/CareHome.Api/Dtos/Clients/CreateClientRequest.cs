@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using CareHome.Api.Common;
 
 namespace CareHome.Api.Dtos.Clients
 {
@@ -33,7 +34,7 @@ namespace CareHome.Api.Dtos.Clients
         public DateOnly AdmissionDate { get; set; }
 
         [MaxLength(150)]
-        [EmailAddress]
+        [OptionalEmailAddress]
         public string? Email { get; set; }
 
         [MaxLength(30)]

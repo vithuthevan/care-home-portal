@@ -2,6 +2,9 @@ namespace CareHome.Api.Dtos.CreditNotes
 {
     public class CreditNotePreviewRequest
     {
+        /// <summary>When set (e.g. from invoice detail), only lines on this invoice are eligible.</summary>
+        public int? InvoiceId { get; set; }
+
         public int? ClientId { get; set; }
 
         public int? FundingAuthorityId { get; set; }

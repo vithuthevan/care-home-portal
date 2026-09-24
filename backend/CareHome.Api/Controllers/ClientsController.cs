@@ -103,8 +103,7 @@ namespace CareHome.Api.Controllers
 
             var total = await query.CountAsync();
             var clients = await ProjectToDto(query)
-                .OrderBy(x => x.FirstName)
-                .ThenBy(x => x.LastName)
+                .OrderByDescending(x => x.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -223,7 +222,7 @@ namespace CareHome.Api.Controllers
 
                 AdmissionDate = request.AdmissionDate,
 
-                Email = request.Email?.Trim(),
+                Email = OptionalContactFields.NormalizeEmail(request.Email),
                 Phone = request.Phone?.Trim(),
                 Notes = request.Notes?.Trim(),
 
@@ -399,8 +398,7 @@ namespace CareHome.Api.Controllers
                     request.IsArchived;
             }
 
-            client.Email =
-                request.Email?.Trim();
+            client.Email = OptionalContactFields.NormalizeEmail(request.Email);
 
             client.Phone =
                 request.Phone?.Trim();
