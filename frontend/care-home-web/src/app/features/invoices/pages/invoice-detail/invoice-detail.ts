@@ -246,6 +246,13 @@ export class InvoiceDetailPage implements OnInit {
     ];
   }
 
+  invoiceCategoryEditLink(inv: { invoiceCategoryId?: number }): string[] | null {
+    if (!inv.invoiceCategoryId) {
+      return null;
+    }
+    return ['/invoice-categories', String(inv.invoiceCategoryId), 'edit'];
+  }
+
   paymentsHandoffQueryParams(inv: {
     invoiceNumber?: string;
     publicId?: string;

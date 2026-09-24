@@ -28,6 +28,8 @@ import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 interface FundingContractView {
   id: number;
+  fundingAuthorityId: number;
+  fundingAuthorityPublicId?: string;
   fundingAuthorityName: string;
   invoiceCategoryName: string;
   nominalCode: string;
@@ -295,6 +297,20 @@ export class ClientProfilePage implements OnInit {
       return null;
     }
     return { contractId };
+  }
+
+  fundingAuthorityEditLink(contract: FundingContractView): string[] | null {
+    if (!contract.fundingAuthorityId) {
+      return null;
+    }
+    return [
+      '/funding-authorities',
+      entityRouteKey({
+        id: contract.fundingAuthorityId,
+        publicId: contract.fundingAuthorityPublicId,
+      }),
+      'edit',
+    ];
   }
 
   private suggestedBillingPeriod(): { start: string; end: string } {

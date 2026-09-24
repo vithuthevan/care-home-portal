@@ -499,6 +499,7 @@ public class FundingContractService(
             Id = x.Id,
             ClientId = x.ClientId,
             FundingAuthorityId = x.FundingAuthorityId,
+            FundingAuthorityPublicId = x.FundingAuthority.PublicId,
             FundingAuthorityName = x.FundingAuthority.Name,
             InvoiceCategoryId = x.InvoiceCategoryId,
             InvoiceCategoryName = x.InvoiceCategory.Name,

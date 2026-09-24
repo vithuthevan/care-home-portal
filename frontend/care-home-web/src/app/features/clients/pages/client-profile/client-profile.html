@@ -47,7 +47,13 @@
           <div class="funding-chain mt-4">
             <span class="funding-chain__step">{{ client.firstName }} {{ client.lastName }}</span>
             <span class="funding-chain__arrow" aria-hidden="true">↓</span>
-            <span class="funding-chain__step">{{ contract.fundingAuthorityName }}</span>
+            <span class="funding-chain__step">
+              @if (fundingAuthorityEditLink(contract); as faLink) {
+                <a [routerLink]="faLink">{{ contract.fundingAuthorityName }}</a>
+              } @else {
+                {{ contract.fundingAuthorityName }}
+              }
+            </span>
             <span class="funding-chain__arrow" aria-hidden="true">↓</span>
             <span class="funding-chain__step">{{ contract.invoiceCategoryName }}</span>
             @if (currentRate(); as rate) {
@@ -63,7 +69,13 @@
       <section class="panel funding-summary">
         <app-section-header title="Who pays?" subtitle="Funding authority and rate used for billing." />
         @if (primaryContract(); as contract) {
-          <p class="m-0 font-semibold">{{ contract.fundingAuthorityName }}</p>
+          <p class="m-0 font-semibold">
+            @if (fundingAuthorityEditLink(contract); as faLink) {
+              <a [routerLink]="faLink">{{ contract.fundingAuthorityName }}</a>
+            } @else {
+              {{ contract.fundingAuthorityName }}
+            }
+          </p>
           <p class="mt-1 mb-3 text-sm text-[var(--app-text-muted)]">
             {{ contract.invoiceCategoryName }} · Nominal {{ contract.nominalCode }}
           </p>
@@ -224,7 +236,13 @@
             <article class="contract-card">
               <div class="contract-card__head">
                 <div>
-                  <h3 class="contract-card__title">{{ contract.fundingAuthorityName }}</h3>
+                  <h3 class="contract-card__title">
+                    @if (fundingAuthorityEditLink(contract); as faLink) {
+                      <a [routerLink]="faLink">{{ contract.fundingAuthorityName }}</a>
+                    } @else {
+                      {{ contract.fundingAuthorityName }}
+                    }
+                  </h3>
                 </div>
                 <app-status-badge [value]="contract.status" />
               </div>

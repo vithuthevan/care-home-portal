@@ -73,6 +73,9 @@ export class CreditNoteWorkspacePage implements OnInit {
   readonly sourceInvoiceNumber = signal<string | null>(null);
   readonly sourceResidentName = signal<string | null>(null);
   readonly sourceClientReference = signal<string | null>(null);
+  readonly highlightedCreditNote = signal<{ creditNoteNumber: string; invoiceNumber?: string } | null>(
+    null,
+  );
 
   selectedClientId: number | null = null;
   periodStart = '';
@@ -267,6 +270,26 @@ export class CreditNoteWorkspacePage implements OnInit {
     const clientReference = params.get('clientReference')?.trim() || '';
     const periodStart = this.toDateInput(params.get('periodStart'));
     const periodEnd = this.toDateInput(params.get('periodEnd'));
+    const creditNoteId = Number(params.get('creditNoteId') || 0);
+
+    if (creditNoteId > 0) {
+      this.http.get<{ creditNoteNumber?: string; invoiceNumber?: string }>(`/api/credit-notes/${creditNoteId}`).subscribe({
+        next: (note) => {
+          this.highlightedCreditNote.set({
+            creditNoteNumber: note.creditNoteNumber ?? `#${creditNoteId}`,
+            invoiceNumber: note.invoiceNumber,
+          });
+          this.breadcrumbs.set([
+            { label: 'Billing', routerLink: '/billing' },
+            { label: 'Credit notes', routerLink: '/credit-notes' },
+            { label: note.creditNoteNumber ?? 'Credit note' },
+          ]);
+        },
+        error: () => this.highlightedCreditNote.set(null),
+      });
+    } else {
+      this.highlightedCreditNote.set(null);
+    }
 
     if (invoiceId > 0) {
       this.sourceInvoiceId.set(invoiceId);

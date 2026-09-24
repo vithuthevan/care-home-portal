@@ -28,6 +28,18 @@ interface DashboardBillingExceptionDto {
   message: string;
 }
 
+interface FinanceAttentionDto {
+  receivablesOverdue: number;
+  ageing90Plus: number;
+  unallocatedCash: number;
+  unmatchedRemittances: number;
+  contractsExpiringIn60Days: number;
+  potentialRevenueLeakage: number;
+  openDisputesAmount: number;
+  openDisputesCount: number;
+  residentsRequiringBillingReview: number;
+}
+
 interface DashboardDto {
   totalCareHomes: number;
   currentClients: number;
@@ -56,6 +68,9 @@ interface DashboardDto {
   }[];
   billingExceptions: DashboardBillingExceptionDto[];
   upcomingInvoices: {
+    careHomeId: number;
+    careHomePublicId: string;
+    companyPublicId: string;
     careHomeName: string;
     fundingAuthorityName: string;
     billingFrequency: string;
@@ -97,6 +112,7 @@ export class DashboardPage implements OnInit {
     : { report: 'outstanding' };
   private readonly router = inject(Router);
   readonly dashboard = signal<DashboardDto | null>(null);
+  readonly financeAttention = signal<FinanceAttentionDto | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly isLoading = signal(false);
   readonly today = new Date();
@@ -126,6 +142,26 @@ export class DashboardPage implements OnInit {
     }
     count += data.setupHints.length;
     count += data.billingExceptions.length;
+    const finance = this.financeAttention();
+    if (finance) {
+      if (finance.contractsExpiringIn60Days > 0) {
+        count += 1;
+      }
+      if (finance.residentsRequiringBillingReview > 0) {
+        count += 1;
+      }
+      if (this.commercialRevenueEnabled) {
+        if (finance.receivablesOverdue > 0) {
+          count += 1;
+        }
+        if (finance.unallocatedCash > 0) {
+          count += 1;
+        }
+        if (finance.openDisputesCount > 0) {
+          count += 1;
+        }
+      }
+    }
     return count;
   });
 
@@ -149,6 +185,10 @@ export class DashboardPage implements OnInit {
         error: (error) =>
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to load dashboard.')),
       });
+    this.http.get<FinanceAttentionDto>('/api/finance/attention').subscribe({
+      next: (data) => this.financeAttention.set(data),
+      error: () => this.financeAttention.set(null),
+    });
   }
 
   outstandingReceivablesValue(data: DashboardDto): string {
@@ -223,6 +263,21 @@ export class DashboardPage implements OnInit {
 
   invoiceDetailLink(row: DashboardDto['recentInvoices'][number]): string[] {
     return ['/invoices', entityRouteKey({ id: row.id, publicId: row.publicId })];
+  }
+
+  upcomingCareHomeDashboardLink(row: DashboardDto['upcomingInvoices'][number]): string[] {
+    return [
+      '/care-homes',
+      entityRouteKey({ id: row.careHomeId, publicId: row.careHomePublicId }),
+      'dashboard',
+    ];
+  }
+
+  upcomingBillingQueryParams(row: DashboardDto['upcomingInvoices'][number]): Record<string, string> {
+    return {
+      company: row.companyPublicId,
+      careHome: row.careHomePublicId,
+    };
   }
 
   billingMonthLabel(): string {

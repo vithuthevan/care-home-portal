@@ -6,7 +6,14 @@
 
   <app-api-error [message]="errorMessage()" />
   @if (info()) {
-    <div class="feedback-banner feedback-banner--success">{{ info() }}</div>
+    <div class="feedback-banner feedback-banner--success">
+      {{ info() }}
+      <div class="mt-2">
+        <a mat-flat-button color="primary" routerLink="/billing" [queryParams]="billingHandoffQueryParams()">
+          Review billing
+        </a>
+      </div>
+    </div>
   }
 
   @if (auth.canWrite()) {

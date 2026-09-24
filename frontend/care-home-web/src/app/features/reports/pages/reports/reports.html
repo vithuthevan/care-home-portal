@@ -117,8 +117,10 @@
                     {{ formatBoolean(row[key]) }}
                   } @else if (isPaymentStatus(key)) {
                     <app-labeled-status kind="Payment" [value]="row[key]" />
+                  } @else if (cellRoute(row, key); as route) {
+                    <a [routerLink]="route">{{ formatCellValue(row, key) }}</a>
                   } @else {
-                    {{ row[key] ?? '—' }}
+                    {{ formatCellValue(row, key) }}
                   }
                 </td>
               }

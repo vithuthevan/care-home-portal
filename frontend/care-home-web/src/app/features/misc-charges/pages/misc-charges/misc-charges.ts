@@ -1,5 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
 import { AuthService } from '../../../../core/auth.service';
@@ -15,6 +16,7 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 @Component({
   selector: 'app-misc-charges',
   imports: [
+    RouterLink,
     MatButtonModule,
     PageHeaderComponent,
     ApiErrorComponent,
@@ -27,7 +29,9 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 })
 export class MiscChargesPage implements OnInit {
   private readonly http = inject(HttpClient);
+  private readonly route = inject(ActivatedRoute);
   readonly auth = inject(AuthService);
+  readonly billingHandoffQueryParams = signal<Record<string, string>>({});
   readonly preview = signal<any | null>(null);
   readonly batches = signal<any[]>([]);
   readonly totalCount = signal(0);
@@ -37,6 +41,16 @@ export class MiscChargesPage implements OnInit {
   pageSize = 20;
 
   ngOnInit(): void {
+    this.route.queryParamMap.subscribe((params) => {
+      const handoff: Record<string, string> = {};
+      for (const key of ['company', 'careHome', 'periodStart', 'periodEnd'] as const) {
+        const value = params.get(key);
+        if (value) {
+          handoff[key] = value;
+        }
+      }
+      this.billingHandoffQueryParams.set(handoff);
+    });
     this.loadBatches();
   }
 
@@ -79,7 +93,8 @@ export class MiscChargesPage implements OnInit {
     this.errorMessage.set(null);
     this.http.post('/api/misc-charges/import/confirm', this.preview()).subscribe({
       next: () => {
-        this.info.set('Import committed.');
+        this.preview.set(null);
+        this.info.set('Import committed. Review billing to include these charges in the next run.');
         this.loadBatches();
       },
       error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Import failed.')),

@@ -121,7 +121,7 @@ export class AuditListPage implements OnInit {
     }
     switch (item.entityType) {
       case 'Invoice':
-        return ['/invoices', id];
+        return ['/invoices', id.split(',')[0] ?? id];
       case 'Client':
         return ['/clients', id];
       case 'CreditNote':
@@ -130,9 +130,35 @@ export class AuditListPage implements OnInit {
         return ['/companies', id];
       case 'CareHome':
         return ['/care-homes', id, 'dashboard'];
+      case 'FundingAuthority':
+        return ['/funding-authorities', id, 'edit'];
+      case 'InvoiceCategory':
+        return ['/invoice-categories', id, 'edit'];
+      case 'InvoiceTemplate':
+        return ['/invoice-templates', id, 'edit'];
+      case 'NominalCode':
+        return ['/nominal-codes', id, 'edit'];
+      case 'SageExport':
+        return ['/sage-exports'];
+      case 'Tenant':
+        return ['/settings/organisation'];
+      case 'User':
+        return ['/users'];
+      case 'Payment':
+        return ['/payments', id];
       default:
         return null;
     }
+  }
+
+  entityRouteQueryParams(item: {
+    entityType?: string;
+    entityId?: string | null;
+  }): Record<string, string> | null {
+    if (item.entityType === 'CreditNote' && item.entityId?.trim()) {
+      return { creditNoteId: item.entityId.trim() };
+    }
+    return null;
   }
 
   load(): void {

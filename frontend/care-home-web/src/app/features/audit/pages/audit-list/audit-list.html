@@ -76,7 +76,9 @@
                   </td>
                   <td>
                     @if (entityRoute(item); as link) {
-                      <a [routerLink]="link">{{ entityReference(item) }}</a>
+                      <a [routerLink]="link" [queryParams]="entityRouteQueryParams(item)">{{
+                        entityReference(item)
+                      }}</a>
                     } @else if (entityReference(item); as ref) {
                       {{ ref }}
                     } @else {

@@ -233,7 +233,13 @@
           </div>
           <div>
             <dt>Category</dt>
-            <dd>{{ inv.invoiceCategoryName }}</dd>
+            <dd>
+              @if (invoiceCategoryEditLink(inv); as categoryLink) {
+                <a [routerLink]="categoryLink">{{ inv.invoiceCategoryName }}</a>
+              } @else {
+                {{ inv.invoiceCategoryName }}
+              }
+            </dd>
           </div>
           <div>
             <dt>Care home</dt>

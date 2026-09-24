@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
+import { RouterLink } from '@angular/router';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
 import { AuthService } from '../../../../core/auth.service';
@@ -31,6 +32,7 @@ interface SageExportBatch {
   selector: 'app-sage-export',
   imports: [
     FormsModule,
+    RouterLink,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
@@ -79,6 +81,20 @@ export class SageExportPage implements OnInit {
       body['careHomeId'] = this.selectedCareHomeId;
     }
     return body;
+  }
+
+  invoicesInScopeQueryParams(): Record<string, string | number> {
+    const params: Record<string, string | number> = {};
+    if (this.dateFrom) {
+      params['from'] = this.dateFrom;
+    }
+    if (this.dateTo) {
+      params['to'] = this.dateTo;
+    }
+    if (this.selectedCareHomeId > 0) {
+      params['careHomeId'] = this.selectedCareHomeId;
+    }
+    return params;
   }
 
   isFileMissing(batch: SageExportBatch): boolean {

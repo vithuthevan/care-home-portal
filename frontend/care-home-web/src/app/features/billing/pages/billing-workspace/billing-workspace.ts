@@ -320,6 +320,74 @@ export class BillingWorkspacePage implements OnInit {
     return ['/clients', key, 'funding', 'new'];
   }
 
+  /** Query params to hand off billing scope to misc charges and back. */
+  billingScopeQueryParams(): Record<string, string> {
+    const params: Record<string, string> = {};
+    if (this.companyId) {
+      const company = this.companies().find((c) => c.id === this.companyId);
+      if (company) {
+        params['company'] = entityRouteKey(company);
+      }
+    }
+    if (this.careHomeId) {
+      const home = this.careHomes().find((h) => h.id === this.careHomeId);
+      if (home) {
+        params['careHome'] = entityRouteKey(home);
+      }
+    }
+    if (this.periodStart) {
+      params['periodStart'] = this.periodStart;
+    }
+    if (this.periodEnd) {
+      params['periodEnd'] = this.periodEnd;
+    }
+    return params;
+  }
+
+  exceptionSetupLink(item: BillingExceptionView): string[] | null {
+    const code = item.code;
+    if (code === 'MISSING_TEMPLATE') {
+      return ['/invoice-templates'];
+    }
+    if (code === 'MISSING_NOMINAL') {
+      return ['/nominal-codes'];
+    }
+    if (code === 'MISSING_CATEGORY') {
+      return ['/invoice-categories'];
+    }
+    const text = `${item.message ?? ''}`.toLowerCase();
+    if (text.includes('miscellaneous') || text.includes('misc charge')) {
+      return ['/misc-charges'];
+    }
+    if (text.includes('invoice template')) {
+      return ['/invoice-templates'];
+    }
+    if (text.includes('nominal')) {
+      return ['/nominal-codes'];
+    }
+    return null;
+  }
+
+  exceptionSetupActionLabel(item: BillingExceptionView): string {
+    const link = this.exceptionSetupLink(item);
+    if (!link) {
+      return 'Fix setup';
+    }
+    if (link[0] === '/misc-charges') {
+      return 'Import misc charges';
+    }
+    if (link[0] === '/invoice-templates') {
+      return 'Configure templates';
+    }
+    if (link[0] === '/nominal-codes') {
+      return 'Nominal codes';
+    }
+    if (link[0] === '/invoice-categories') {
+      return 'Invoice categories';
+    }
+    return 'Fix setup';
+  }
+
   isSingleResidentScope(): boolean {
     return this.selectedClientIds.length === 1;
   }

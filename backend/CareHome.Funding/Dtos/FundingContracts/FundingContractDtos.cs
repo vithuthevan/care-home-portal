@@ -8,6 +8,8 @@ namespace CareHome.Api.Dtos.FundingContracts
 
         public int FundingAuthorityId { get; set; }
 
+        public Guid FundingAuthorityPublicId { get; set; }
+
         public string FundingAuthorityName { get; set; } = string.Empty;
 
         public int InvoiceCategoryId { get; set; }

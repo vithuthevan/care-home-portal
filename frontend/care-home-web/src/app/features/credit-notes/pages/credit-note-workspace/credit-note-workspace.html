@@ -6,6 +6,15 @@
 
   <app-api-error [message]="errorMessage()" />
 
+  @if (highlightedCreditNote(); as highlighted) {
+    <div class="alert-banner alert-banner--info mb-4">
+      <strong>Credit note {{ highlighted.creditNoteNumber }}</strong>
+      @if (highlighted.invoiceNumber) {
+        <span> · Original invoice {{ highlighted.invoiceNumber }}</span>
+      }
+    </div>
+  }
+
   @if (sourceInvoiceNumber() || residentContextLabel() || sourcePeriodLabel()) {
     <div class="alert-banner alert-banner--info">
       @if (sourceInvoiceNumber()) {

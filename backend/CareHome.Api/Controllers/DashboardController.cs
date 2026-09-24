@@ -101,6 +101,9 @@ namespace CareHome.Api.Controllers
                 .Where(x => homes.Contains(x.Client.CareHomeId) && x.Status == "Active")
                 .Select(x => new UpcomingInvoiceDto
                 {
+                    CareHomeId = x.Client.CareHomeId,
+                    CareHomePublicId = x.Client.CareHome.PublicId,
+                    CompanyPublicId = x.Client.CareHome.Company.PublicId,
                     CareHomeName = x.Client.CareHome.Name,
                     FundingAuthorityName = x.FundingAuthority.Name,
                     BillingFrequency = x.FundingAuthority.BillingFrequency

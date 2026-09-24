@@ -26,6 +26,8 @@ namespace CareHome.Api.Services
                 .Where(x => homes.Contains(x.CareHomeId) && !x.IsArchived)
                 .Select(x => new CensusRowDto
                 {
+                    ClientPublicId = x.PublicId,
+                    CareHomePublicId = x.CareHome.PublicId,
                     ClientName = x.FirstName + " " + x.LastName,
                     ReferenceNumber = x.ReferenceNumber,
                     CareHomeName = x.CareHome.Name,
@@ -72,6 +74,8 @@ namespace CareHome.Api.Services
 
             return await query.Select(x => new CurrentRateRowDto
             {
+                ClientPublicId = x.ClientFundingContract.Client.PublicId,
+                CareHomePublicId = x.ClientFundingContract.Client.CareHome.PublicId,
                 CompanyName = x.ClientFundingContract.Client.CareHome.Company.Name,
                 CareHomeName = x.ClientFundingContract.Client.CareHome.Name,
                 ClientName = x.ClientFundingContract.Client.FirstName + " " + x.ClientFundingContract.Client.LastName,
@@ -109,8 +113,11 @@ namespace CareHome.Api.Services
 
             var rows = await query.Select(x => new
             {
+                x.Invoice.PublicId,
                 x.Invoice.InvoiceNumber,
                 x.Invoice.InvoiceDate,
+                ClientPublicId = x.Client.PublicId,
+                CareHomePublicId = x.Invoice.CareHome.PublicId,
                 x.SnapshotClientName,
                 x.SnapshotCareHomeName,
                 x.SnapshotInvoiceCategoryName,
@@ -124,6 +131,9 @@ namespace CareHome.Api.Services
 
             return rows.Select(x => new InvoiceReportRowDto
             {
+                InvoicePublicId = x.PublicId,
+                ClientPublicId = x.ClientPublicId,
+                CareHomePublicId = x.CareHomePublicId,
                 InvoiceNumber = x.InvoiceNumber,
                 InvoiceDate = x.InvoiceDate,
                 ClientName = x.SnapshotClientName,
@@ -188,6 +198,8 @@ namespace CareHome.Api.Services
                 .Where(x => homes.Contains(x.Id))
                 .Select(x => new OccupancyRowDto
                 {
+                    CareHomePublicId = x.PublicId,
+                    CompanyPublicId = x.Company.PublicId,
                     CareHomeName = x.Name,
                     CompanyName = x.Company.Name,
                     Capacity = x.BedCapacity,
@@ -210,6 +222,7 @@ namespace CareHome.Api.Services
 
             return await query.OrderBy(x => x.EffectiveFrom).Select(x => new RateHistoryRowDto
             {
+                ClientPublicId = x.ClientFundingContract.Client.PublicId,
                 ClientName = x.ClientFundingContract.Client.FirstName + " " + x.ClientFundingContract.Client.LastName,
                 FundingAuthority = x.ClientFundingContract.FundingAuthority.Name,
                 EffectiveFrom = x.EffectiveFrom,
@@ -230,6 +243,7 @@ namespace CareHome.Api.Services
                 .Take(500)
                 .Select(x => new BillingExceptionRowDto
                 {
+                    ClientPublicId = x.Client == null ? null : x.Client.PublicId,
                     LoggedAt = x.LoggedAt,
                     Severity = x.Severity,
                     Code = x.Code,
@@ -243,10 +257,17 @@ namespace CareHome.Api.Services
         {
             var query = new ReceivableInvoiceQuery { OpenReceivablesOnly = true, Page = 1, PageSize = 10_000 };
             var (items, _) = await receivables.ListInvoicesAsync(tenantId, query, cancellationToken);
+            var homeIds = items.Select(x => x.CareHomeId).Distinct().ToList();
+            var homePublicIds = await dbContext.CareHomes.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && homeIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.PublicId, cancellationToken);
+
             return items
                 .OrderBy(x => x.DueDate)
                 .Select(x => new OutstandingInvoiceRowDto
                 {
+                    InvoicePublicId = x.PublicId,
+                    CareHomePublicId = homePublicIds.GetValueOrDefault(x.CareHomeId),
                     InvoiceNumber = x.InvoiceNumber,
                     InvoiceDate = x.InvoiceDate,
                     DueDate = x.DueDate,

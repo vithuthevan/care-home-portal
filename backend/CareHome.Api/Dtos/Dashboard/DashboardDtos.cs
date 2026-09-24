@@ -77,6 +77,12 @@ namespace CareHome.Api.Dtos.Dashboard
 
     public class UpcomingInvoiceDto
     {
+        public int CareHomeId { get; set; }
+
+        public Guid CareHomePublicId { get; set; }
+
+        public Guid CompanyPublicId { get; set; }
+
         public string CareHomeName { get; set; } = string.Empty;
 
         public string FundingAuthorityName { get; set; } = string.Empty;

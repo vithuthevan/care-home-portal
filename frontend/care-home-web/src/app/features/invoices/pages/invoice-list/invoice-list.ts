@@ -77,6 +77,8 @@ export class InvoiceListPage implements OnInit {
   status = '';
   paymentStatus = '';
   filterCareHomeId = 0;
+  filterDateFrom = '';
+  filterDateTo = '';
   selected = new Set<number>();
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -96,6 +98,14 @@ export class InvoiceListPage implements OnInit {
       }
       const careHomeKey = params.get('careHome');
       const careHomeId = Number(params.get('careHomeId') || 0);
+      const from = params.get('from');
+      const to = params.get('to');
+      if (from) {
+        this.filterDateFrom = from.length >= 10 ? from.slice(0, 10) : from;
+      }
+      if (to) {
+        this.filterDateTo = to.length >= 10 ? to.slice(0, 10) : to;
+      }
       if (careHomeKey) {
         this.applyCareHomeFilterKey(careHomeKey);
       } else {
@@ -182,7 +192,14 @@ export class InvoiceListPage implements OnInit {
   }
 
   hasActiveFilters(): boolean {
-    return !!(this.invoiceNumber || this.status || this.paymentStatus || this.filterCareHomeId);
+    return !!(
+      this.invoiceNumber ||
+      this.status ||
+      this.paymentStatus ||
+      this.filterCareHomeId ||
+      this.filterDateFrom ||
+      this.filterDateTo
+    );
   }
 
   clearFilters(): void {
@@ -190,10 +207,14 @@ export class InvoiceListPage implements OnInit {
     this.status = '';
     this.paymentStatus = '';
     this.filterCareHomeId = 0;
+    this.filterDateFrom = '';
+    this.filterDateTo = '';
     this.page = 1;
     if (
       this.route.snapshot.queryParamMap.get('careHomeId') ||
-      this.route.snapshot.queryParamMap.get('careHome')
+      this.route.snapshot.queryParamMap.get('careHome') ||
+      this.route.snapshot.queryParamMap.get('from') ||
+      this.route.snapshot.queryParamMap.get('to')
     ) {
       void this.router.navigate(['/invoices']);
       return;
@@ -232,6 +253,8 @@ export class InvoiceListPage implements OnInit {
     if (this.status) params = params.set('status', this.status);
     if (this.paymentStatus) params = params.set('paymentStatus', this.paymentStatus);
     if (this.filterCareHomeId) params = params.set('careHomeId', this.filterCareHomeId);
+    if (this.filterDateFrom) params = params.set('from', this.filterDateFrom);
+    if (this.filterDateTo) params = params.set('to', this.filterDateTo);
     this.http
       .get<PagedResult<any>>('/api/invoices', { params })
       .pipe(finalize(() => this.isLoading.set(false)))

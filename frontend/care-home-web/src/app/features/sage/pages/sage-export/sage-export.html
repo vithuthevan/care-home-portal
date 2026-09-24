@@ -7,6 +7,13 @@
   @if (infoMessage(); as info) {
     <div class="alert-banner" [class.alert-banner--success]="info.tone === 'success'" [class.alert-banner--warning]="info.tone === 'warning'">
       {{ info.text }}
+      @if (dateFrom || dateTo) {
+        <div class="mt-2">
+          <a mat-stroked-button routerLink="/invoices" [queryParams]="invoicesInScopeQueryParams()">
+            View invoices in period
+          </a>
+        </div>
+      }
     </div>
   }
   <section class="panel mb-4">
@@ -55,6 +62,11 @@
   </section>
   @if (preview(); as preview) {
     <p>Ready to export {{ preview.eligibleCount }} · Blocked {{ preview.blockedCount }}</p>
+    @if (dateFrom || dateTo) {
+      <p class="text-sm">
+        <a routerLink="/invoices" [queryParams]="invoicesInScopeQueryParams()">View invoices in this period</a>
+      </p>
+    }
     @for (err of preview.errors; track err) {
       <app-api-error [message]="err" />
     }

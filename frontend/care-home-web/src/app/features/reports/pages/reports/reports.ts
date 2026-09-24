@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
@@ -60,6 +60,7 @@ const SHARED_COLUMN_LABELS: Record<string, string> = {
   selector: 'app-reports',
   imports: [
     FormsModule,
+    RouterLink,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
@@ -317,7 +318,49 @@ export class ReportsPage implements OnInit {
 
   keys(): string[] {
     const rows = this.rows();
-    return rows[0] ? Object.keys(rows[0]) : [];
+    if (!rows[0]) {
+      return [];
+    }
+    return Object.keys(rows[0]).filter((key) => !this.isHiddenColumn(key));
+  }
+
+  isHiddenColumn(key: string): boolean {
+    return key.endsWith('PublicId');
+  }
+
+  cellRoute(row: Record<string, unknown>, key: string): string[] | null {
+    const publicId = (value: unknown): string | null => {
+      if (value == null || value === '') {
+        return null;
+      }
+      return String(value);
+    };
+
+    if (key === 'invoiceNumber') {
+      const id = publicId(row['invoicePublicId']);
+      return id ? ['/invoices', id] : null;
+    }
+    if (key === 'clientName') {
+      const id = publicId(row['clientPublicId']);
+      return id ? ['/clients', id] : null;
+    }
+    if (key === 'careHomeName') {
+      const id = publicId(row['careHomePublicId']);
+      return id ? ['/care-homes', id, 'dashboard'] : null;
+    }
+    if (key === 'companyName') {
+      const id = publicId(row['companyPublicId']);
+      return id ? ['/companies', id] : null;
+    }
+    return null;
+  }
+
+  formatCellValue(row: Record<string, unknown>, key: string): string {
+    const value = row[key];
+    if (value == null || value === '') {
+      return '—';
+    }
+    return String(value);
   }
 
   columnLabel(key: string): string {
