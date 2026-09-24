@@ -1,4 +1,5 @@
 using CareHome.Api.Abstractions;
+using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.Invoices;
 using CareHome.Api.Receivables.Domain;
@@ -22,8 +23,15 @@ public sealed class InvoiceReceivableReadModel(
         var snapshots = await LoadSnapshotsAsync(tenantId, invoiceIds, cancellationToken);
         var asOf = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
+        var netBilled = await LoadNetBilledAmountsAsync(tenantId, invoiceIds, cancellationToken);
+
         foreach (var item in items)
         {
+            if (netBilled.TryGetValue(item.Id, out var net))
+            {
+                item.NetBilledAmount = net;
+            }
+
             if (!snapshots.TryGetValue(item.Id, out var snap))
             {
                 continue;
@@ -36,11 +44,46 @@ public sealed class InvoiceReceivableReadModel(
     public async Task EnrichDetailAsync(int tenantId, InvoiceDetailDto item, CancellationToken cancellationToken)
     {
         var snapshots = await LoadSnapshotsAsync(tenantId, [item.Id], cancellationToken);
+        var netBilled = await LoadNetBilledAmountsAsync(tenantId, [item.Id], cancellationToken);
+        if (netBilled.TryGetValue(item.Id, out var net))
+        {
+            item.NetBilledAmount = net;
+        }
+
         if (snapshots.TryGetValue(item.Id, out var snap))
         {
             var asOf = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
             Apply(item, snap, asOf);
         }
+    }
+
+    private async Task<Dictionary<int, decimal>> LoadNetBilledAmountsAsync(
+        int tenantId,
+        List<int> invoiceIds,
+        CancellationToken cancellationToken)
+    {
+        if (invoiceIds.Count == 0)
+        {
+            return new Dictionary<int, decimal>();
+        }
+
+        var lineParts = await dbContext.InvoiceLines.AsNoTracking()
+            .Where(l => l.Invoice.TenantId == tenantId && invoiceIds.Contains(l.InvoiceId))
+            .Select(l => new
+            {
+                l.InvoiceId,
+                l.LineAmount,
+                Credits = l.CreditNoteLines
+                    .Where(c => c.CreditNote.Status != CreditNoteStatuses.Void)
+                    .Sum(c => c.Amount)
+            })
+            .ToListAsync(cancellationToken);
+
+        return lineParts
+            .GroupBy(x => x.InvoiceId)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Sum(x => InvoiceLineNetAmount.FromParts(x.LineAmount, x.Credits)));
     }
 
     private static void Apply(InvoiceListDto item, InvoiceReceivableSnapshot snap, DateOnly asOf)

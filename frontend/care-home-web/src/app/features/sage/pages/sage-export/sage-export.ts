@@ -15,6 +15,9 @@ import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-but
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { CareHomeService } from '../../../care-homes/services/care-home.service';
+import { CareHomeLocation } from '../../../care-homes/models/care-home.model';
+import { MatSelectModule } from '@angular/material/select';
 
 interface SageExportBatch {
   id: number;
@@ -31,6 +34,7 @@ interface SageExportBatch {
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
+    MatSelectModule,
     PageHeaderComponent,
     ApiErrorComponent,
     IconActionButtonComponent,
@@ -42,9 +46,12 @@ interface SageExportBatch {
 export class SageExportPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly toast = inject(ToastService);
+  private readonly careHomeService = inject(CareHomeService);
   readonly auth = inject(AuthService);
   dateFrom = '';
   dateTo = '';
+  selectedCareHomeId = 0;
+  readonly careHomes = signal<CareHomeLocation[]>([]);
   readonly preview = signal<any | null>(null);
   readonly batches = signal<SageExportBatch[]>([]);
   readonly totalCount = signal(0);
@@ -58,6 +65,20 @@ export class SageExportPage implements OnInit {
 
   ngOnInit(): void {
     this.loadBatches();
+    this.careHomeService.getCareHomes().subscribe({
+      next: (items) => this.careHomes.set(items),
+    });
+  }
+
+  private exportBody(): Record<string, string | number> {
+    const body: Record<string, string | number> = {
+      dateFrom: this.dateFrom,
+      dateTo: this.dateTo,
+    };
+    if (this.selectedCareHomeId > 0) {
+      body['careHomeId'] = this.selectedCareHomeId;
+    }
+    return body;
   }
 
   isFileMissing(batch: SageExportBatch): boolean {
@@ -68,8 +89,8 @@ export class SageExportPage implements OnInit {
     return this.retryingId() === batch.id;
   }
 
-  invoiceExportLabel(_batch: SageExportBatch): string {
-    return 'Invoices exported';
+  invoiceExportLabel(batch: SageExportBatch): string {
+    return batch.status === 'FileMissing' ? 'Export recorded (file missing)' : 'Export recorded';
   }
 
   csvAvailabilityLabel(batch: SageExportBatch): string {
@@ -103,7 +124,7 @@ export class SageExportPage implements OnInit {
     this.infoMessage.set(null);
     this.isPreviewing.set(true);
     this.http
-      .post('/api/sage-exports/preview', { dateFrom: this.dateFrom, dateTo: this.dateTo })
+      .post('/api/sage-exports/preview', this.exportBody())
       .pipe(finalize(() => this.isPreviewing.set(false)))
       .subscribe({
         next: (preview) => this.preview.set(preview),
@@ -120,7 +141,7 @@ export class SageExportPage implements OnInit {
     this.infoMessage.set(null);
     this.isExporting.set(true);
     this.http
-      .post<SageExportBatch>('/api/sage-exports', { dateFrom: this.dateFrom, dateTo: this.dateTo })
+      .post<SageExportBatch>('/api/sage-exports', this.exportBody())
       .pipe(finalize(() => this.isExporting.set(false)))
       .subscribe({
         next: (batch) => {

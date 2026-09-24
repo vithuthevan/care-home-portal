@@ -17,13 +17,13 @@ Static review of the Angular app (`frontend/care-home-web`) and the .NET API (`b
 | # | Area | Finding | Severity | Fix Needed |
 |---|---|---|---|---|
 | 1 | Duplicate Add buttons | Header action is also rendered in the empty state, and on residents, care homes, and users it is rendered again in the filter bar. | Low (UX) | YES |
-| 2 | Optional email | Blank optional emails are posted as `""` and rejected by `[EmailAddress]`. | Medium | YES |
+| 2 | Optional email | Blank optional emails are posted as `""` and rejected by `[EmailAddress]`. | Medium | **Fixed** (`OptionalEmailAddress`, `optionalEmail()`, `NormalizeEmail`) |
 | 3 | Invoice header/footer | Header/footer text is snapshotted and printed on the PDF. On-screen preview does not show them. Email body templates are stored and unused. | Low–medium | YES (gaps only) |
 | 4 | Theme toggle | Control is inside the user menu, not beside the user chip. | Low (UX) | YES |
-| 5 | Sage nominal codes | Tenant-specific master data with no starter rows. Contracts and Sage export depend on them. | High (setup blocker) | YES |
-| 6 | Default sorting | Residents (and similar directories that should show recent records) are not newest-first. Document and reference lists already use a deliberate order. | Medium | YES (selective) |
-| 7 | Credit notes | Balance math is correct. Income reports, Sage export, partial credit UI, void, and invoice pinning are not. | High | YES |
-| 8 | Reports | All nine reports run real queries. Income figures ignore credit notes. Several API filters are not on the screen. | High | YES |
+| 5 | Sage nominal codes | Tenant-specific master data with no starter rows. Contracts and Sage export depend on them. | High (setup blocker) | **Fixed** (default codes 4000–4003 seeded per tenant) |
+| 6 | Default sorting | Residents (and similar directories that should show recent records) are not newest-first. Document and reference lists already use a deliberate order. | Medium | **Fixed** for residents (`OrderByDescending` by id) |
+| 7 | Credit notes | Balance math is correct. Income reports, Sage export, partial credit UI, void, and invoice pinning are not. | High | **Partial** (invoice `invoiceId` wiring, net in reports/Sage; partial/void UI still open) |
+| 8 | Reports | All nine reports run real queries. Income figures ignore credit notes. Several API filters are not on the screen. | High | **Partial** (net billed amounts; company/care home filters on screen for selected reports) |
 | 9 | Miscellaneous charges | Import → billing → invoice line → Sage snapshot is wired. No manual entry, no cancel, and credits do not unbill the charge. | Medium | YES (gaps) |
 
 ---
@@ -216,6 +216,8 @@ Keep it a toolbar icon button with an accessible name (“Switch to dark mode”
 
 ## Issue 5 — Sage Nominal Codes
 
+**Implementation update:** `DefaultNominalCodes` and `TenantNominalCodeSeeder` insert starter codes (4000–4003) on tenant provision and via startup backfill for existing tenants. Manual `/nominal-codes` CRUD remains available.
+
 **Classification:** missing reference data. The feature is implemented. New tenants are not given codes.
 
 ### Existing implementation
@@ -303,12 +305,14 @@ Report queries are separate. Resident census is ordered by home then name (corre
 
 ## Issue 7 — Credit Notes
 
+**Implementation update:** Credit note workspace posts `invoiceId` from invoice detail query params; `CreditNoteService` filters eligible lines by invoice when set. Invoice income reports, Sage CSV `NetAmount`, dashboard recent invoices, and invoice list/detail expose **net billed** after credits via `InvoiceLineNetAmount`. Partial amounts and void remain API-only without UI.
+
 **Classification:** mixed. Receivable maths and the “cannot exceed remaining” rule are correct. Reporting, Sage, void, partial entry, and invoice pinning are incomplete or inconsistent.
 
 ### Lifecycle
 
 1. Invoice detail links to `/credit-notes` with query params (`invoiceId`, invoice number, first line’s resident, period). The banner shows that context.
-2. `CreditNoteWorkspacePage.body()` posts `clientId`, period, reason, and `creditNoteDate` = period end. It does **not** post `invoiceId` or `lineAmounts`.
+2. `CreditNoteWorkspacePage.body()` posts `invoiceId` (when opened from an invoice), `clientId`, period, reason, and `creditNoteDate` = period end. It does **not** post `lineAmounts` from the UI (full remaining credit per line is still the default).
 3. `POST /api/credit-notes/preview` and `POST /api/credit-notes/generate` (`CreditNotesController`, `CreditNoteService`).
 4. Eligible lines are invoice lines in the tenant whose **service period overlaps** the requested period, excluding void invoices, optionally filtered by resident, authority, and category, and by the user’s care-home scope.
 5. If the match spans more than one invoice, generate is blocked.
@@ -382,11 +386,13 @@ There is no standalone credit note. `InvoiceId` is required. `CreditNoteStatuses
 
 ## Issue 8 — Reports
 
+**Implementation update:** Invoice-by-resident, invoice-by-care-home, and income-by-category amounts use net line totals after non-void credits. The reports screen sends optional `companyId` and `careHomeId` for census, current rates, occupancy, and invoices-by-care-home. Other API filters (`clientId`, funding authority, category, contract) are still not on the screen.
+
 **Classification:** fully wired queries with incomplete filters and one systematic credit-note omission. None of the nine are placeholders.
 
 Screen: `/reports` (`reports.html`, `reports.ts`). API: `GET /api/reports/{name}` (`ReportsController`). Policy: `CanViewFinancialReports`. Tenant comes from the request context. Care-home scope is applied in `ReportService.AllowedHomes` for reports that load homes.
 
-The screen always sends only `from` and `to`. It does not send `companyId`, `careHomeId`, `clientId`, `clientStatus`, `fundingAuthorityId`, `categoryId`, or `contractId`, even when the API accepts them. CSV, Excel, and PDF export use the same query. PDF export is a text dump, not the invoice PDF.
+The screen sends `from`, `to`, and (for supported reports) `companyId` and/or `careHomeId`. It does not send `clientId`, `clientStatus`, `fundingAuthorityId`, `categoryId`, or `contractId`, even when the API accepts them. CSV, Excel, and PDF export use the same query. PDF export is a text dump, not the invoice PDF.
 
 Date filters on invoice reports use **invoice date**, not service period and not `CreatedAt`.
 
@@ -394,9 +400,9 @@ Date filters on invoice reports use **invoice date**, not service period and not
 
 | Report | Credits |
 |---|---|
-| Invoices by resident | Ignored. Row amount is `InvoiceLine.LineAmount` |
-| Invoices by care home | Ignored. Same rows, then filtered by care-home **name** |
-| Income by category | Ignored. Sum of line amounts |
+| Invoices by resident | **Net billed** (`LineAmount` + non-void credit note lines) |
+| Invoices by care home | **Net billed**. Same rows, then filtered by care-home **name** |
+| Income by category | **Net billed**. Sum of net line amounts by category |
 | Outstanding | Subtracted. Amount is receivable outstanding (gross − credits − payments) |
 | All other reports | Not financial documents; credits do not apply |
 

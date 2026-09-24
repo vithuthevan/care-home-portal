@@ -41,6 +41,9 @@ namespace CareHome.Api.Dtos.Invoices
 
         public decimal TotalAmount { get; set; }
 
+        /// <summary>Sum of net line amounts after non-void credits; aligns with reports and Sage export.</summary>
+        public decimal NetBilledAmount { get; set; }
+
         public DateTimeOffset? SentAt { get; set; }
     }
 

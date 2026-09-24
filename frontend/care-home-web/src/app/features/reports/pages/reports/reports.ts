@@ -20,6 +20,10 @@ import { DisplayDateTimePipe } from '../../../../shared/format/display-date-time
 import { CurrencyDisplayComponent } from '../../../../shared/ui/currency-display';
 import { LabeledStatusComponent } from '../../../../shared/ui/labeled-status';
 import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
+import { CompanyService } from '../../../companies/services/company.service';
+import { CareHomeService } from '../../../care-homes/services/care-home.service';
+import { Company } from '../../../companies/models/company.model';
+import { CareHomeLocation } from '../../../care-homes/models/care-home.model';
 
 const SHARED_COLUMN_LABELS: Record<string, string> = {
   clientName: 'Resident',
@@ -77,9 +81,15 @@ const SHARED_COLUMN_LABELS: Record<string, string> = {
 export class ReportsPage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
+  private readonly companyService = inject(CompanyService);
+  private readonly careHomeService = inject(CareHomeService);
   report = 'client-census';
   from = '';
   to = '';
+  selectedCompanyId = 0;
+  selectedCareHomeId = 0;
+  readonly companies = signal<Company[]>([]);
+  readonly careHomes = signal<CareHomeLocation[]>([]);
   readonly rows = signal<any[]>([]);
   readonly errorMessage = signal<string | null>(null);
   readonly hasRun = signal(false);
@@ -99,6 +109,38 @@ export class ReportsPage implements OnInit {
     if (to) {
       this.to = to.length >= 10 ? to.slice(0, 10) : to;
     }
+
+    this.companyService.getCompanies().subscribe({
+      next: (items) => this.companies.set(items),
+    });
+    this.careHomeService.getCareHomes().subscribe({
+      next: (items) => this.careHomes.set(items),
+    });
+  }
+
+  showCompanyFilter(): boolean {
+    return ['client-census', 'current-rates', 'occupancy'].includes(this.report);
+  }
+
+  showCareHomeFilter(): boolean {
+    return ['client-census', 'current-rates', 'invoices-by-care-home'].includes(this.report);
+  }
+
+  private reportParams(): HttpParams {
+    let params = new HttpParams();
+    if (this.from) {
+      params = params.set('from', this.from);
+    }
+    if (this.to) {
+      params = params.set('to', this.to);
+    }
+    if (this.showCompanyFilter() && this.selectedCompanyId > 0) {
+      params = params.set('companyId', this.selectedCompanyId);
+    }
+    if (this.showCareHomeFilter() && this.selectedCareHomeId > 0) {
+      params = params.set('careHomeId', this.selectedCareHomeId);
+    }
+    return params;
   }
 
   private readonly reportMeta: Record<string, { title: string; description: string }> = {
@@ -233,14 +275,18 @@ export class ReportsPage implements OnInit {
   onReportChange(): void {
     this.rows.set([]);
     this.hasRun.set(false);
+    if (!this.showCompanyFilter()) {
+      this.selectedCompanyId = 0;
+    }
+    if (!this.showCareHomeFilter()) {
+      this.selectedCareHomeId = 0;
+    }
   }
 
   load(): void {
     this.errorMessage.set(null);
     this.isLoading.set(true);
-    let params = new HttpParams();
-    if (this.from) params = params.set('from', this.from);
-    if (this.to) params = params.set('to', this.to);
+    const params = this.reportParams();
     this.http
       .get<any[]>(`/api/reports/${this.report}`, { params })
       .pipe(finalize(() => this.isLoading.set(false)))
@@ -257,9 +303,7 @@ export class ReportsPage implements OnInit {
     if (this.isLoading()) {
       return;
     }
-    let params = new HttpParams().set('format', format);
-    if (this.from) params = params.set('from', this.from);
-    if (this.to) params = params.set('to', this.to);
+    let params = this.reportParams().set('format', format);
     this.http
       .get(`/api/reports/${this.report}`, { params, responseType: 'blob' })
       .subscribe((blob) => {

@@ -34,7 +34,14 @@
       <div class="invoice-hero__main">
         <div class="invoice-hero__title-row">
           <h2 id="invoice-hero-title" class="invoice-hero__number m-0">{{ inv.invoiceNumber }}</h2>
-          <p class="m-0 amount-hero invoice-hero__total">£{{ inv.totalAmount | number: '1.2-2' }}</p>
+          <p class="m-0 amount-hero invoice-hero__total">
+            £{{ (inv.netBilledAmount ?? inv.totalAmount) | number: '1.2-2' }}
+          </p>
+          @if (inv.netBilledAmount != null && inv.netBilledAmount !== inv.totalAmount) {
+            <p class="m-0 text-sm text-[var(--app-text-muted)]">
+              Original invoice total £{{ inv.totalAmount | number: '1.2-2' }}
+            </p>
+          }
         </div>
         <div class="invoice-hero__statuses">
           <app-labeled-status kind="Invoice" [value]="inv.status" />

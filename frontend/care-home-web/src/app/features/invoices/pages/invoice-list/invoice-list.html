@@ -95,7 +95,7 @@
                 <th class="col-hide-sm">Funding</th>
                 <th>Status</th>
                 <th>Payment status</th>
-                <th class="num">Total</th>
+                <th class="num">Net billed</th>
               </tr>
             </thead>
             <tbody>
@@ -123,7 +123,7 @@
                       <app-status-badge value="Due" class="ml-1" />
                     }
                   </td>
-                  <td class="num">£{{ item.totalAmount | number: '1.2-2' }}</td>
+                  <td class="num">£{{ (item.netBilledAmount ?? item.totalAmount) | number: '1.2-2' }}</td>
                 </tr>
               }
             </tbody>
@@ -168,8 +168,8 @@
             <span>{{ formatPeriod(item) }}</span>
           </div>
           <div class="mobile-data-card__row">
-            <span class="mobile-data-card__label">Total</span>
-            <span class="amount-lg">£{{ item.totalAmount | number: '1.2-2' }}</span>
+            <span class="mobile-data-card__label">Net billed</span>
+            <span class="amount-lg">£{{ (item.netBilledAmount ?? item.totalAmount) | number: '1.2-2' }}</span>
           </div>
           <div class="mobile-data-card__row">
             <span class="mobile-data-card__label">Care home</span>

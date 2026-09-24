@@ -15,9 +15,18 @@
       Invoice export, the export batch, and whether the CSV file is available are separate.
       If the file is missing, invoices remain exported — use Retry CSV to regenerate the file.
     </p>
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
       <app-date-field label="Date from" [(ngModel)]="dateFrom" />
       <app-date-field label="Date to" [(ngModel)]="dateTo" />
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Care home</mat-label>
+        <mat-select [(ngModel)]="selectedCareHomeId">
+          <mat-option [value]="0">All care homes</mat-option>
+          @for (home of careHomes(); track home.id) {
+            <mat-option [value]="home.id">{{ home.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
       <div class="flex flex-wrap items-center gap-2">
         <button mat-stroked-button type="button" (click)="runPreview()" [disabled]="isPreviewing()">
           @if (isPreviewing()) {
@@ -64,7 +73,7 @@
             <th>File</th>
             <th>Export</th>
             <th>CSV file</th>
-            <th class="num">Records</th>
+            <th class="num">CSV rows</th>
             <th class="col-actions">Actions</th>
           </tr>
         </thead>

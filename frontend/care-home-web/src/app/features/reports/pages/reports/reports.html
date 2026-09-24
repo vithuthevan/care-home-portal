@@ -25,6 +25,28 @@
         </mat-form-field>
         <app-date-field label="From" [(ngModel)]="from" />
         <app-date-field label="To" [(ngModel)]="to" />
+        @if (showCompanyFilter()) {
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Company</mat-label>
+            <mat-select [(ngModel)]="selectedCompanyId">
+              <mat-option [value]="0">All companies</mat-option>
+              @for (company of companies(); track company.id) {
+                <mat-option [value]="company.id">{{ company.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+        @if (showCareHomeFilter()) {
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Care home</mat-label>
+            <mat-select [(ngModel)]="selectedCareHomeId">
+              <mat-option [value]="0">All care homes</mat-option>
+              @for (home of careHomes(); track home.id) {
+                <mat-option [value]="home.id">{{ home.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
       </div>
       <div filterActions>
         <button
