@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Mail;
+using CareHome.Api.Telemetry;
 using Microsoft.Extensions.Options;
 
 namespace CareHome.Api.Email;
@@ -101,6 +102,7 @@ public class ConfigurableEmailSender(
                 _options.Smtp.Password,
                 _options.Smtp.User);
 
+            CareHomeTelemetry.EmailSendFailures.Add(1);
             logger.LogError(
                 ex,
                 "SMTP send failed for {Recipient}. {Summary} Detail={Detail}",

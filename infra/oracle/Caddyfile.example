@@ -1,0 +1,11 @@
+# Install Caddy on the VM, copy to /etc/caddy/Caddyfile, set your domain and email.
+# API container listens on 127.0.0.1:8080 (docker-compose.prod.yml).
+
+{
+	email you@example.com
+}
+
+carehome.example.com {
+	encode gzip
+	reverse_proxy 127.0.0.1:8080
+}

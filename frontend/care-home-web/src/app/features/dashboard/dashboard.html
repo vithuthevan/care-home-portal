@@ -1,261 +1,384 @@
-<div class="page">
-  <app-page-header
-    title="Dashboard"
-    subtitle="Operational and financial overview for your organisation."
-  >
-    <span class="text-sm text-[var(--app-text-muted)]">{{ today | date: 'd MMM y' }}</span>
+<div class="page dashboard-page">
+  <app-page-header title="Operations centre" subtitle="">
+    @if (auth.canWrite()) {
+      <a mat-flat-button color="primary" routerLink="/billing">Start billing</a>
+    }
   </app-page-header>
 
-  <app-api-error [message]="errorMessage()" />
+  <p class="dashboard-context">{{ contextLine() }}</p>
+  <p class="dashboard-lead">What needs attention today.</p>
 
-  @if (isLoading()) {
+  @if (errorMessage()) {
+    <div class="dashboard-error-row">
+      <app-api-error [message]="errorMessage()" />
+      <button mat-stroked-button type="button" (click)="load()" [disabled]="isLoading()">
+        Retry
+      </button>
+    </div>
+  }
+
+  @if (isLoading() && !dashboard()) {
     <app-loading-state label="Loading dashboard..." />
   }
 
   @if (dashboard(); as data) {
-    <section class="dashboard-section">
-      <h2 class="dashboard-section__title">What should I do next?</h2>
-      <div class="panel actions-bar actions-bar--primary-first">
-        @if (auth.canWrite()) {
-          <a mat-flat-button color="primary" routerLink="/clients/new">Add resident</a>
-        }
-        <a mat-stroked-button routerLink="/billing">Start billing</a>
-        <a mat-stroked-button routerLink="/invoices">View invoices</a>
-        <a mat-stroked-button routerLink="/reports" [queryParams]="{ report: 'outstanding' }"
-          >Outstanding report</a
-        >
+    <section class="dashboard-section" aria-labelledby="dashboard-operations-heading">
+      <h2 id="dashboard-operations-heading" class="dashboard-section__title">Operations</h2>
+      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <app-kpi-card
+          label="Care homes"
+          [value]="data.totalCareHomes"
+          hint="Locations in scope"
+          icon="home_work"
+          tone="info"
+          routerLink="/care-homes"
+        />
+        <app-kpi-card
+          label="Current residents"
+          [value]="data.currentClients"
+          hint="Active placements"
+          icon="groups"
+          tone="success"
+          routerLink="/clients"
+        />
+        <app-kpi-card
+          label="Available beds"
+          [value]="data.availableBeds"
+          hint="Capacity remaining"
+          icon="hotel"
+          tone="info"
+        />
       </div>
     </section>
 
-    <section class="dashboard-section">
-      <h2 class="dashboard-section__title">Operations</h2>
+    <section class="dashboard-section" aria-labelledby="dashboard-finance-heading">
+      <h2 id="dashboard-finance-heading" class="dashboard-section__title">Finance</h2>
       <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div class="panel kpi-card">
-          <div class="kpi-icon"><mat-icon>home_work</mat-icon></div>
-          <div>
-            <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Care homes</h3>
-            <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.totalCareHomes }}</p>
-            <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">Locations in scope</p>
-          </div>
-        </div>
-        <a routerLink="/clients" class="panel kpi-card kpi-card--link no-underline">
-          <div class="kpi-icon"><mat-icon>groups</mat-icon></div>
-          <div>
-            <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Current residents</h3>
-            <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.currentClients }}</p>
-            <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">View residents</p>
-          </div>
-        </a>
-        <div class="panel kpi-card">
-          <div class="kpi-icon"><mat-icon>hotel</mat-icon></div>
-          <div>
-            <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Available beds</h3>
-            <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.availableBeds }}</p>
-            <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">Capacity remaining</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="dashboard-section">
-      <h2 class="dashboard-section__title">Finance</h2>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <a
+        <app-kpi-card
+          [label]="commercialRevenueEnabled ? 'Outstanding receivables' : 'Outstanding invoices'"
+          [value]="outstandingReceivablesValue(data)"
+          [hint]="outstandingReceivablesHint(data)"
+          icon="request_quote"
+          tone="attention"
+          [routerLink]="outstandingKpiLink"
+          [queryParams]="outstandingKpiQueryParams"
+        />
+        <app-kpi-card
+          label="Generated invoices"
+          [value]="data.invoicesGenerated"
+          [hint]="invoicesGeneratedHint()"
+          icon="receipt_long"
+          tone="finance"
           routerLink="/invoices"
-          [queryParams]="{ paymentStatus: 'NotPaid' }"
-          class="panel kpi-card kpi-card--link no-underline"
-        >
-          <div class="kpi-icon"><mat-icon>request_quote</mat-icon></div>
-          <div>
-            <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Outstanding invoices</h3>
-            <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.outstandingInvoices }}</p>
-            <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">
-              £{{ data.outstandingAmount | number: '1.2-2' }} unpaid — view list
-            </p>
-          </div>
-        </a>
-        <a routerLink="/invoices" class="panel kpi-card kpi-card--link no-underline">
-          <div class="kpi-icon"><mat-icon>receipt_long</mat-icon></div>
-          <div>
-            <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Generated invoices</h3>
-            <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.invoicesGenerated }}</p>
-            <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">View invoice list</p>
-          </div>
-        </a>
-        <div class="panel kpi-card">
-          <div class="kpi-icon"><mat-icon>event</mat-icon></div>
-          <div>
-            <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Upcoming billing</h3>
-            <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.upcomingBillingCount }}</p>
-            <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">Periods approaching</p>
-          </div>
-        </div>
+        />
+        <app-kpi-card
+          label="Upcoming billing"
+          [value]="data.upcomingBillingCount"
+          hint="Active funding arrangements"
+          icon="event"
+          tone="finance"
+          routerLink="/billing"
+        />
       </div>
     </section>
 
-    @if (
-      data.billingExceptions.length ||
-      data.setupHints.length ||
-      data.outstandingInvoices > 0
-    ) {
-      <section class="dashboard-section" id="attention">
-        <h2 class="dashboard-section__title">Attention needed</h2>
-        <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          @if (data.outstandingInvoices > 0) {
-            <div class="panel">
-              <h3 class="mt-0 text-section">Unpaid invoices</h3>
-              <p class="text-sm text-[var(--app-text-muted)]">
-                {{ data.outstandingInvoices }} invoice(s) totalling £{{
-                  data.outstandingAmount | number: '1.2-2'
-                }}
-                are marked not paid.
+    <section class="dashboard-section" id="attention" aria-labelledby="dashboard-attention-heading">
+      <h2 id="dashboard-attention-heading" class="dashboard-section__title">Attention needed</h2>
+      <div class="attention-queue">
+        @if (data.outstandingInvoices > 0) {
+          <div class="attention-queue__item">
+            <span class="attention-queue__dot attention-queue__dot--warning" aria-hidden="true"></span>
+            <div class="attention-queue__content">
+              <span class="attention-queue__title">Outstanding invoices</span>
+              <p class="attention-queue__detail">
+                {{ data.outstandingInvoices }} invoice{{ data.outstandingInvoices === 1 ? '' : 's' }}
+                require attention · £{{ data.outstandingAmount | number: '1.2-2' }} outstanding.
               </p>
               <a
-                class="mt-3 inline-block text-sm font-medium"
-                routerLink="/reports"
-                [queryParams]="{ report: 'outstanding' }"
-                >Run outstanding report</a
+                class="attention-queue__action"
+                routerLink="/invoices"
+                [queryParams]="{ paymentStatus: 'NotPaid' }"
+                >View invoices</a
               >
             </div>
+          </div>
+        }
+
+        @for (item of data.setupHints; track item) {
+          <div class="attention-queue__item">
+            <span class="attention-queue__dot attention-queue__dot--warning" aria-hidden="true"></span>
+            <div class="attention-queue__content">
+              <span class="attention-queue__title">{{ setupHintTitle(item) }}</span>
+              <p class="attention-queue__detail">{{ item }}</p>
+              @if (setupHintAction(item); as action) {
+                <a class="attention-queue__action" [routerLink]="action.link">{{ action.label }}</a>
+              }
+            </div>
+          </div>
+        }
+
+        @for (item of data.billingExceptions; track item.code + item.message) {
+          <div class="attention-queue__item">
+            <span class="attention-queue__dot attention-queue__dot--danger" aria-hidden="true"></span>
+            <div class="attention-queue__content">
+              <span class="attention-queue__title">{{ exceptionTitle(item) }}</span>
+              <p class="attention-queue__detail">{{ exceptionDetail(item) }}</p>
+              <a class="attention-queue__action" routerLink="/billing">Review billing</a>
+            </div>
+          </div>
+        }
+
+        @if (financeAttention(); as finance) {
+          @if (finance.contractsExpiringIn60Days > 0) {
+            <div class="attention-queue__item">
+              <span class="attention-queue__dot attention-queue__dot--warning" aria-hidden="true"></span>
+              <div class="attention-queue__content">
+                <span class="attention-queue__title">Funding contracts expiring</span>
+                <p class="attention-queue__detail">
+                  {{ finance.contractsExpiringIn60Days }} active
+                  {{ finance.contractsExpiringIn60Days === 1 ? 'contract' : 'contracts' }} end within 60 days.
+                </p>
+                <a class="attention-queue__action" routerLink="/clients">Review residents</a>
+              </div>
+            </div>
           }
-          <div class="panel" id="setup-checklist">
-            <h3 class="mt-0 text-section">Setup checklist</h3>
-            <ul class="m-0 list-none p-0 text-sm">
-              @for (item of data.setupHints; track item) {
-                <li class="mb-3 flex gap-2">
-                  <span
-                    class="mt-1 inline-block h-2 w-2 rounded-full bg-[var(--app-warning)]"
-                    aria-hidden="true"
-                  ></span>
-                  <span>{{ item }}</span>
-                </li>
-              } @empty {
-                <li class="flex gap-2 text-[var(--app-success)]">
-                  <span
-                    class="mt-1 inline-block h-2 w-2 rounded-full bg-[var(--app-success)]"
-                    aria-hidden="true"
-                  ></span>
-                  Organisation setup looks complete.
-                </li>
-              }
-            </ul>
+          @if (finance.residentsRequiringBillingReview > 0) {
+            <div class="attention-queue__item">
+              <span class="attention-queue__dot attention-queue__dot--warning" aria-hidden="true"></span>
+              <div class="attention-queue__content">
+                <span class="attention-queue__title">Billing review suggested</span>
+                <p class="attention-queue__detail">
+                  {{ finance.residentsRequiringBillingReview }}
+                  {{ finance.residentsRequiringBillingReview === 1 ? 'resident may' : 'residents may' }}
+                  need billing attention.
+                </p>
+                <a class="attention-queue__action" routerLink="/billing">Review billing</a>
+              </div>
+            </div>
+          }
+          @if (commercialRevenueEnabled) {
+            @if (finance.receivablesOverdue > 0) {
+              <div class="attention-queue__item">
+                <span class="attention-queue__dot attention-queue__dot--warning" aria-hidden="true"></span>
+                <div class="attention-queue__content">
+                  <span class="attention-queue__title">Overdue receivables</span>
+                  <p class="attention-queue__detail">
+                    £{{ finance.receivablesOverdue | number: '1.2-2' }} overdue on open invoices.
+                  </p>
+                  <a class="attention-queue__action" routerLink="/receivables">Open receivables</a>
+                </div>
+              </div>
+            }
+            @if (finance.unallocatedCash > 0) {
+              <div class="attention-queue__item">
+                <span class="attention-queue__dot attention-queue__dot--warning" aria-hidden="true"></span>
+                <div class="attention-queue__content">
+                  <span class="attention-queue__title">Unallocated cash</span>
+                  <p class="attention-queue__detail">
+                    £{{ finance.unallocatedCash | number: '1.2-2' }} recorded on payments without full allocation.
+                  </p>
+                  <a class="attention-queue__action" routerLink="/payments">Open payments</a>
+                </div>
+              </div>
+            }
+            @if (finance.openDisputesCount > 0) {
+              <div class="attention-queue__item">
+                <span class="attention-queue__dot attention-queue__dot--danger" aria-hidden="true"></span>
+                <div class="attention-queue__content">
+                  <span class="attention-queue__title">Open disputes</span>
+                  <p class="attention-queue__detail">
+                    {{ finance.openDisputesCount }} open
+                    {{ finance.openDisputesCount === 1 ? 'dispute' : 'disputes' }} · £{{
+                      finance.openDisputesAmount | number: '1.2-2'
+                    }}
+                    disputed.
+                  </p>
+                  <a class="attention-queue__action" routerLink="/disputes">Review disputes</a>
+                </div>
+              </div>
+            }
+          }
+        }
+
+        @if (attentionCount() === 0) {
+          <div class="attention-queue__item">
+            <span class="attention-queue__dot attention-queue__dot--success" aria-hidden="true"></span>
+            <div class="attention-queue__content">
+              <span class="attention-queue__title">Everything looks up to date</span>
+              <p class="attention-queue__detail">No unpaid invoices or setup issues need action right now.</p>
+            </div>
           </div>
-          <div class="panel xl:col-span-2">
-            <h3 class="mt-0 text-section">Billing exceptions</h3>
-            <ul class="m-0 list-none p-0 text-sm">
-              @for (item of data.billingExceptions; track item) {
-                <li class="mb-3 flex gap-2">
-                  <span
-                    class="mt-1 inline-block h-2 w-2 rounded-full bg-[var(--app-danger)]"
-                    aria-hidden="true"
-                  ></span>
-                  <span>{{ item }}</span>
-                </li>
-              } @empty {
-                <li class="text-[var(--app-text-muted)]">No billing exceptions reported.</li>
-              }
-            </ul>
-          </div>
+        }
+      </div>
+    </section>
+
+    <section class="dashboard-section" aria-labelledby="dashboard-billing-heading">
+      <h2 id="dashboard-billing-heading" class="dashboard-section__title">{{ billingMonthLabel() }}</h2>
+      <div class="panel dashboard-billing-panel">
+        <div class="dashboard-billing-panel__copy">
+          <h3 class="dashboard-billing-panel__title">Prepare your next billing run</h3>
+          <p class="dashboard-billing-panel__text">
+            Use the billing workspace to preview who is billable and resolve any exceptions before you generate
+            invoices.
+          </p>
+          @if (data.upcomingBillingCount > 0) {
+            <p class="dashboard-billing-panel__stat">
+              {{ data.upcomingBillingCount }} active funding
+              {{ data.upcomingBillingCount === 1 ? 'arrangement' : 'arrangements' }} in scope
+            </p>
+          }
         </div>
-      </section>
-    }
-
-    <section class="dashboard-section">
-      <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <section class="panel xl:col-span-2">
-          <div class="mb-4 flex items-center justify-between gap-3">
-            <h2 class="m-0 text-section">Recent invoices</h2>
-            <a mat-stroked-button routerLink="/invoices">View all</a>
-          </div>
-          <div class="table-container table-container--sticky">
-            <table class="data-table data-table--responsive-hide-sm">
-              <thead>
-                <tr>
-                  <th>Number</th>
-                  <th class="col-hide-sm">Home</th>
-                  <th class="num">Amount</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (row of data.recentInvoices; track row.id) {
-                  <tr class="row-clickable" [routerLink]="['/invoices', row.id]">
-                    <td class="font-medium">{{ row.invoiceNumber }}</td>
-                    <td class="col-hide-sm">{{ row.careHomeName }}</td>
-                    <td class="num">£{{ row.totalAmount | number: '1.2-2' }}</td>
-                    <td><app-status-badge [value]="row.status" /></td>
-                  </tr>
-                } @empty {
-                  <tr>
-                    <td colspan="4" class="text-[var(--app-text-muted)]">No recent invoices.</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section class="panel">
-          <h2 class="mt-0 mb-3 text-section">Upcoming billing</h2>
-          <div class="table-container">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Home</th>
-                  <th>Authority</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (
-                  row of data.upcomingInvoices;
-                  track row.careHomeName + row.fundingAuthorityName
-                ) {
-                  <tr>
-                    <td>{{ row.careHomeName }}</td>
-                    <td>{{ row.fundingAuthorityName }}</td>
-                  </tr>
-                } @empty {
-                  <tr>
-                    <td colspan="2" class="text-[var(--app-text-muted)]">Nothing scheduled.</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </section>
+        <a mat-stroked-button routerLink="/billing">Review billing</a>
       </div>
     </section>
 
     <section class="dashboard-section">
-      <h2 class="dashboard-section__title">Occupancy by home</h2>
-      <section class="panel">
-        <div class="table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Home</th>
-                <th class="num">Occupied</th>
-                <th class="num">Capacity</th>
-                <th class="num">Available</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of data.occupancyByHome; track row.careHomeId) {
-                <tr>
-                  <td>{{ row.careHomeName }}</td>
-                  <td class="num">{{ row.occupied }}</td>
-                  <td class="num">{{ row.capacity }}</td>
-                  <td class="num">{{ row.available }}</td>
-                  <td>
-                    <a [routerLink]="['/care-homes', row.careHomeId, 'dashboard']">Open</a>
-                  </td>
-                </tr>
+      <div class="grid grid-cols-1 gap-4 dashboard-main-grid xl:grid-cols-3">
+        <section class="panel xl:col-span-2" aria-labelledby="dashboard-recent-invoices-heading">
+          <app-section-header title="Recent invoices">
+            <a mat-stroked-button routerLink="/invoices">View all</a>
+          </app-section-header>
+
+          @if (data.recentInvoices.length) {
+            <div class="table-container table-container--sticky">
+              <table class="data-table data-table--responsive-hide-sm data-table--dashboard-invoices">
+                <thead>
+                  <tr>
+                    <th>Invoice</th>
+                    <th class="col-hide-sm">Home</th>
+                    <th class="num">Net billed</th>
+                    <th>Status</th>
+                    <th class="col-hide-sm">Payment</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of data.recentInvoices; track row.publicId || row.id) {
+                    <tr>
+                      <td>
+                        <a class="invoice-link" [routerLink]="invoiceDetailLink(row)">{{ row.invoiceNumber }}</a>
+                      </td>
+                      <td class="col-hide-sm">{{ row.careHomeName }}</td>
+                      <td class="num">£{{ (row.netBilledAmount ?? row.totalAmount) | number: '1.2-2' }}</td>
+                      <td><app-status-badge [value]="row.status" /></td>
+                      <td class="col-hide-sm">
+                        <app-labeled-status kind="Payment" [value]="row.paymentStatus" />
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <app-empty-state
+              class="dashboard-invoices-empty"
+              title="No invoices yet"
+              message="Once billing is generated, recent invoices will appear here."
+            >
+              @if (auth.canWrite()) {
+                <a mat-flat-button color="primary" routerLink="/billing">Start billing</a>
               }
-            </tbody>
-          </table>
-        </div>
-      </section>
+            </app-empty-state>
+          }
+        </section>
+
+        <section class="panel" aria-labelledby="dashboard-upcoming-heading">
+          <h2 id="dashboard-upcoming-heading" class="mt-0 mb-3 text-section">Upcoming billing</h2>
+          @if (data.upcomingInvoices.length) {
+            <div class="table-container">
+              <table class="data-table data-table--dashboard-upcoming">
+                <thead>
+                  <tr>
+                    <th>Care home</th>
+                    <th class="col-hide-sm">Funding authority</th>
+                    <th>Frequency</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (
+                    row of data.upcomingInvoices;
+                    track row.careHomePublicId + row.fundingAuthorityName + row.billingFrequency
+                  ) {
+                    <tr>
+                      <td>
+                        <a class="home-link" [routerLink]="upcomingCareHomeDashboardLink(row)">{{
+                          row.careHomeName
+                        }}</a>
+                      </td>
+                      <td class="col-hide-sm">{{ row.fundingAuthorityName }}</td>
+                      <td>
+                        <div class="flex flex-wrap items-center gap-2">
+                          <span>{{ formatFrequency(row.billingFrequency) }}</span>
+                          <a
+                            class="attention-queue__action"
+                            routerLink="/billing"
+                            [queryParams]="upcomingBillingQueryParams(row)"
+                            >Billing</a
+                          >
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          } @else {
+            <app-empty-state
+              title="No upcoming billing"
+              message="Configure funding contracts and rates to prepare the next billing run."
+            >
+              @if (auth.canWrite()) {
+                <a mat-stroked-button routerLink="/billing">Review billing</a>
+              }
+            </app-empty-state>
+          }
+        </section>
+      </div>
+    </section>
+
+    <section class="dashboard-section" aria-labelledby="dashboard-occupancy-heading">
+      <h2 id="dashboard-occupancy-heading" class="dashboard-section__title">Occupancy by home</h2>
+      @if (data.occupancyByHome.length) {
+        <section class="panel">
+          <div class="table-container">
+            <table class="data-table data-table--dashboard-occupancy">
+              <thead>
+                <tr>
+                  <th>Care home</th>
+                  <th class="num">Occupied</th>
+                  <th class="num">Capacity</th>
+                  <th class="num">Available</th>
+                  <th class="col-actions"></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of data.occupancyByHome; track row.publicId || row.careHomeId) {
+                  <tr>
+                    <td>
+                      <a class="home-link" [routerLink]="careHomeDashboardLink(row)">{{ row.careHomeName }}</a>
+                    </td>
+                    <td class="num">{{ row.occupied }}</td>
+                    <td class="num">{{ row.capacity }}</td>
+                    <td class="num">{{ row.available }}</td>
+                    <td class="col-actions">
+                      <a [routerLink]="careHomeDashboardLink(row)">View →</a>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </section>
+      } @else {
+        <app-empty-state
+          class="dashboard-occupancy-empty"
+          title="No care homes configured"
+          message="Add a care home to begin managing occupancy."
+        >
+          @if (auth.canWrite()) {
+            <a mat-flat-button color="primary" routerLink="/care-homes/new">Add care home</a>
+          }
+        </app-empty-state>
+      }
     </section>
   }
 </div>

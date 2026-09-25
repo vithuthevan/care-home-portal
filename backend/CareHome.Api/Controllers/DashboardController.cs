@@ -1,8 +1,13 @@
+using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.Dashboard;
+using CareHome.Api.Features;
+using CareHome.Api.Receivables.Contracts;
+using CareHome.Api.Receivables.Dtos;
 using CareHome.Api.Security;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace CareHome.Api.Controllers
 {
@@ -12,7 +17,9 @@ namespace CareHome.Api.Controllers
     public class DashboardController(
         CareHomeDbContext dbContext,
         UserAccessService userAccess,
-        ITenantContext tenantContext) : ControllerBase
+        ITenantContext tenantContext,
+        IReceivablesService receivables,
+        IOptions<CommercialRevenueFeature> commercialRevenue) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<DashboardDto>> GetDashboard()
@@ -27,41 +34,76 @@ namespace CareHome.Api.Controllers
             var occupancy = await queryHomes.Select(x => new OccupancyCardDto
             {
                 CareHomeId = x.Id,
+                PublicId = x.PublicId,
                 CareHomeName = x.Name,
                 Capacity = x.BedCapacity,
                 Occupied = x.Clients.Count(c => c.Status == "Current" && !c.IsArchived),
                 Available = x.BedCapacity - x.Clients.Count(c => c.Status == "Current" && !c.IsArchived)
             }).ToListAsync();
 
-            var outstanding = dbContext.Invoices.AsNoTracking()
-                .Where(x => homes.Contains(x.CareHomeId) && x.Status != "Void" && x.PaymentStatus != "Paid");
+            int outstandingInvoices;
+            decimal outstandingAmount;
+            if (commercialRevenue.Value.CommercialRevenueEnabled)
+            {
+                var receivableSummary = await receivables.GetTenantSummaryAsync(
+                    tenantContext.TenantId,
+                    new ReceivableInvoiceQuery(),
+                    HttpContext.RequestAborted);
+                outstandingInvoices = receivableSummary.OpenInvoiceCount;
+                outstandingAmount = receivableSummary.TotalOutstanding;
+            }
+            else
+            {
+                (outstandingInvoices, outstandingAmount) = await GetLegacyOutstandingAsync(
+                    tenantContext.TenantId,
+                    homes,
+                    HttpContext.RequestAborted);
+            }
 
-            var recent = await dbContext.Invoices.AsNoTracking()
+            var recentEntities = await dbContext.Invoices.AsNoTracking()
+                .Include(x => x.Lines)
+                    .ThenInclude(l => l.CreditNoteLines)
+                    .ThenInclude(c => c.CreditNote)
                 .Where(x => homes.Contains(x.CareHomeId))
                 .OrderByDescending(x => x.GeneratedAt)
                 .Take(8)
-                .Select(x => new RecentInvoiceDto
-                {
-                    Id = x.Id,
-                    InvoiceNumber = x.InvoiceNumber,
-                    CareHomeName = x.SnapshotCareHomeName,
-                    TotalAmount = x.TotalAmount,
-                    Status = x.Status
-                })
                 .ToListAsync();
+
+            var recent = recentEntities.Select(x => new RecentInvoiceDto
+            {
+                Id = x.Id,
+                PublicId = x.PublicId,
+                InvoiceNumber = x.InvoiceNumber,
+                CareHomeName = x.SnapshotCareHomeName,
+                ClientName = x.Lines.OrderBy(l => l.Id).Select(l => l.SnapshotClientName).FirstOrDefault()
+                    ?? string.Empty,
+                PeriodStart = x.PeriodStart,
+                PeriodEnd = x.PeriodEnd,
+                TotalAmount = x.TotalAmount,
+                NetBilledAmount = Money.Round(x.Lines.Sum(InvoiceLineNetAmount.FromLine)),
+                Status = x.Status,
+                PaymentStatus = x.PaymentStatus
+            }).ToList();
 
             var exceptions = await dbContext.BillingExceptionLogs.AsNoTracking()
                 .Where(x => x.TenantId == tenantContext.TenantId)
                 .Where(x => x.CareHomeId == null || homes.Contains(x.CareHomeId.Value))
                 .OrderByDescending(x => x.LoggedAt)
                 .Take(8)
-                .Select(x => x.Message)
+                .Select(x => new DashboardBillingExceptionDto
+                {
+                    Code = x.Code,
+                    Message = x.Message
+                })
                 .ToListAsync();
 
             var upcoming = await dbContext.ClientFundingContracts.AsNoTracking()
                 .Where(x => homes.Contains(x.Client.CareHomeId) && x.Status == "Active")
                 .Select(x => new UpcomingInvoiceDto
                 {
+                    CareHomeId = x.Client.CareHomeId,
+                    CareHomePublicId = x.Client.CareHome.PublicId,
+                    CompanyPublicId = x.Client.CareHome.Company.PublicId,
                     CareHomeName = x.Client.CareHome.Name,
                     FundingAuthorityName = x.FundingAuthority.Name,
                     BillingFrequency = x.FundingAuthority.BillingFrequency
@@ -76,8 +118,8 @@ namespace CareHome.Api.Controllers
                 CurrentClients = occupied,
                 AvailableBeds = capacity - occupied,
                 UpcomingBillingCount = upcoming.Count,
-                OutstandingInvoices = await outstanding.CountAsync(),
-                OutstandingAmount = await outstanding.SumAsync(x => (decimal?)x.TotalAmount) ?? 0,
+                OutstandingInvoices = outstandingInvoices,
+                OutstandingAmount = outstandingAmount,
                 InvoicesGenerated = await dbContext.Invoices.CountAsync(x =>
                     x.TenantId == tenantContext.TenantId && homes.Contains(x.CareHomeId) && x.Status != "Void"),
                 OccupancyByHome = occupancy,
@@ -101,22 +143,50 @@ namespace CareHome.Api.Controllers
             }
 
             var occupied = home.Clients.Count(c => c.Status == "Current" && !c.IsArchived);
-            var outstanding = dbContext.Invoices.AsNoTracking()
-                .Where(x => x.CareHomeId == id && x.Status != "Void" && x.PaymentStatus != "Paid");
+            int homeOutstandingCount;
+            decimal homeOutstandingAmount;
+            if (commercialRevenue.Value.CommercialRevenueEnabled)
+            {
+                var homeReceivables = await receivables.GetCareHomeSummaryAsync(
+                    tenantContext.TenantId,
+                    id,
+                    new ReceivableInvoiceQuery(),
+                    HttpContext.RequestAborted);
+                homeOutstandingCount = homeReceivables?.OpenInvoiceCount ?? 0;
+                homeOutstandingAmount = homeReceivables?.TotalOutstanding ?? 0;
+            }
+            else
+            {
+                (homeOutstandingCount, homeOutstandingAmount) = await GetLegacyOutstandingAsync(
+                    tenantContext.TenantId,
+                    [id],
+                    HttpContext.RequestAborted);
+            }
 
-            var recent = await dbContext.Invoices.AsNoTracking()
+            var recentEntities = await dbContext.Invoices.AsNoTracking()
+                .Include(x => x.Lines)
+                    .ThenInclude(l => l.CreditNoteLines)
+                    .ThenInclude(c => c.CreditNote)
                 .Where(x => x.CareHomeId == id)
                 .OrderByDescending(x => x.GeneratedAt)
                 .Take(8)
-                .Select(x => new RecentInvoiceDto
-                {
-                    Id = x.Id,
-                    InvoiceNumber = x.InvoiceNumber,
-                    CareHomeName = x.SnapshotCareHomeName,
-                    TotalAmount = x.TotalAmount,
-                    Status = x.Status
-                })
                 .ToListAsync();
+
+            var recent = recentEntities.Select(x => new RecentInvoiceDto
+            {
+                Id = x.Id,
+                PublicId = x.PublicId,
+                InvoiceNumber = x.InvoiceNumber,
+                CareHomeName = x.SnapshotCareHomeName,
+                ClientName = x.Lines.OrderBy(l => l.Id).Select(l => l.SnapshotClientName).FirstOrDefault()
+                    ?? string.Empty,
+                PeriodStart = x.PeriodStart,
+                PeriodEnd = x.PeriodEnd,
+                TotalAmount = x.TotalAmount,
+                NetBilledAmount = Money.Round(x.Lines.Sum(InvoiceLineNetAmount.FromLine)),
+                Status = x.Status,
+                PaymentStatus = x.PaymentStatus
+            }).ToList();
 
             return Ok(new CareHomeDashboardDto
             {
@@ -132,9 +202,29 @@ namespace CareHome.Api.Controllers
                     .OrderBy(x => x)
                     .ToList(),
                 RecentInvoices = recent,
-                OutstandingCount = await outstanding.CountAsync(),
-                OutstandingAmount = await outstanding.SumAsync(x => (decimal?)x.TotalAmount) ?? 0
+                OutstandingCount = homeOutstandingCount,
+                OutstandingAmount = homeOutstandingAmount
             });
+        }
+
+        private async Task<(int Count, decimal Amount)> GetLegacyOutstandingAsync(
+            int tenantId,
+            List<int> homes,
+            CancellationToken cancellationToken)
+        {
+            if (homes.Count == 0)
+            {
+                return (0, 0m);
+            }
+
+            var open = await dbContext.Invoices.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && homes.Contains(x.CareHomeId))
+                .Where(x => x.Status != InvoiceStatuses.Void)
+                .Where(x => x.PaymentStatus != PaymentStatuses.Paid)
+                .Select(x => x.TotalAmount)
+                .ToListAsync(cancellationToken);
+
+            return (open.Count, open.Sum());
         }
 
         private async Task<List<string>> BuildSetupHints(int tenantId)

@@ -4,107 +4,133 @@
     subtitle="Who changed what and when. Records are append-only."
   />
 
-  <app-filter-bar [compact]="true">
-    <div class="filter-bar__fields filter-bar__fields--2">
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Entity type</mat-label>
-        <mat-select [(ngModel)]="entityType" (selectionChange)="load()">
-          <mat-option value="">All types</mat-option>
-          @for (type of entityTypeOptions; track type.value) {
-            <mat-option [value]="type.value">{{ type.label }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-    </div>
-    <div filterActions>
-      <button mat-flat-button color="primary" type="button" (click)="load()">Apply filter</button>
-      <button mat-stroked-button type="button" (click)="entityType = ''; load()">Clear</button>
-    </div>
-  </app-filter-bar>
-
   <app-api-error [message]="errorMessage()" />
   @if (isLoading()) {
     <app-loading-state label="Loading audit log..." />
   }
 
-  <p class="mb-3 text-sm text-[var(--app-text-muted)]">{{ totalCount() }} events</p>
-
-  <div class="table-container panel panel--flat list-view-table--from-md">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Actor</th>
-          <th>Action</th>
-          <th>Entity</th>
-          <th>When</th>
-        </tr>
-      </thead>
-      <tbody>
-        @for (item of items(); track item.id) {
-          <tr>
-            <td>{{ actorLabel(item) }}</td>
-            <td>
-              <span class="font-medium">{{ humanAction(item.action) }}</span>
-              @if (item.description) {
-                <span class="text-[var(--app-text-muted)]"> — {{ item.description }}</span>
-              }
-            </td>
-            <td>
-              @if (item.entityType) {
-                <span class="badge badge-neutral">{{ item.entityType }}</span>
-              } @else {
-                —
-              }
-            </td>
-            <td>{{ item.loggedAt | displayDateTime }}</td>
-          </tr>
-        }
-      </tbody>
-    </table>
-    @if (!isLoading() && items().length === 0) {
-      <app-empty-state
-        title="No audit events found"
-        message="Try clearing filters or check back after changes are made in the system."
-      />
-    }
-  </div>
-
-  <div class="mobile-card-list mobile-card-list--breakpoint-md">
-    @for (item of items(); track item.id) {
-      <article class="mobile-data-card">
-        <div class="font-semibold">{{ humanAction(item.action) }}</div>
-        @if (item.description) {
-          <p class="mt-1 mb-0 text-sm text-[var(--app-text-muted)]">{{ item.description }}</p>
-        }
-        <div class="mobile-data-card__row">
-          <span class="mobile-data-card__label">Actor</span>
-          <span>{{ actorLabel(item) }}</span>
+  @if (!isLoading()) {
+    <div class="table-shell list-view-table--from-md">
+      <app-filter-bar [toolbar]="true" [compact]="true">
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Entity type</mat-label>
+          <mat-select [(ngModel)]="entityType" (selectionChange)="page = 1; load()">
+            <mat-option value="">All types</mat-option>
+            @for (type of entityTypeOptions; track type.value) {
+              <mat-option [value]="type.value">{{ type.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Action</mat-label>
+          <mat-select [(ngModel)]="action" (selectionChange)="page = 1; load()">
+            <mat-option value="">All actions</mat-option>
+            @for (opt of actionOptions; track opt.value) {
+              <mat-option [value]="opt.value">{{ opt.label }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <div filterActions>
+          <button
+            mat-stroked-button
+            type="button"
+            (click)="entityType = ''; action = ''; page = 1; load()"
+          >
+            Clear
+          </button>
         </div>
-        @if (item.entityType) {
+      </app-filter-bar>
+
+      <p class="m-0 border-b border-[var(--app-border)] px-4 py-2 text-sm text-[var(--app-text-muted)]">
+        {{ totalCount() }} events
+      </p>
+
+      @if (items().length) {
+        <div class="table-container table-container--sticky">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Actor</th>
+                <th>Action</th>
+                <th>Entity</th>
+                <th>Reference</th>
+                <th>When</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of items(); track item.id) {
+                <tr>
+                  <td>{{ actorLabel(item) }}</td>
+                  <td>
+                    <span class="font-medium">{{ humanAction(item.action) }}</span>
+                  </td>
+                  <td>
+                    @if (entityLabel(item); as entity) {
+                      <div>{{ entity }}</div>
+                    }
+                    @if (item.entityType) {
+                      <span class="badge badge-neutral">{{ entityTypeLabel(item.entityType) }}</span>
+                    } @else {
+                      —
+                    }
+                  </td>
+                  <td>
+                    @if (entityRoute(item); as link) {
+                      <a [routerLink]="link" [queryParams]="entityRouteQueryParams(item)">{{
+                        entityReference(item)
+                      }}</a>
+                    } @else if (entityReference(item); as ref) {
+                      {{ ref }}
+                    } @else {
+                      —
+                    }
+                  </td>
+                  <td>{{ item.loggedAt | displayDateTime }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <app-empty-state
+          title="No audit events found"
+          message="Try clearing filters or check back after changes are made in the system."
+        />
+      }
+    </div>
+
+    <div class="mobile-card-list mobile-card-list--breakpoint-md">
+      @for (item of items(); track item.id) {
+        <article class="mobile-data-card">
+          <div class="font-semibold">{{ humanAction(item.action) }}</div>
+          @if (item.description) {
+            <p class="mt-1 mb-0 text-sm text-[var(--app-text-muted)]">{{ item.description }}</p>
+          }
           <div class="mobile-data-card__row">
-            <span class="mobile-data-card__label">Entity</span>
-            <span class="badge badge-neutral">{{ item.entityType }}</span>
+            <span class="mobile-data-card__label">Actor</span>
+            <span>{{ actorLabel(item) }}</span>
           </div>
-        }
-        <div class="mobile-data-card__row">
-          <span class="mobile-data-card__label">When</span>
-          <span>{{ item.loggedAt | displayDateTime }}</span>
-        </div>
-      </article>
-    } @empty {
-      <app-empty-state
-        title="No audit events"
-        message="Activity will appear here as users make changes in the system."
-      />
-    }
-  </div>
+          @if (item.entityType) {
+            <div class="mobile-data-card__row">
+              <span class="mobile-data-card__label">Entity</span>
+              <span class="badge badge-neutral">{{ entityTypeLabel(item.entityType) }}</span>
+            </div>
+          }
+          <div class="mobile-data-card__row">
+            <span class="mobile-data-card__label">When</span>
+            <span>{{ item.loggedAt | displayDateTime }}</span>
+          </div>
+        </article>
+      }
+    </div>
 
-  <app-table-pagination
-    [page]="page"
-    [pageSize]="pageSize"
-    [totalCount]="totalCount()"
-    [disabled]="isLoading()"
-    (pageChange)="onPageChange($event)"
-    (pageSizeChange)="onPageSizeChange($event)"
-  />
+    <app-table-pagination
+      [page]="page"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount()"
+      [disabled]="isLoading()"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)"
+    />
+  }
 </div>

@@ -15,6 +15,11 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
+import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import {
+  deactivateFundingAuthorityMessage,
+  fundingAuthorityUsageLabel,
+} from '../../../../shared/format/master-data-usage';
 
 @Component({
   selector: 'app-funding-authority-list',
@@ -32,6 +37,7 @@ import { TablePaginationComponent } from '../../../../shared/ui/table-pagination
   templateUrl: './funding-authority-list.html',
 })
 export class FundingAuthorityList implements OnInit {
+  readonly entityRouteKey = entityRouteKey;
   private readonly fundingAuthorityService = inject(FundingAuthorityService);
   private readonly confirm = inject(ConfirmDialogService);
   readonly auth = inject(AuthService);
@@ -41,7 +47,7 @@ export class FundingAuthorityList implements OnInit {
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   page = 1;
-  pageSize = 50;
+  pageSize = 20;
 
   ngOnInit(): void {
     this.loadFundingAuthorities();
@@ -79,11 +85,13 @@ export class FundingAuthorityList implements OnInit {
       });
   }
 
+  usageLabel = fundingAuthorityUsageLabel;
+
   deactivateFundingAuthority(authority: FundingAuthority): void {
     this.confirm
       .confirm({
-        title: 'Deactivate funding authority',
-        message: `Deactivate ${authority.name}? It will no longer be available for new contracts.`,
+        title: 'Deactivate funding authority?',
+        message: deactivateFundingAuthorityMessage(authority.name, authority.usage),
         confirmLabel: 'Deactivate',
       })
       .subscribe((ok) => {

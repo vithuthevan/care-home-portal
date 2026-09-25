@@ -1,0 +1,13 @@
+# Development API image: SDK + dotnet watch (bind-mount source at runtime).
+FROM mcr.microsoft.com/dotnet/sdk:10.0
+WORKDIR /src/CareHome.Api
+
+COPY backend/CareHome.Api/CareHome.Api.csproj ./
+RUN dotnet restore CareHome.Api.csproj
+
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true
+ENV DOTNET_WATCH_RESTART_ON_RUDE_EDIT=true
+
+EXPOSE 8080
+
+CMD ["dotnet", "watch", "run", "--urls", "http://+:8080", "--non-interactive"]

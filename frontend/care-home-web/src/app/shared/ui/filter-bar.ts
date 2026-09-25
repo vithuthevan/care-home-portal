@@ -8,9 +8,10 @@ import { Component, input } from '@angular/core';
   template: `
     <section
       class="filter-bar"
-      [class.panel]="!embedded()"
+      [class.panel]="!embedded() && !toolbar()"
       [class.filter-bar--compact]="compact()"
       [class.filter-bar--embedded]="embedded()"
+      [class.filter-bar--toolbar]="toolbar()"
     >
       <div class="filter-bar__fields">
         <ng-content />
@@ -25,4 +26,6 @@ export class FilterBarComponent {
   readonly compact = input(false);
   /** When true, omits outer panel chrome (for use inside another panel). */
   readonly embedded = input(false);
+  /** Compact table toolbar: search/filters on the left, actions on the right. */
+  readonly toolbar = input(false);
 }

@@ -1,9 +1,12 @@
 export interface Client {
   id: number;
+  publicId?: string;
 
   careHomeId: number;
+  careHomePublicId?: string;
   careHomeName: string;
   companyId: number;
+  companyPublicId?: string;
   companyName: string;
 
   sageId: string;
@@ -49,7 +52,7 @@ export interface CreateClientRequest {
 
   admissionDate: string;
 
-  email?: string;
+  email?: string | null;
   phone?: string;
 
   notes?: string;

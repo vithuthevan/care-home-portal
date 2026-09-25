@@ -6,6 +6,15 @@
 
   <app-api-error [message]="errorMessage()" />
 
+  @if (highlightedCreditNote(); as highlighted) {
+    <div class="alert-banner alert-banner--info mb-4">
+      <strong>Credit note {{ highlighted.creditNoteNumber }}</strong>
+      @if (highlighted.invoiceNumber) {
+        <span> · Original invoice {{ highlighted.invoiceNumber }}</span>
+      }
+    </div>
+  }
+
   @if (sourceInvoiceNumber() || residentContextLabel() || sourcePeriodLabel()) {
     <div class="alert-banner alert-banner--info">
       @if (sourceInvoiceNumber()) {
@@ -38,6 +47,9 @@
       title="Create credit note"
       subtitle="Preview before generating. Credits cannot exceed remaining invoiced amounts."
     />
+    <p class="m-0 mb-3 text-sm text-[var(--app-text-muted)]">
+      Fields marked with <span aria-hidden="true">*</span> are required.
+    </p>
     <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
       <mat-form-field appearance="outline" class="w-full md:col-span-2">
         <mat-label>Resident</mat-label>
@@ -63,17 +75,26 @@
         </mat-autocomplete>
         <mat-hint>Optional. Select a resident or leave blank to match the period only.</mat-hint>
       </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Period start</mat-label>
-        <input matInput type="date" [(ngModel)]="periodStart" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Period end</mat-label>
-        <input matInput type="date" [(ngModel)]="periodEnd" />
-      </mat-form-field>
+      <app-date-field
+        label="Period start *"
+        [(ngModel)]="periodStart"
+        [required]="true"
+        requiredErrorMessage="Period start is required."
+      />
+      <app-date-field
+        label="Period end *"
+        [(ngModel)]="periodEnd"
+        [required]="true"
+        requiredErrorMessage="Period end is required."
+      />
       <mat-form-field appearance="outline" class="w-full md:col-span-4">
-        <mat-label>Reason</mat-label>
-        <input matInput [(ngModel)]="reason" placeholder="e.g. Partial period adjustment" />
+        <mat-label>Reason *</mat-label>
+        <input
+          matInput
+          [(ngModel)]="reason"
+          required
+          placeholder="e.g. Partial period adjustment"
+        />
       </mat-form-field>
     </div>
     <div class="flex flex-wrap gap-2">
@@ -163,8 +184,7 @@
       </div>
       @if (previewData.lines?.length === 1 && previewData.lines[0].creditAmount === previewData.lines[0].remainingAmount) {
         <p class="mt-3 mb-0 text-sm text-[var(--app-text-muted)]">
-          This preview credits the full remaining balance on the invoice line. Partial credits may
-          require backend support not exposed in this workspace.
+          This preview credits the full remaining balance on the selected invoice line(s).
         </p>
       }
     </section>
@@ -197,7 +217,7 @@
                 <td class="font-medium">{{ note.creditNoteNumber }}</td>
                 <td>
                   @if (note.invoiceId) {
-                    <a [routerLink]="['/invoices', note.invoiceId]">{{ note.invoiceNumber }}</a>
+                    <a [routerLink]="invoiceLink(note)">{{ note.invoiceNumber }}</a>
                   } @else {
                     {{ note.invoiceNumber }}
                   }

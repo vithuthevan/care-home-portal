@@ -17,6 +17,7 @@ describe('ClientProfilePage', () => {
     id: 1,
     careHomeId: 1,
     careHomeName: 'Green Valley',
+    companyId: 1,
     companyName: 'Green Valley Ltd',
     sageId: 'SAGE001',
     referenceNumber: 'CLIENT001',
@@ -46,7 +47,14 @@ describe('ClientProfilePage', () => {
         provideNoopAnimations(),
         {
           provide: ActivatedRoute,
-          useValue: { paramMap: of(convertToParamMap({ id: '1' })) },
+          useValue: {
+            paramMap: of(convertToParamMap({ id: '1' })),
+            queryParamMap: of(convertToParamMap({})),
+            snapshot: {
+              paramMap: convertToParamMap({ id: '1' }),
+              queryParamMap: convertToParamMap({}),
+            },
+          },
         },
       ],
     }).compileComponents();
@@ -55,14 +63,47 @@ describe('ClientProfilePage', () => {
     fixture = TestBed.createComponent(ClientProfilePage);
     fixture.detectChanges();
 
-    http.expectOne('/api/funding-authorities?activeOnly=true').flush([]);
-    http.expectOne('/api/invoice-categories?activeOnly=true').flush([]);
-    http.expectOne('/api/nominal-codes?activeOnly=true').flush([]);
     http.expectOne('/api/clients/1').flush(client);
     http.expectOne('/api/clients/1/funding-contracts').flush([]);
     http.expectOne((req) => req.url === '/api/invoices').flush({ items: [] });
     await fixture.whenStable();
     fixture.detectChanges();
+  });
+
+  it('loads resident when route key is a public UUID', async () => {
+    const publicId = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+    TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [ClientProfilePage],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+        provideNoopAnimations(),
+        {
+          provide: ActivatedRoute,
+          useValue: {
+            paramMap: of(convertToParamMap({ id: publicId })),
+            queryParamMap: of(convertToParamMap({})),
+            snapshot: {
+              paramMap: convertToParamMap({ id: publicId }),
+              queryParamMap: convertToParamMap({}),
+            },
+          },
+        },
+      ],
+    }).compileComponents();
+
+    const localHttp = TestBed.inject(HttpTestingController);
+    const localFixture = TestBed.createComponent(ClientProfilePage);
+    localFixture.detectChanges();
+
+    localHttp.expectOne(`/api/clients/${publicId}`).flush({ ...client, publicId });
+    localHttp.expectOne(`/api/clients/1/funding-contracts`).flush([]);
+    localHttp.expectOne((req) => req.url === '/api/invoices').flush({ items: [] });
+    await localFixture.whenStable();
+    expect(localFixture.nativeElement.textContent).toContain('Alice Brown');
   });
 
   it('should render profile hero, funding summary, and workflow tabs', () => {
@@ -73,8 +114,8 @@ describe('ClientProfilePage', () => {
     expect(el.textContent).toContain('Funding');
     expect(el.textContent).toContain('Billing');
     expect(el.textContent).toContain('Invoices');
-    expect(el.textContent).toContain('Funding summary');
-    expect(el.textContent).toContain('Identity & placement');
+    expect(el.textContent).toContain('Who pays?');
+    expect(el.textContent).toContain('Placement');
     expect(el.textContent).toContain('Green Valley');
   });
 });

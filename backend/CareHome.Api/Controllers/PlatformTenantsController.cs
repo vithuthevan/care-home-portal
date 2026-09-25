@@ -4,6 +4,7 @@ using CareHome.Api.Data;
 using CareHome.Api.Dtos.Tenants;
 using CareHome.Api.Models;
 using CareHome.Api.Security;
+using CareHome.Api.Security.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -12,7 +13,7 @@ namespace CareHome.Api.Controllers
 {
     [ApiController]
     [Route("api/platform/tenants")]
-    [Authorize(Roles = $"{AppRoles.PlatformAdmin},{AppRoles.SuperAdmin}")]
+    [Authorize(Policy = CareHomePolicies.PlatformOnly)]
     public class PlatformTenantsController(
         CareHomeDbContext dbContext,
         TenantProvisioningService provisioning,

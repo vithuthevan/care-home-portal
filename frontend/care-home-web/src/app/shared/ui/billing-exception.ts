@@ -4,7 +4,7 @@ const LABELS: Record<string, string> = {
   MISSING_NOMINAL: 'A nominal code must be configured before generating this invoice.',
   MISSING_TEMPLATE: 'No invoice template is configured for this billing stream.',
   ALREADY_FULLY_BILLED: 'Already fully billed for this period.',
-  OVERLAPPING_FUNDING_CONTRACTS: 'Funding contracts overlap for the same authority and category.',
+  OVERLAPPING_FUNDING_CONTRACTS: 'Overlapping funding arrangements found for this resident and billing period.',
   PARTIAL_PERIOD_BILLING: 'Only unbilled dates in this period will be invoiced.',
 };
 
@@ -23,7 +23,7 @@ export function billingExceptionHeadline(code: string): string {
     MISSING_NOMINAL: 'Setup required',
     MISSING_TEMPLATE: 'Setup required',
     ALREADY_FULLY_BILLED: 'Already billed',
-    OVERLAPPING_FUNDING_CONTRACTS: 'Contract overlap',
+    OVERLAPPING_FUNDING_CONTRACTS: 'Overlapping funding',
     PARTIAL_PERIOD_BILLING: 'Partial period',
   };
   return headlines[code] || 'Requires attention';

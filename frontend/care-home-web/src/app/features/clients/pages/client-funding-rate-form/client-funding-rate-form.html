@@ -1,0 +1,112 @@
+<div class="page page--narrow">
+  <app-page-header
+    title="Add rate"
+    subtitle="Set the amount and frequency billed under an existing funding contract."
+  />
+
+  <app-api-error [message]="errorMessage()" />
+
+  @if (isLoading()) {
+    <app-loading-state label="Loading..." />
+  } @else if (client(); as resident) {
+    <p class="m-0 mb-4 text-sm text-[var(--app-text-muted)]">
+      Resident: <strong>{{ resident.firstName }} {{ resident.lastName }}</strong> ·
+      {{ resident.referenceNumber }}
+    </p>
+
+    @if (contracts().length === 0) {
+      <app-empty-state
+        title="No funding contract"
+        message="Add a funding contract before you can record a rate for this resident."
+      >
+        <a mat-flat-button color="primary" [routerLink]="['/clients', clientRouteKey, 'funding', 'new']">
+          Add funding contract
+        </a>
+      </app-empty-state>
+    } @else {
+      <form class="panel max-w-4xl" (ngSubmit)="save()">
+        <p class="m-0 mb-4 text-sm text-[var(--app-text-muted)]">
+          Fields marked with <span aria-hidden="true">*</span> are required.
+        </p>
+
+        <section class="form-section">
+          <h2 class="form-section__title">Rate</h2>
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <mat-form-field appearance="outline" class="w-full md:col-span-2">
+              <mat-label>Contract *</mat-label>
+              <mat-select [(ngModel)]="model.contractId" name="contractId" required>
+                <mat-option [value]="0" disabled>Select contract</mat-option>
+                @for (contract of contracts(); track contract.id) {
+                  <mat-option [value]="contract.id">
+                    {{ contract.fundingAuthorityName }} · {{ contract.invoiceCategoryName }} ·
+                    {{ formatContractRange(contract) }}
+                  </mat-option>
+                }
+              </mat-select>
+              <mat-hint>Funding authority and category this rate applies to.</mat-hint>
+            </mat-form-field>
+            <app-date-field
+              label="Effective from *"
+              [(ngModel)]="model.effectiveFrom"
+              name="effectiveFrom"
+              [required]="true"
+              requiredErrorMessage="Effective from is required."
+            />
+            <app-date-field
+              label="Effective to (optional)"
+              [(ngModel)]="model.effectiveTo"
+              name="effectiveTo"
+              hint="Leave blank while this rate is current. Previous open-ended rates close automatically."
+            />
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Frequency *</mat-label>
+              <mat-select [(ngModel)]="model.frequency" name="frequency" required>
+                <mat-option value="Daily">Daily</mat-option>
+                <mat-option value="Weekly">Weekly</mat-option>
+                <mat-option value="Monthly">Monthly</mat-option>
+              </mat-select>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Amount *</mat-label>
+              <input
+                matInput
+                type="number"
+                step="0.01"
+                min="0.01"
+                [(ngModel)]="model.amount"
+                name="amount"
+                required
+              />
+              <mat-hint>Must be greater than zero.</mat-hint>
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="w-full md:col-span-2">
+              <mat-label>Notes (optional)</mat-label>
+              <textarea matInput rows="2" [(ngModel)]="model.notes" name="notes"></textarea>
+            </mat-form-field>
+          </div>
+        </section>
+
+        <div class="form-actions">
+          <a
+            mat-stroked-button
+            [routerLink]="['/clients', clientRouteKey]"
+            [queryParams]="{ tab: 'funding' }"
+            >Cancel</a
+          >
+          <button
+            mat-flat-button
+            color="primary"
+            type="submit"
+            [disabled]="isSaving() || !auth.canWrite()"
+          >
+            @if (isSaving()) {
+              Saving rate...
+            } @else {
+              Add rate
+            }
+          </button>
+        </div>
+      </form>
+    }
+  }
+</div>

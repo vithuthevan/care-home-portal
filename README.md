@@ -46,6 +46,10 @@ docker compose stop
 docker compose down
 ```
 
+## Host on Oracle Cloud (OCI)
+
+Production on a Compute VM: `docker-compose.prod.yml`, `Dockerfile.prod`, TLS via Caddy/nginx. Use a **dedicated database per branch** (`main` vs `revenue-cycle-v2`). See `docs/ORACLE_CLOUD_DEPLOYMENT.md`.
+
 ## Host on Azure
 
 Recommended Production host: App Service (API + Angular same origin) + Azure SQL. See `docs/AZURE_HOSTING.md`.
@@ -73,10 +77,10 @@ Do not use `EnsureCreated`. Do not edit already-applied migrations.
 
 ```powershell
 cd backend\CareHome.Api
-dotnet run --launch-profile http
+dotnet watch run --launch-profile http
 ```
 
-http://localhost:5092
+http://localhost:5092 — `dotnet watch` rebuilds and restarts the API when C# files change.
 
 ## Run frontend
 
@@ -91,11 +95,10 @@ http://localhost:4200 — `npm start` runs `ng serve --hmr` with automatic rebui
 For Docker UI development with bind-mounted sources (Windows-friendly polling):
 
 ```powershell
-docker compose up -d sql api
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up web
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up sql api web
 ```
 
-The default `docker compose up` **web** image bakes sources at build time; use the dev compose file above or run `npm start` on the host for hot reload.
+The default `docker compose up` bakes API and UI at **build** time. Use the dev compose file above (or host `dotnet watch` + `npm start`) so edits apply without rebuilding images.
 
 ## Development login
 

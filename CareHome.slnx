@@ -1,6 +1,15 @@
 <Solution>
   <Folder Name="/backend/">
+    <Project Path="backend/CareHome.Abstractions/CareHome.Abstractions.csproj" />
     <Project Path="backend/CareHome.Api/CareHome.Api.csproj" />
+    <Project Path="backend/CareHome.Billing/CareHome.Billing.csproj" />
+    <Project Path="backend/CareHome.Data/CareHome.Data.csproj" />
+    <Project Path="backend/CareHome.Funding/CareHome.Funding.csproj" />
+    <Project Path="backend/CareHome.Payments/CareHome.Payments.csproj" />
+    <Project Path="backend/CareHome.Receivables/CareHome.Receivables.csproj" />
+    <Project Path="backend/CareHome.Reconciliation/CareHome.Reconciliation.csproj" />
+    <Project Path="backend/CareHome.Remittance/CareHome.Remittance.csproj" />
+    <Project Path="backend/CareHome.RevenueAssurance/CareHome.RevenueAssurance.csproj" />
   </Folder>
   <Project Path="CareHome.Api.Tests/CareHome.Api.Tests.csproj" />
 </Solution>

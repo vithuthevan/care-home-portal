@@ -1,3 +1,5 @@
+using CareHome.Api.Dtos.Common;
+
 namespace CareHome.Api.Dtos.InvoiceTemplates
 {
     public class InvoiceTemplateDto
@@ -47,6 +49,8 @@ namespace CareHome.Api.Dtos.InvoiceTemplates
         public string? EmailBodyTemplate { get; set; }
 
         public bool IsActive { get; set; }
+
+        public MasterDataUsageDto? Usage { get; set; }
     }
 
     public class UpsertInvoiceTemplateRequest

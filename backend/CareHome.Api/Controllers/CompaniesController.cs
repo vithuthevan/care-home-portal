@@ -39,8 +39,12 @@ namespace CareHome.Api.Controllers
                 .Select(company => new CompanyDto
                 {
                     Id = company.Id,
+                    PublicId = company.PublicId,
                     Name = company.Name,
-                    IsActive = company.IsActive
+                    IsActive = company.IsActive,
+                    CareHomeCount = company.CareHomes.Count,
+                    ActiveCareHomeCount = company.CareHomes.Count(x => x.IsActive),
+                    ResidentCount = company.CareHomes.SelectMany(x => x.Clients).Count(x => !x.IsArchived),
                 });
 
             if (!Pagination.IsRequested(page, pageSize))
@@ -60,16 +64,23 @@ namespace CareHome.Api.Controllers
             });
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<CompanyDto>> GetCompany(int id)
+        [HttpGet("{key}")]
+        public async Task<ActionResult<CompanyDto>> GetCompany(string key)
         {
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
+            {
+                return NotFound();
+            }
+
             var tenantId = tenantContext.TenantId;
             var company = await dbContext.Companies
                 .AsNoTracking()
-                .Where(company => company.Id == id && company.TenantId == tenantId)
+                .Where(company => company.TenantId == tenantId)
+                .Where(company => publicId != default ? company.PublicId == publicId : company.Id == id)
                 .Select(company => new CompanyDto
                 {
                     Id = company.Id,
+                    PublicId = company.PublicId,
                     Name = company.Name,
                     IsActive = company.IsActive,
                     CareHomeCount = company.CareHomes.Count,
@@ -120,18 +131,25 @@ namespace CareHome.Api.Controllers
 
             return CreatedAtAction(
                 nameof(GetCompany),
-                new { id = company.Id },
+                new { key = company.PublicId },
                 ToDto(company));
         }
 
-        [HttpPut("{id:int}")]
+        [HttpPut("{key}")]
         public async Task<ActionResult<CompanyDto>> UpdateCompany(
-            int id,
+            string key,
             UpdateCompanyRequest request)
         {
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
+            {
+                return NotFound();
+            }
+
             var tenantId = tenantContext.TenantId;
             var company = await dbContext.Companies
-                .FirstOrDefaultAsync(company => company.Id == id && company.TenantId == tenantId);
+                .FirstOrDefaultAsync(company =>
+                    company.TenantId == tenantId &&
+                    (publicId != default ? company.PublicId == publicId : company.Id == id));
 
             if (company is null)
             {
@@ -143,7 +161,7 @@ namespace CareHome.Api.Controllers
             var duplicateExists = await dbContext.Companies
                 .AnyAsync(existingCompany =>
                     existingCompany.TenantId == tenantId &&
-                    existingCompany.Id != id &&
+                    existingCompany.Id != company.Id &&
                     existingCompany.Name == companyName);
 
             if (duplicateExists)
@@ -157,7 +175,7 @@ namespace CareHome.Api.Controllers
             if (company.IsActive && !request.IsActive)
             {
                 var deactivationError =
-                    await RejectIfDeactivatingWithActiveCareHomes(id);
+                    await RejectIfDeactivatingWithActiveCareHomes(company.Id);
 
                 if (deactivationError is not null)
                 {
@@ -174,12 +192,19 @@ namespace CareHome.Api.Controllers
             return Ok(ToDto(company));
         }
 
-        [HttpDelete("{id:int}")]
-        public async Task<IActionResult> DeactivateCompany(int id)
+        [HttpDelete("{key}")]
+        public async Task<IActionResult> DeactivateCompany(string key)
         {
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
+            {
+                return NotFound();
+            }
+
             var tenantId = tenantContext.TenantId;
             var company = await dbContext.Companies
-                .FirstOrDefaultAsync(company => company.Id == id && company.TenantId == tenantId);
+                .FirstOrDefaultAsync(company =>
+                    company.TenantId == tenantId &&
+                    (publicId != default ? company.PublicId == publicId : company.Id == id));
 
             if (company is null)
             {
@@ -189,7 +214,7 @@ namespace CareHome.Api.Controllers
             if (company.IsActive)
             {
                 var deactivationError =
-                    await RejectIfDeactivatingWithActiveCareHomes(id);
+                    await RejectIfDeactivatingWithActiveCareHomes(company.Id);
 
                 if (deactivationError is not null)
                 {
@@ -200,7 +225,7 @@ namespace CareHome.Api.Controllers
             company.IsActive = false;
 
             await dbContext.SaveChangesAsync();
-            await audit.LogAsync("Company", id.ToString(), "Deactivate", null, null, "Deactivated company.");
+            await audit.LogAsync("Company", company.Id.ToString(), "Deactivate", null, null, "Deactivated company.");
 
             return NoContent();
         }
@@ -230,6 +255,7 @@ namespace CareHome.Api.Controllers
             return new CompanyDto
             {
                 Id = company.Id,
+                PublicId = company.PublicId,
                 Name = company.Name,
                 IsActive = company.IsActive
             };

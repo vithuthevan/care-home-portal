@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: CareHome_CI_Test_Passw0rd!
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P CareHome_CI_Test_Passw0rd! -C -Q 'SELECT 1'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      CAREHOME_TEST_SQL: Server=localhost,1433;Database=CareHome_CI;User Id=sa;Password=CareHome_CI_Test_Passw0rd!;TrustServerCertificate=True;MultipleActiveResultSets=True
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore API
+        run: dotnet restore backend/CareHome.Api/CareHome.Api.csproj
+
+      - name: Restore tests
+        run: dotnet restore CareHome.Api.Tests/CareHome.Api.Tests.csproj
+
+      - name: Build API
+        run: dotnet build backend/CareHome.Api/CareHome.Api.csproj --configuration Release --no-restore
+
+      - name: Build tests
+        run: dotnet build CareHome.Api.Tests/CareHome.Api.Tests.csproj --configuration Release --no-restore
+
+      - name: EF migrations model check
+        run: |
+          dotnet tool install -g dotnet-ef --version 10.0.11
+          dotnet ef migrations has-pending-model-changes \
+            --project backend/CareHome.Data/CareHome.Data.csproj \
+            --startup-project backend/CareHome.Api/CareHome.Api.csproj
+
+      - name: Test
+        run: dotnet test CareHome.Api.Tests/CareHome.Api.Tests.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Publish API artifact
+        run: dotnet publish backend/CareHome.Api/CareHome.Api.csproj -c Release -o artifacts/api --no-restore
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: carehome-api
+          path: artifacts/api
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend/care-home-web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/care-home-web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Unit tests
+        run: npm run test -- --watch=false
+
+      - name: Publish SPA artifact
+        run: mkdir -p ../../artifacts/spa && cp -r dist/care-home-web/browser/* ../../artifacts/spa/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: carehome-spa
+          path: artifacts/spa

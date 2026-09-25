@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { finalize } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
+import { optionalEmail } from '../../../../shared/format/optional-email';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -87,9 +88,10 @@ export class PlatformTenantFormPage implements OnInit {
     this.isSaving.set(true);
     this.errorMessage.set(null);
     const body = this.form.getRawValue();
+    const payload = { ...body, email: optionalEmail(body.email) };
     const request$ = this.isEditMode
-      ? this.http.put(`/api/platform/tenants/${this.tenantId}`, body)
-      : this.http.post<CreateOrganisationResponse>('/api/platform/tenants', body);
+      ? this.http.put(`/api/platform/tenants/${this.tenantId}`, payload)
+      : this.http.post<CreateOrganisationResponse>('/api/platform/tenants', payload);
 
     request$.pipe(finalize(() => this.isSaving.set(false))).subscribe({
       next: (result) => {

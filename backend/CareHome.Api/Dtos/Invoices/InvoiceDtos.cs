@@ -4,6 +4,8 @@ namespace CareHome.Api.Dtos.Invoices
     {
         public int Id { get; set; }
 
+        public Guid PublicId { get; set; }
+
         public string InvoiceNumber { get; set; } = string.Empty;
 
         public string CompanyName { get; set; } = string.Empty;
@@ -24,9 +26,23 @@ namespace CareHome.Api.Dtos.Invoices
 
         public string PaymentStatus { get; set; } = string.Empty;
 
+        /// <summary>Derived collection status from receivables (authoritative for revenue UI).</summary>
+        public string? CollectionStatus { get; set; }
+
+        public decimal PaidAmount { get; set; }
+
+        public decimal CreditedAmount { get; set; }
+
+        public decimal OutstandingAmount { get; set; }
+
+        public bool IsOverdue { get; set; }
+
         public bool IsDue { get; set; }
 
         public decimal TotalAmount { get; set; }
+
+        /// <summary>Sum of net line amounts after non-void credits; aligns with reports and Sage export.</summary>
+        public decimal NetBilledAmount { get; set; }
 
         public DateTimeOffset? SentAt { get; set; }
     }
@@ -35,9 +51,15 @@ namespace CareHome.Api.Dtos.Invoices
     {
         public int CompanyId { get; set; }
 
+        public Guid CompanyPublicId { get; set; }
+
         public int CareHomeId { get; set; }
 
+        public Guid CareHomePublicId { get; set; }
+
         public int FundingAuthorityId { get; set; }
+
+        public Guid FundingAuthorityPublicId { get; set; }
 
         public int InvoiceCategoryId { get; set; }
 
@@ -53,6 +75,8 @@ namespace CareHome.Api.Dtos.Invoices
         public int Id { get; set; }
 
         public int ClientId { get; set; }
+
+        public Guid ClientPublicId { get; set; }
 
         public string ClientName { get; set; } = string.Empty;
 
@@ -75,6 +99,9 @@ namespace CareHome.Api.Dtos.Invoices
         public decimal LineAmount { get; set; }
 
         public string Description { get; set; } = string.Empty;
+
+        /// <summary>Human-readable basis captured when the line was generated (not a recalculation).</summary>
+        public string? AmountBasis { get; set; }
     }
 
     public class UpdatePaymentStatusRequest

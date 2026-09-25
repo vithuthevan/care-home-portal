@@ -1,3 +1,5 @@
+using CareHome.Api.Dtos.Common;
+
 namespace CareHome.Api.Dtos.InvoiceCategories
 {
     public class InvoiceCategoryDto
@@ -11,5 +13,10 @@ namespace CareHome.Api.Dtos.InvoiceCategories
         public string? Description { get; set; }
 
         public bool IsActive { get; set; }
+
+        /// <summary>SystemDefault = provisioned with the tenant; Organisation = created by users.</summary>
+        public string ConfigurationSource { get; set; } = "Organisation";
+
+        public MasterDataUsageDto? Usage { get; set; }
     }
 }

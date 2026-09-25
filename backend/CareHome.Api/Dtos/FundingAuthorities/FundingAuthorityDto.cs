@@ -1,8 +1,12 @@
+using CareHome.Api.Dtos.Common;
+
 namespace CareHome.Api.Dtos.FundingAuthorities
 {
     public class FundingAuthorityDto
     {
         public int Id { get; set; }
+
+        public Guid PublicId { get; set; }
 
         public string Code { get; set; } = string.Empty;
 
@@ -23,5 +27,9 @@ namespace CareHome.Api.Dtos.FundingAuthorities
         public int? BillingIntervalDays { get; set; }
 
         public bool IsActive { get; set; }
+
+        public string ConfigurationSource { get; set; } = "Organisation";
+
+        public MasterDataUsageDto? Usage { get; set; }
     }
 }

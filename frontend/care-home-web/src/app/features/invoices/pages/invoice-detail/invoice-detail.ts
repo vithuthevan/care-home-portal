@@ -5,6 +5,8 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
 import { AuthService } from '../../../../core/auth.service';
@@ -13,9 +15,12 @@ import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
 import { LabeledStatusComponent } from '../../../../shared/ui/labeled-status';
+import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
+import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import { COMMERCIAL_REVENUE_ENABLED } from '../../../../core/commercial-revenue.feature';
 
 @Component({
   selector: 'app-invoice-detail',
@@ -24,11 +29,14 @@ import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
     DecimalPipe,
     MatButtonModule,
     MatIconModule,
+    MatMenuModule,
+    MatTooltipModule,
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
     DisplayDatePipe,
     LabeledStatusComponent,
+    StatusBadgeComponent,
   ],
   templateUrl: './invoice-detail.html',
 })
@@ -39,6 +47,8 @@ export class InvoiceDetailPage implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly breadcrumbs = inject(BreadcrumbService);
   readonly auth = inject(AuthService);
+  readonly commercialRevenueEnabled = COMMERCIAL_REVENUE_ENABLED;
+  readonly entityRouteKey = entityRouteKey;
   readonly invoice = signal<any | null>(null);
   readonly errorMessage = signal<string | null>(null);
   readonly info = signal<string | null>(null);
@@ -48,14 +58,31 @@ export class InvoiceDetailPage implements OnInit {
   readonly isSending = signal(false);
   readonly isPaying = signal(false);
 
+  /** Manual payment status only — hidden when allocations drive collection status. */
+  showPaymentStatusActions(): boolean {
+    const inv = this.invoice();
+    if (this.commercialRevenueEnabled || !inv || !this.auth.canWrite()) {
+      return false;
+    }
+    if (inv.status === 'Void') {
+      return false;
+    }
+    const paid = inv.paidAmount ?? 0;
+    return paid <= 0;
+  }
+
+  isPaymentPaid(): boolean {
+    return this.invoice()?.paymentStatus === 'Paid';
+  }
+
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
-      const id = Number(params.get('id'));
-      this.loadInvoice(id);
+      const key = params.get('id') ?? '';
+      this.loadInvoice(key);
     });
   }
 
-  private loadInvoice(id: number): void {
+  private loadInvoice(key: string): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.info.set(null);
@@ -63,7 +90,7 @@ export class InvoiceDetailPage implements OnInit {
     this.invoice.set(null);
 
     this.http
-      .get(`/api/invoices/${id}`)
+      .get(`/api/invoices/${key}`)
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: (invoice: any) => {
@@ -130,20 +157,20 @@ export class InvoiceDetailPage implements OnInit {
 
   confirmPay(status: string): void {
     const current = this.invoice();
-    if (!current || current.paymentStatus === status) {
+    if (!current || current.paymentStatus === status || this.isPaying()) {
       return;
     }
 
     const number = current.invoiceNumber || 'this invoice';
-    const label =
-      status === 'Paid'
-        ? `Mark ${number} as paid?`
-        : `Mark ${number} as not paid?`;
+    const markingPaid = status === 'Paid';
+    const message = markingPaid
+      ? `Mark ${number} as paid? This updates payment status only. It does not record a bank receipt.`
+      : `Mark ${number} as unpaid? This updates payment status only.`;
     this.confirm
       .confirm({
         title: 'Update payment status',
-        message: label,
-        confirmLabel: 'Confirm',
+        message,
+        confirmLabel: markingPaid ? 'Mark as paid' : 'Mark as unpaid',
       })
       .subscribe((ok) => {
         if (!ok) {
@@ -155,27 +182,116 @@ export class InvoiceDetailPage implements OnInit {
 
   private pay(status: string): void {
     const current = this.invoice();
-    if (!current) {
+    if (!current || this.isPaying()) {
       return;
     }
 
     this.isPaying.set(true);
+    this.errorMessage.set(null);
     this.http
       .post(`/api/invoices/${current.id}/payment-status`, { paymentStatus: status })
       .pipe(finalize(() => this.isPaying.set(false)))
       .subscribe({
         next: () => {
           this.invoice.set({ ...current, paymentStatus: status });
-          this.toast.success('Payment status updated.');
+          this.toast.success(
+            status === 'Paid' ? 'Invoice marked as paid.' : 'Invoice marked as unpaid.',
+          );
+          const key = this.route.snapshot.paramMap.get('id') ?? String(current.id);
+          this.refreshInvoice(key);
         },
         error: (error) =>
           this.errorMessage.set(getApiErrorMessage(error, 'Payment update failed.')),
       });
   }
 
-  invoiceSubtitle(inv: { invoiceCategoryName?: string; careHomeName?: string }): string {
-    const parts = [inv.invoiceCategoryName, inv.careHomeName].filter(Boolean);
-    return parts.join(' · ') || 'Invoice document';
+  private refreshInvoice(key: string): void {
+    this.http.get(`/api/invoices/${key}`).subscribe({
+      next: (invoice: any) => this.invoice.set(invoice),
+    });
+  }
+
+  careHomeDashboardLink(inv: {
+    careHomeId?: number;
+    careHomePublicId?: string;
+  }): string[] | null {
+    if (!inv.careHomeId) {
+      return null;
+    }
+    return [
+      '/care-homes',
+      entityRouteKey({ id: inv.careHomeId, publicId: inv.careHomePublicId }),
+      'dashboard',
+    ];
+  }
+
+  companyDetailLink(inv: { companyId?: number; companyPublicId?: string }): string[] | null {
+    if (!inv.companyId) {
+      return null;
+    }
+    return ['/companies', entityRouteKey({ id: inv.companyId, publicId: inv.companyPublicId })];
+  }
+
+  fundingAuthorityEditLink(inv: {
+    fundingAuthorityId?: number;
+    fundingAuthorityPublicId?: string;
+  }): string[] | null {
+    if (!inv.fundingAuthorityId) {
+      return null;
+    }
+    return [
+      '/funding-authorities',
+      entityRouteKey({ id: inv.fundingAuthorityId, publicId: inv.fundingAuthorityPublicId }),
+      'edit',
+    ];
+  }
+
+  invoiceCategoryEditLink(inv: { invoiceCategoryId?: number }): string[] | null {
+    if (!inv.invoiceCategoryId) {
+      return null;
+    }
+    return ['/invoice-categories', String(inv.invoiceCategoryId), 'edit'];
+  }
+
+  paymentsHandoffQueryParams(inv: {
+    invoiceNumber?: string;
+    publicId?: string;
+  }): Record<string, string> {
+    const params: Record<string, string> = {};
+    if (inv.invoiceNumber) {
+      params['search'] = inv.invoiceNumber;
+    }
+    if (inv.publicId) {
+      params['invoicePublicId'] = inv.publicId;
+    }
+    return params;
+  }
+
+  lineAmountHint(line: {
+    amountBasis?: string | null;
+    eligibleDays?: number;
+    rateAmount?: number;
+    rateFrequency?: string;
+  }): string | null {
+    if (line.amountBasis?.trim()) {
+      return line.amountBasis.trim();
+    }
+    if (line.eligibleDays === undefined || line.eligibleDays === null) {
+      return null;
+    }
+    const rate =
+      line.rateAmount != null ? `£${line.rateAmount.toFixed(2)} ${line.rateFrequency || ''}`.trim() : '';
+    if (rate) {
+      return `Line amount reflects ${line.eligibleDays} eligible day(s) at ${rate} (as calculated by billing).`;
+    }
+    return `Line amount reflects ${line.eligibleDays} eligible day(s) (as calculated by billing).`;
+  }
+
+  clientProfileLink(line: { clientId?: number; clientPublicId?: string }): string[] | null {
+    if (!line.clientId) {
+      return null;
+    }
+    return ['/clients', entityRouteKey({ id: line.clientId, publicId: line.clientPublicId })];
   }
 
   creditNoteQueryParams(inv: {

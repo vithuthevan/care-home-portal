@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { finalize } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
+import { optionalEmail } from '../../../../shared/format/optional-email';
 import { AuthService } from '../../../../core/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -78,8 +79,13 @@ export class OrganisationSettingsPage implements OnInit {
     this.isSaving.set(true);
     this.errorMessage.set(null);
     this.savedMessage.set(null);
+    const raw = this.form.getRawValue();
     this.http
-      .put('/api/settings/organisation', this.form.getRawValue())
+      .put('/api/settings/organisation', {
+        ...raw,
+        email: optionalEmail(raw.email),
+        emailFromAddress: optionalEmail(raw.emailFromAddress),
+      })
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
         next: () => {

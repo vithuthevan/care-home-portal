@@ -14,6 +14,8 @@ import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
+import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 @Component({
   selector: 'app-company-form',
@@ -36,9 +38,10 @@ export class CompanyForm implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+  private readonly breadcrumbs = inject(BreadcrumbService);
   readonly auth = inject(AuthService);
 
-  companyId: number | null = null;
+  companyRouteKey: string | null = null;
   isEditMode = false;
   readonly isLoading = signal(false);
   readonly isSaving = signal(false);
@@ -52,14 +55,23 @@ export class CompanyForm implements OnInit {
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
-      this.companyId = Number(id);
+      this.companyRouteKey = id;
       this.isEditMode = true;
+      this.breadcrumbs.set([
+        { label: 'Companies', routerLink: '/companies' },
+        { label: 'Edit company' },
+      ]);
       this.loadCompany();
+      return;
     }
+    this.breadcrumbs.set([
+      { label: 'Companies', routerLink: '/companies' },
+      { label: 'Add company' },
+    ]);
   }
 
   private loadCompany(): void {
-    if (this.companyId === null) {
+    if (this.companyRouteKey === null) {
       return;
     }
 
@@ -67,7 +79,7 @@ export class CompanyForm implements OnInit {
     this.errorMessage.set(null);
 
     this.companyService
-      .getCompany(this.companyId)
+      .getCompany(this.companyRouteKey)
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: (company) => {
@@ -75,6 +87,11 @@ export class CompanyForm implements OnInit {
             name: company.name,
             isActive: company.isActive,
           });
+          this.breadcrumbs.set([
+            { label: 'Companies', routerLink: '/companies' },
+            { label: company.name, routerLink: ['/companies', entityRouteKey(company)] },
+            { label: 'Edit company' },
+          ]);
         },
         error: (error) => {
           logApiFailure(error);
@@ -93,9 +110,9 @@ export class CompanyForm implements OnInit {
     this.isSaving.set(true);
     const formValue = this.form.getRawValue();
 
-    if (this.isEditMode && this.companyId !== null) {
+    if (this.isEditMode && this.companyRouteKey !== null) {
       this.companyService
-        .updateCompany(this.companyId, {
+        .updateCompany(this.companyRouteKey, {
           name: formValue.name,
           isActive: formValue.isActive,
         })
@@ -116,9 +133,10 @@ export class CompanyForm implements OnInit {
       .createCompany({ name: formValue.name })
       .pipe(finalize(() => this.isSaving.set(false)))
       .subscribe({
-        next: (company) => {
+        next: () => {
+          this.form.reset({ name: '', isActive: true });
           this.toast.success('Company created successfully.');
-          void this.router.navigate(['/companies', company.id]);
+          void this.router.navigate(['/companies']);
         },
         error: (error) => {
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to create company.'));

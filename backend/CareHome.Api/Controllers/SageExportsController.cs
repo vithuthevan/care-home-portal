@@ -86,6 +86,32 @@ namespace CareHome.Api.Controllers
             });
         }
 
+        [HttpPost("{id:int}/retry-file")]
+        public async Task<ActionResult<SageExportBatchDto>> RetryFile(int id)
+        {
+            var publicId = await dbContext.Tenants
+                .Where(x => x.Id == tenantContext.TenantId)
+                .Select(x => x.PublicId)
+                .FirstAsync();
+            var (batch, error) = await sage.RetryFileWriteAsync(tenantContext.TenantId, publicId, id);
+            if (error is not null || batch is null)
+            {
+                return BadRequest(new { message = error ?? "Retry failed." });
+            }
+
+            return Ok(new SageExportBatchDto
+            {
+                Id = batch.Id,
+                ExportedAt = batch.ExportedAt,
+                DateFrom = batch.DateFrom,
+                DateTo = batch.DateTo,
+                CompanyId = batch.CompanyId,
+                RecordCount = batch.RecordCount,
+                FileName = batch.FileName,
+                Status = batch.Status
+            });
+        }
+
         [HttpGet("{id:int}/file")]
         public async Task<IActionResult> FileDownload(int id)
         {
@@ -99,7 +125,7 @@ namespace CareHome.Api.Controllers
             var bytes = await documents.ReadAsync(batch.FilePath);
             if (bytes is null)
             {
-                return NotFound();
+                return NotFound(new { message = "Export recorded, but the CSV file is unavailable. Use Retry CSV to regenerate the file." });
             }
 
             return File(bytes, "text/csv", batch.FileName);

@@ -1,14 +1,24 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using CareHome.Api.Audit;
-using CareHome.Api.Billing;
+using CareHome.Api.Billing.DependencyInjection;
 using CareHome.Api.Common;
+using CareHome.Api.Features;
 using CareHome.Api.Data;
 using CareHome.Api.Documents;
 using CareHome.Api.Email;
 using CareHome.Api.Export;
+using CareHome.Api.Funding.DependencyInjection;
+using CareHome.Api.Payments.DependencyInjection;
+using CareHome.Api.Reconciliation.DependencyInjection;
+using CareHome.Api.Remittance.DependencyInjection;
+using CareHome.Api.RevenueAssurance.DependencyInjection;
+using CareHome.Api.Receivables.DependencyInjection;
 using CareHome.Api.Security;
+using CareHome.Api.Security.Authorization;
 using CareHome.Api.Services;
+using CareHome.Api.Middleware;
+using CareHome.Api.Telemetry;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -23,7 +33,38 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var applyMigrationsOnly = args.Contains("--apply-migrations", StringComparer.OrdinalIgnoreCase);
+if (applyMigrationsOnly)
+{
+    var migrateConnectionString =
+        builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? throw new InvalidOperationException(
+            "Connection string 'DefaultConnection' was not found.");
+
+    ProductionStartupValidator.ValidateConnectionString(migrateConnectionString);
+
+    builder.Services.AddDbContext<CareHomeDbContext>(options =>
+        options.UseSqlServer(migrateConnectionString));
+
+    var migrateApp = builder.Build();
+    using var migrateScope = migrateApp.Services.CreateScope();
+    var migrateDb = migrateScope.ServiceProvider.GetRequiredService<CareHomeDbContext>();
+    var migrateLogger = migrateScope.ServiceProvider
+        .GetRequiredService<ILoggerFactory>()
+        .CreateLogger("Startup");
+    await migrateDb.Database.MigrateAsync();
+    await DatabaseMigrationStartupLogger.LogPendingMigrationsAsync(migrateDb, migrateLogger);
+    migrateLogger.LogInformation("Database migrations applied (--apply-migrations).");
+    return;
+}
+
+QuestPdfLicenseConfigurator.Configure(builder.Configuration);
+
+builder.Services.Configure<CommercialRevenueFeature>(
+    builder.Configuration.GetSection(CommercialRevenueFeature.SectionName));
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddCareHomeTelemetry(builder.Configuration, builder.Environment);
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddProblemDetails();
 
@@ -130,7 +171,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-builder.Services.AddAuthorization();
+builder.Services.AddCareHomeAuthorizationPolicies();
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -176,24 +217,38 @@ builder.Services.Configure<ForwardedHeadersOptions>(options =>
 
 builder.Services.AddScoped<ITenantContext, HttpTenantContext>();
 builder.Services.AddScoped<AuditService>();
+builder.Services.AddScoped<IAuditWriter>(sp => sp.GetRequiredService<AuditService>());
 builder.Services.AddScoped<UserAccessService>();
+builder.Services.AddScoped<ICareHomeAccessScope>(sp => sp.GetRequiredService<UserAccessService>());
 builder.Services.AddScoped<TenantProvisioningService>();
 builder.Services.AddScoped<DocumentSequenceService>();
+builder.Services.AddScoped<IDocumentSequence>(sp => sp.GetRequiredService<DocumentSequenceService>());
 builder.Services.AddScoped<ClientIdentifierService>();
-builder.Services.AddScoped<RateCalculator>();
-builder.Services.AddScoped<InvoiceTemplateResolver>();
-builder.Services.AddScoped<BillingService>();
-builder.Services.AddScoped<CreditNoteService>();
+builder.Services.AddCareHomeFunding();
+builder.Services.AddCareHomeBilling();
+builder.Services.AddCareHomeReceivables();
+builder.Services.AddCareHomePayments();
+builder.Services.AddCareHomeReconciliation();
+builder.Services.AddCareHomeRemittance();
+builder.Services.AddCareHomeRevenueAssurance();
+builder.Services.AddScoped<DisputeWorkflowService>();
+builder.Services.AddScoped<ContractRenewalWorkflowService>();
+builder.Services.AddScoped<CollectionsWorkflowService>();
+builder.Services.AddScoped<FinanceAttentionService>();
+builder.Services.AddScoped<InvoiceReceivableReadModel>();
 builder.Services.AddScoped<InvoicePdfService>();
 builder.Services.AddScoped<IDocumentStore, LocalDocumentStore>();
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
 builder.Services.AddScoped<IEmailSender, ConfigurableEmailSender>();
 builder.Services.AddScoped<Sage50ColumnMap>();
 builder.Services.AddScoped<SageExportService>();
+builder.Services.AddScoped<MasterDataUsageService>();
 builder.Services.AddScoped<MiscChargeImportService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<IdentitySeeder>();
 builder.Services.AddScoped<DevelopmentMasterDataSeeder>();
+builder.Services.AddScoped<EmptyTenantMasterDataSeeder>();
+builder.Services.AddScoped<TenantNominalCodeSeeder>();
 builder.Services.AddSingleton<LoginPasswordCipher>();
 
 var app = builder.Build();
@@ -217,6 +272,7 @@ app.UseCors("AllowAngularApp");
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<CommercialRevenueApiGateMiddleware>();
 app.UseMiddleware<RequestLoggingScopeMiddleware>();
 app.UseMiddleware<InactiveTenantMiddleware>();
 app.UseMiddleware<MustChangePasswordMiddleware>();
@@ -252,7 +308,19 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 
 if (Directory.Exists(wwwRoot))
 {
-    app.MapFallbackToFile("index.html").AllowAnonymous();
+    var spaIndexPath = Path.Combine(wwwRoot, "index.html");
+    app.MapFallback(async (HttpContext context) =>
+    {
+        if (SecurityHeadersMiddleware.MatchesApiOrHealthPath(context.Request.Path))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            await context.Response.WriteAsJsonAsync(new { message = "Not found." });
+            return;
+        }
+
+        context.Response.ContentType = "text/html; charset=utf-8";
+        await context.Response.SendFileAsync(spaIndexPath);
+    }).AllowAnonymous();
 }
 
 using (var scope = app.Services.CreateScope())
@@ -260,11 +328,13 @@ using (var scope = app.Services.CreateScope())
     var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>()
         .CreateLogger("Startup");
 
+    var db = scope.ServiceProvider.GetRequiredService<CareHomeDbContext>();
     if (app.Configuration.GetValue("Database:ApplyMigrations", false))
     {
-        var db = scope.ServiceProvider.GetRequiredService<CareHomeDbContext>();
         await db.Database.MigrateAsync();
     }
+
+    await DatabaseMigrationStartupLogger.LogPendingMigrationsAsync(db, logger);
 
     try
     {
@@ -273,6 +343,12 @@ using (var scope = app.Services.CreateScope())
 
         var dataSeeder = scope.ServiceProvider.GetRequiredService<DevelopmentMasterDataSeeder>();
         await dataSeeder.SeedAsync();
+
+        var emptyTenantSeeder = scope.ServiceProvider.GetRequiredService<EmptyTenantMasterDataSeeder>();
+        await emptyTenantSeeder.SeedAsync();
+
+        var nominalCodeSeeder = scope.ServiceProvider.GetRequiredService<TenantNominalCodeSeeder>();
+        await nominalCodeSeeder.BackfillAllTenantsAsync();
     }
     catch (InvalidOperationException ex) when (ex.Message.Contains("Development platform admin", StringComparison.Ordinal))
     {

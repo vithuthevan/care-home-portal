@@ -1,8 +1,10 @@
 using CareHome.Api.Audit;
 using CareHome.Api.Data;
+using CareHome.Api.Dtos.Common;
 using CareHome.Api.Dtos.InvoiceTemplates;
 using CareHome.Api.Models;
 using CareHome.Api.Security;
+using CareHome.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,7 +16,8 @@ namespace CareHome.Api.Controllers
     public class InvoiceTemplatesController(
         CareHomeDbContext dbContext,
         ITenantContext tenantContext,
-        AuditService audit) : ControllerBase
+        AuditService audit,
+        MasterDataUsageService usage) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<List<InvoiceTemplateDto>>> List()
@@ -29,7 +32,11 @@ namespace CareHome.Api.Controllers
                 .OrderBy(x => x.Name)
                 .ToListAsync();
 
-            return Ok(templates.Select(ToDto).ToList());
+            var usageMap = await usage.GetInvoiceTemplateUsagesAsync(
+                tenantId,
+                templates.Select(x => x.Id).ToList());
+
+            return Ok(templates.Select(x => ToDto(x, usageMap.GetValueOrDefault(x.Id))).ToList());
         }
 
         [HttpGet("{id:int}")]
@@ -43,7 +50,13 @@ namespace CareHome.Api.Controllers
                 .Include(x => x.Company)
                 .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId);
 
-            return template is null ? NotFound() : Ok(ToDto(template));
+            if (template is null)
+            {
+                return NotFound();
+            }
+
+            var usageDto = await usage.GetInvoiceTemplateUsageAsync(tenantId, template.Id);
+            return Ok(ToDto(template, usageDto));
         }
 
         [HttpPost]
@@ -66,7 +79,8 @@ namespace CareHome.Api.Controllers
                 .Include(x => x.CareHome)
                 .Include(x => x.Company)
                 .FirstAsync(x => x.Id == template.Id);
-            return CreatedAtAction(nameof(Get), new { id = template.Id }, ToDto(created));
+            var createdUsage = await usage.GetInvoiceTemplateUsageAsync(tenantId, template.Id);
+            return CreatedAtAction(nameof(Get), new { id = template.Id }, ToDto(created, createdUsage));
         }
 
         [HttpPut("{id:int}")]
@@ -111,7 +125,8 @@ namespace CareHome.Api.Controllers
                 .Include(x => x.CareHome)
                 .Include(x => x.Company)
                 .FirstAsync(x => x.Id == id);
-            return Ok(ToDto(updated));
+            var updatedUsage = await usage.GetInvoiceTemplateUsageAsync(tenantId, id);
+            return Ok(ToDto(updated, updatedUsage));
         }
 
         [HttpDelete("{id:int}")]
@@ -160,7 +175,7 @@ namespace CareHome.Api.Controllers
             return null;
         }
 
-        private static InvoiceTemplateDto ToDto(InvoiceTemplate x)
+        private static InvoiceTemplateDto ToDto(InvoiceTemplate x, MasterDataUsageDto? usageDto = null)
         {
             return new InvoiceTemplateDto
             {
@@ -186,7 +201,8 @@ namespace CareHome.Api.Controllers
                 ContactPhone = x.ContactPhone,
                 EmailSubjectTemplate = x.EmailSubjectTemplate,
                 EmailBodyTemplate = x.EmailBodyTemplate,
-                IsActive = x.IsActive
+                IsActive = x.IsActive,
+                Usage = usageDto
             };
         }
 

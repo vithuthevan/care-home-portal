@@ -16,7 +16,7 @@ export class StatusBadgeComponent {
       return 'Unknown';
     }
     if (value === 'NotPaid') {
-      return 'Not Paid';
+      return 'Unpaid';
     }
     return value.replace(/([a-z])([A-Z])/g, '$1 $2');
   }
@@ -24,17 +24,28 @@ export class StatusBadgeComponent {
   private tone(value: string): string {
     const key = (value || '').toLowerCase();
     if (
-      ['active', 'current', 'generated', 'paid', 'success', 'successful', 'valid'].includes(key)
+      [
+        'active',
+        'current',
+        'generated',
+        'paid',
+        'received',
+        'success',
+        'successful',
+        'valid',
+      ].includes(key)
     ) {
       return 'badge-success';
     }
-    if (['sent', 'simulated', 'draft'].includes(key)) {
+    if (['sent', 'simulated', 'draft', 'info'].includes(key)) {
       return 'badge-info';
     }
-    if (['left', 'due', 'warning'].includes(key)) {
+    if (['left', 'due', 'warning', 'pending', 'not paid', 'notpaid', 'unpaid'].includes(key)) {
       return 'badge-warning';
     }
-    if (['void', 'deceased', 'failed', 'inactive', 'invalid', 'notpaid'].includes(key)) {
+    if (
+      ['void', 'deceased', 'failed', 'inactive', 'invalid', 'cancelled', 'canceled'].includes(key)
+    ) {
       return 'badge-danger';
     }
     return 'badge-neutral';

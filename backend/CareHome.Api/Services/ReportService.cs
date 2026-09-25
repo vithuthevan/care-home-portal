@@ -1,5 +1,9 @@
+using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.Reports;
+using CareHome.Api.Models;
+using CareHome.Api.Receivables.Contracts;
+using CareHome.Api.Receivables.Dtos;
 using CareHome.Api.Security;
 using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +13,10 @@ using QuestPDF.Infrastructure;
 
 namespace CareHome.Api.Services
 {
-    public class ReportService(CareHomeDbContext dbContext, UserAccessService userAccess)
+    public class ReportService(
+        CareHomeDbContext dbContext,
+        UserAccessService userAccess,
+        IReceivablesService receivables)
     {
         public async Task<List<CensusRowDto>> ClientCensusAsync(
             int tenantId, int? companyId, int? careHomeId, CancellationToken cancellationToken)
@@ -19,6 +26,8 @@ namespace CareHome.Api.Services
                 .Where(x => homes.Contains(x.CareHomeId) && !x.IsArchived)
                 .Select(x => new CensusRowDto
                 {
+                    ClientPublicId = x.PublicId,
+                    CareHomePublicId = x.CareHome.PublicId,
                     ClientName = x.FirstName + " " + x.LastName,
                     ReferenceNumber = x.ReferenceNumber,
                     CareHomeName = x.CareHome.Name,
@@ -65,6 +74,8 @@ namespace CareHome.Api.Services
 
             return await query.Select(x => new CurrentRateRowDto
             {
+                ClientPublicId = x.ClientFundingContract.Client.PublicId,
+                CareHomePublicId = x.ClientFundingContract.Client.CareHome.PublicId,
                 CompanyName = x.ClientFundingContract.Client.CareHome.Company.Name,
                 CareHomeName = x.ClientFundingContract.Client.CareHome.Name,
                 ClientName = x.ClientFundingContract.Client.FirstName + " " + x.ClientFundingContract.Client.LastName,
@@ -83,7 +94,7 @@ namespace CareHome.Api.Services
         {
             var homes = await AllowedHomes(tenantId, null, null, cancellationToken);
             var query = dbContext.InvoiceLines.AsNoTracking()
-                .Where(x => x.Invoice.TenantId == tenantId && homes.Contains(x.Invoice.CareHomeId) && x.Invoice.Status != "Void");
+                .Where(x => x.Invoice.TenantId == tenantId && homes.Contains(x.Invoice.CareHomeId) && x.Invoice.Status != InvoiceStatuses.Void);
 
             if (clientId.HasValue)
             {
@@ -100,17 +111,38 @@ namespace CareHome.Api.Services
                 query = query.Where(x => x.Invoice.InvoiceDate <= to);
             }
 
-            return await query.Select(x => new InvoiceReportRowDto
+            var rows = await query.Select(x => new
             {
-                InvoiceNumber = x.Invoice.InvoiceNumber,
-                InvoiceDate = x.Invoice.InvoiceDate,
+                x.Invoice.PublicId,
+                x.Invoice.InvoiceNumber,
+                x.Invoice.InvoiceDate,
+                ClientPublicId = x.Client.PublicId,
+                CareHomePublicId = x.Invoice.CareHome.PublicId,
+                x.SnapshotClientName,
+                x.SnapshotCareHomeName,
+                x.SnapshotInvoiceCategoryName,
+                x.LineAmount,
+                Credits = x.CreditNoteLines
+                    .Where(c => c.CreditNote.Status != CreditNoteStatuses.Void)
+                    .Sum(c => c.Amount),
+                x.Invoice.PaymentStatus,
+                x.Invoice.Status
+            }).ToListAsync(cancellationToken);
+
+            return rows.Select(x => new InvoiceReportRowDto
+            {
+                InvoicePublicId = x.PublicId,
+                ClientPublicId = x.ClientPublicId,
+                CareHomePublicId = x.CareHomePublicId,
+                InvoiceNumber = x.InvoiceNumber,
+                InvoiceDate = x.InvoiceDate,
                 ClientName = x.SnapshotClientName,
                 CareHomeName = x.SnapshotCareHomeName,
                 Category = x.SnapshotInvoiceCategoryName,
-                Amount = x.LineAmount,
-                PaymentStatus = x.Invoice.PaymentStatus,
-                Status = x.Invoice.Status
-            }).ToListAsync(cancellationToken);
+                Amount = InvoiceLineNetAmount.FromParts(x.LineAmount, x.Credits),
+                PaymentStatus = x.PaymentStatus,
+                Status = x.Status
+            }).ToList();
         }
 
         public async Task<List<InvoiceReportRowDto>> InvoicesByCareHomeAsync(
@@ -134,19 +166,29 @@ namespace CareHome.Api.Services
             int tenantId, DateOnly from, DateOnly to, CancellationToken cancellationToken)
         {
             var homes = await AllowedHomes(tenantId, null, null, cancellationToken);
-            return await dbContext.InvoiceLines.AsNoTracking()
+            var lines = await dbContext.InvoiceLines.AsNoTracking()
                 .Where(x => x.Invoice.TenantId == tenantId
                     && homes.Contains(x.Invoice.CareHomeId)
-                    && x.Invoice.Status != "Void"
+                    && x.Invoice.Status != InvoiceStatuses.Void
                     && x.Invoice.InvoiceDate >= from
                     && x.Invoice.InvoiceDate <= to)
+                .Select(x => new
+                {
+                    x.SnapshotInvoiceCategoryName,
+                    Net = x.LineAmount + x.CreditNoteLines
+                        .Where(c => c.CreditNote.Status != CreditNoteStatuses.Void)
+                        .Sum(c => c.Amount)
+                })
+                .ToListAsync(cancellationToken);
+
+            return lines
                 .GroupBy(x => x.SnapshotInvoiceCategoryName)
                 .Select(g => new IncomeByCategoryRowDto
                 {
                     Category = g.Key,
-                    Amount = g.Sum(x => x.LineAmount)
+                    Amount = Money.Round(g.Sum(x => x.Net))
                 })
-                .ToListAsync(cancellationToken);
+                .ToList();
         }
 
         public async Task<List<OccupancyRowDto>> OccupancyAsync(int tenantId, int? companyId, CancellationToken cancellationToken)
@@ -156,6 +198,8 @@ namespace CareHome.Api.Services
                 .Where(x => homes.Contains(x.Id))
                 .Select(x => new OccupancyRowDto
                 {
+                    CareHomePublicId = x.PublicId,
+                    CompanyPublicId = x.Company.PublicId,
                     CareHomeName = x.Name,
                     CompanyName = x.Company.Name,
                     Capacity = x.BedCapacity,
@@ -178,6 +222,7 @@ namespace CareHome.Api.Services
 
             return await query.OrderBy(x => x.EffectiveFrom).Select(x => new RateHistoryRowDto
             {
+                ClientPublicId = x.ClientFundingContract.Client.PublicId,
                 ClientName = x.ClientFundingContract.Client.FirstName + " " + x.ClientFundingContract.Client.LastName,
                 FundingAuthority = x.ClientFundingContract.FundingAuthority.Name,
                 EffectiveFrom = x.EffectiveFrom,
@@ -198,6 +243,7 @@ namespace CareHome.Api.Services
                 .Take(500)
                 .Select(x => new BillingExceptionRowDto
                 {
+                    ClientPublicId = x.Client == null ? null : x.Client.PublicId,
                     LoggedAt = x.LoggedAt,
                     Severity = x.Severity,
                     Code = x.Code,
@@ -209,21 +255,28 @@ namespace CareHome.Api.Services
 
         public async Task<List<OutstandingInvoiceRowDto>> OutstandingAsync(int tenantId, CancellationToken cancellationToken)
         {
-            var homes = await AllowedHomes(tenantId, null, null, cancellationToken);
-            return await dbContext.Invoices.AsNoTracking()
-                .Where(x => x.TenantId == tenantId && homes.Contains(x.CareHomeId) && x.Status != "Void" && x.PaymentStatus != "Paid")
+            var query = new ReceivableInvoiceQuery { OpenReceivablesOnly = true, Page = 1, PageSize = 10_000 };
+            var (items, _) = await receivables.ListInvoicesAsync(tenantId, query, cancellationToken);
+            var homeIds = items.Select(x => x.CareHomeId).Distinct().ToList();
+            var homePublicIds = await dbContext.CareHomes.AsNoTracking()
+                .Where(x => x.TenantId == tenantId && homeIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id, x => x.PublicId, cancellationToken);
+
+            return items
                 .OrderBy(x => x.DueDate)
                 .Select(x => new OutstandingInvoiceRowDto
                 {
+                    InvoicePublicId = x.PublicId,
+                    CareHomePublicId = homePublicIds.GetValueOrDefault(x.CareHomeId),
                     InvoiceNumber = x.InvoiceNumber,
                     InvoiceDate = x.InvoiceDate,
                     DueDate = x.DueDate,
-                    CareHomeName = x.SnapshotCareHomeName,
-                    Amount = x.TotalAmount,
+                    CareHomeName = x.CareHomeName,
+                    Amount = x.OutstandingAmount,
                     PaymentStatus = x.PaymentStatus,
-                    IsDue = x.DueDate < DateOnly.FromDateTime(DateTime.UtcNow.Date)
+                    IsDue = x.DaysOverdue > 0
                 })
-                .ToListAsync(cancellationToken);
+                .ToList();
         }
 
         public byte[] ToCsv<T>(IEnumerable<T> rows)
@@ -273,7 +326,6 @@ namespace CareHome.Api.Services
 
         public byte[] ToPdf(string title, IEnumerable<string> lines)
         {
-            QuestPDF.Settings.License = LicenseType.Community;
             return Document.Create(container =>
             {
                 container.Page(page =>

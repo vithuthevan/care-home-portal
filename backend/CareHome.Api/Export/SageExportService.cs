@@ -73,7 +73,7 @@ namespace CareHome.Api.Export
                 DateFrom = request.DateFrom,
                 DateTo = request.DateTo,
                 CompanyId = request.CompanyId,
-                RecordCount = eligibleInvoices.Sum(x => x.Lines.Count),
+                RecordCount = columnMap.CountExportableLines(eligibleInvoices),
                 FileName = fileName,
                 FilePath = string.Empty,
                 Status = "Completed"
@@ -113,7 +113,7 @@ namespace CareHome.Api.Export
                     batch.Id);
                 batch.Status = "FileMissing";
                 await dbContext.SaveChangesAsync(cancellationToken);
-                return (null, "Export was recorded but the CSV file could not be written. Contact support with the batch id.");
+                return (batch, null);
             }
 
             await audit.LogAsync(
@@ -134,6 +134,81 @@ namespace CareHome.Api.Export
             return (batch, null);
         }
 
+        public async Task<(SageExportBatch? Batch, string? Error)> RetryFileWriteAsync(
+            int tenantId,
+            Guid tenantPublicId,
+            int batchId,
+            CancellationToken cancellationToken = default)
+        {
+            var batch = await dbContext.SageExportBatches
+                .FirstOrDefaultAsync(x => x.Id == batchId && x.TenantId == tenantId, cancellationToken);
+
+            if (batch is null)
+            {
+                return (null, "Export batch was not found.");
+            }
+
+            if (!string.Equals(batch.Status, "FileMissing", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(batch.FilePath)
+                && await documents.ReadAsync(batch.FilePath, cancellationToken) is not null)
+            {
+                return (null, "This export batch already has a CSV file.");
+            }
+
+            var invoices = await dbContext.Invoices
+                .Include(x => x.Lines)
+                    .ThenInclude(l => l.CreditNoteLines)
+                    .ThenInclude(c => c.CreditNote)
+                .Where(x => x.TenantId == tenantId && x.SageExportBatchId == batchId)
+                .OrderBy(x => x.InvoiceNumber)
+                .ToListAsync(cancellationToken);
+
+            if (invoices.Count == 0)
+            {
+                return (null, "No invoices are linked to this export batch.");
+            }
+
+            var csv = columnMap.BuildCsv(invoices);
+            try
+            {
+                var fileName = string.IsNullOrWhiteSpace(batch.FileName)
+                    ? $"sage50-{batch.Id}.csv"
+                    : batch.FileName;
+                var path = await documents.SaveAsync(
+                    TenantDocumentPaths.Folder(tenantPublicId, "sage-exports"),
+                    fileName,
+                    Encoding.UTF8.GetBytes(csv),
+                    cancellationToken);
+
+                batch.FilePath = path;
+                batch.FileName = fileName;
+                batch.Status = "Completed";
+                await dbContext.SaveChangesAsync(cancellationToken);
+
+                await audit.LogAsync(
+                    "SageExport",
+                    batch.Id.ToString(),
+                    "RetryFile",
+                    null,
+                    new { batch.FileName },
+                    "Regenerated Sage50 CSV after a prior file write failure.",
+                    cancellationToken);
+
+                return (batch, null);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "Sage CSV retry write failed. TenantId={TenantId} BatchId={BatchId}",
+                    tenantId,
+                    batchId);
+                batch.Status = "FileMissing";
+                await dbContext.SaveChangesAsync(cancellationToken);
+                return (null, "The CSV file could not be written. The export remains recorded. Try Retry CSV again.");
+            }
+        }
+
         private async Task<List<Invoice>> LoadEligibleInvoicesAsync(
             int tenantId,
             SageExportRequest request,
@@ -143,6 +218,8 @@ namespace CareHome.Api.Export
 
             var query = dbContext.Invoices
                 .Include(x => x.Lines)
+                    .ThenInclude(l => l.CreditNoteLines)
+                    .ThenInclude(c => c.CreditNote)
                 .Where(x => x.TenantId == tenantId)
                 .Where(x => x.Status != "Void")
                 .Where(x => x.InvoiceDate >= request.DateFrom && x.InvoiceDate <= request.DateTo);
@@ -202,7 +279,7 @@ namespace CareHome.Api.Export
                     var issues = new List<string>();
                     if (string.IsNullOrWhiteSpace(line.SnapshotSageId))
                     {
-                        issues.Add("Sage client ID is missing.");
+                        issues.Add("Sage ID is missing.");
                     }
 
                     if (string.IsNullOrWhiteSpace(line.SnapshotNominalCode))
@@ -213,7 +290,16 @@ namespace CareHome.Api.Export
                     var eligible = issues.Count == 0;
                     if (!eligible)
                     {
-                        errors.Add($"Invoice {invoice.InvoiceNumber} line {line.Id}: {string.Join(" ", issues)}");
+                        var lineRef = string.IsNullOrWhiteSpace(line.Description)
+                            ? $"Invoice {invoice.InvoiceNumber}"
+                            : $"Invoice {invoice.InvoiceNumber} ({line.Description})";
+                        errors.Add($"{lineRef}: {string.Join(" ", issues)}");
+                    }
+
+                    var netAmount = InvoiceLineNetAmount.FromLine(line);
+                    if (netAmount == 0m)
+                    {
+                        continue;
                     }
 
                     rows.Add(new SageExportRowDto
@@ -222,7 +308,7 @@ namespace CareHome.Api.Export
                         InvoiceNumber = invoice.InvoiceNumber,
                         SageId = line.SnapshotSageId,
                         NominalCode = line.SnapshotNominalCode,
-                        Amount = line.LineAmount,
+                        Amount = netAmount,
                         Eligible = eligible,
                         Reason = eligible ? null : string.Join(" ", issues)
                     });

@@ -2,6 +2,10 @@ namespace CareHome.Api.Dtos.Reports
 {
     public class CensusRowDto
     {
+        public Guid? ClientPublicId { get; set; }
+
+        public Guid? CareHomePublicId { get; set; }
+
         public string ClientName { get; set; } = string.Empty;
         public string ReferenceNumber { get; set; } = string.Empty;
         public string CareHomeName { get; set; } = string.Empty;
@@ -12,6 +16,10 @@ namespace CareHome.Api.Dtos.Reports
 
     public class CurrentRateRowDto
     {
+        public Guid? ClientPublicId { get; set; }
+
+        public Guid? CareHomePublicId { get; set; }
+
         public string CompanyName { get; set; } = string.Empty;
         public string CareHomeName { get; set; } = string.Empty;
         public string ClientName { get; set; } = string.Empty;
@@ -26,6 +34,12 @@ namespace CareHome.Api.Dtos.Reports
 
     public class InvoiceReportRowDto
     {
+        public Guid? InvoicePublicId { get; set; }
+
+        public Guid? ClientPublicId { get; set; }
+
+        public Guid? CareHomePublicId { get; set; }
+
         public string InvoiceNumber { get; set; } = string.Empty;
         public DateOnly InvoiceDate { get; set; }
         public string ClientName { get; set; } = string.Empty;
@@ -44,6 +58,10 @@ namespace CareHome.Api.Dtos.Reports
 
     public class OccupancyRowDto
     {
+        public Guid? CareHomePublicId { get; set; }
+
+        public Guid? CompanyPublicId { get; set; }
+
         public string CareHomeName { get; set; } = string.Empty;
         public string CompanyName { get; set; } = string.Empty;
         public int Capacity { get; set; }
@@ -53,6 +71,8 @@ namespace CareHome.Api.Dtos.Reports
 
     public class RateHistoryRowDto
     {
+        public Guid? ClientPublicId { get; set; }
+
         public string ClientName { get; set; } = string.Empty;
         public string FundingAuthority { get; set; } = string.Empty;
         public DateOnly EffectiveFrom { get; set; }
@@ -64,6 +84,8 @@ namespace CareHome.Api.Dtos.Reports
 
     public class BillingExceptionRowDto
     {
+        public Guid? ClientPublicId { get; set; }
+
         public DateTimeOffset LoggedAt { get; set; }
         public string Severity { get; set; } = string.Empty;
         public string Code { get; set; } = string.Empty;
@@ -73,6 +95,10 @@ namespace CareHome.Api.Dtos.Reports
 
     public class OutstandingInvoiceRowDto
     {
+        public Guid? InvoicePublicId { get; set; }
+
+        public Guid? CareHomePublicId { get; set; }
+
         public string InvoiceNumber { get; set; } = string.Empty;
         public DateOnly InvoiceDate { get; set; }
         public DateOnly DueDate { get; set; }

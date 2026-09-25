@@ -1,10 +1,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
-COPY backend/CareHome.Api/CareHome.Api.csproj backend/CareHome.Api/
+# Full backend tree (main = CareHome.Api only; revenue-cycle-v2 = modular projects).
+COPY backend/ backend/
 RUN dotnet restore backend/CareHome.Api/CareHome.Api.csproj
-
-COPY backend/CareHome.Api/ backend/CareHome.Api/
 RUN dotnet publish backend/CareHome.Api/CareHome.Api.csproj -c Release -o /app/publish --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime

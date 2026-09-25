@@ -13,6 +13,7 @@ import { CareHomeService } from '../../../care-homes/services/care-home.service'
 import { ClientService } from '../../services/client.service';
 
 import { getApiErrorMessage, logApiFailure } from '../../../../core/api-error';
+import { optionalEmail } from '../../../../shared/format/optional-email';
 import { AuthService } from '../../../../core/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -23,6 +24,9 @@ import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
+import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
+import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 @Component({
   selector: 'app-client-form',
@@ -38,6 +42,7 @@ import { ToastService } from '../../../../shared/ui/toast.service';
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
+    AppDateFieldComponent,
   ],
 
   templateUrl: './client-form.html',
@@ -53,10 +58,14 @@ export class ClientForm implements OnInit {
 
   private readonly router = inject(Router);
 
+  private readonly breadcrumbs = inject(BreadcrumbService);
+
   readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
 
-  clientId: number | null = null;
+  clientRouteKey: string | null = null;
+
+  residentDisplayName = '';
 
   readonly careHomes = signal<CareHomeLocation[]>([]);
 
@@ -142,19 +151,40 @@ export class ClientForm implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
 
     if (id) {
-      this.clientId = Number(id);
+      this.clientRouteKey = id;
 
       this.isEditMode = true;
 
+      this.breadcrumbs.set([
+        { label: 'Residents', routerLink: '/clients' },
+        { label: 'Edit resident' },
+      ]);
+
       this.loadClient();
     } else {
+      this.breadcrumbs.set([
+        { label: 'Residents', routerLink: '/clients' },
+        { label: 'Add resident' },
+      ]);
       this.form.controls.sageId.clearValidators();
       this.form.controls.sageId.setValidators([Validators.maxLength(20)]);
       this.form.controls.referenceNumber.clearValidators();
       this.form.controls.referenceNumber.setValidators([Validators.maxLength(20)]);
       this.form.controls.sageId.updateValueAndValidity();
       this.form.controls.referenceNumber.updateValueAndValidity();
+
+      const careHomeId = Number(this.route.snapshot.queryParamMap.get('careHomeId') || 0);
+      if (careHomeId) {
+        this.form.patchValue({ careHomeId });
+      }
     }
+  }
+
+  cancelLink(): (string | number)[] {
+    if (this.isEditMode && this.clientRouteKey) {
+      return ['/clients', this.clientRouteKey];
+    }
+    return ['/clients'];
   }
 
   private loadCareHomes(): void {
@@ -172,7 +202,7 @@ export class ClientForm implements OnInit {
   }
 
   private loadClient(): void {
-    if (this.clientId === null) {
+    if (this.clientRouteKey === null) {
       return;
     }
 
@@ -180,7 +210,7 @@ export class ClientForm implements OnInit {
     this.errorMessage.set(null);
 
     this.clientService
-      .getClient(this.clientId)
+      .getClient(this.clientRouteKey)
       .pipe(
         finalize(() => {
           this.isLoading.set(false);
@@ -189,6 +219,15 @@ export class ClientForm implements OnInit {
       .subscribe({
         next: (client) => {
           this.assignedCareHomeId.set(client.careHomeId);
+          this.residentDisplayName = `${client.firstName} ${client.lastName}`.trim();
+          this.breadcrumbs.set([
+            { label: 'Residents', routerLink: '/clients' },
+            {
+              label: this.residentDisplayName,
+              routerLink: ['/clients', entityRouteKey(client)],
+            },
+            { label: 'Edit' },
+          ]);
 
           this.form.patchValue({
             careHomeId: client.careHomeId,
@@ -228,7 +267,7 @@ export class ClientForm implements OnInit {
         error: (error) => {
           logApiFailure(error);
 
-          this.errorMessage.set(getApiErrorMessage(error, 'Unable to load client.'));
+          this.errorMessage.set(getApiErrorMessage(error, 'Unable to load resident.'));
         },
       });
   }
@@ -247,19 +286,22 @@ export class ClientForm implements OnInit {
     if (this.isEditMode && value.status !== 'Current' && !value.dischargeDate) {
       this.form.markAllAsTouched();
 
-      this.errorMessage.set('Discharge date is required when client is no longer current.');
+      this.errorMessage.set('Discharge date is required when the resident is no longer current.');
 
       return;
     }
 
     this.isSaving.set(true);
 
+    const sageId = value.sageId.trim();
+    const referenceNumber = value.referenceNumber.trim();
+
     const baseRequest = {
       careHomeId: value.careHomeId,
 
-      sageId: value.sageId.trim(),
+      sageId: sageId || undefined,
 
-      referenceNumber: value.referenceNumber.trim(),
+      referenceNumber: referenceNumber || undefined,
 
       title: value.title,
 
@@ -273,16 +315,16 @@ export class ClientForm implements OnInit {
 
       admissionDate: value.admissionDate,
 
-      email: value.email,
+      email: optionalEmail(value.email),
 
       phone: value.phone,
 
       notes: value.notes,
     };
 
-    if (this.isEditMode && this.clientId !== null) {
+    if (this.isEditMode && this.clientRouteKey !== null) {
       this.clientService
-        .updateClient(this.clientId, {
+        .updateClient(this.clientRouteKey, {
           ...baseRequest,
 
           status: value.status,
@@ -300,14 +342,18 @@ export class ClientForm implements OnInit {
         )
         .subscribe({
           next: () => {
-            this.toast.success('Client updated successfully.');
-            this.router.navigate(['/clients']);
+            this.toast.success('Resident updated successfully.');
+            if (this.clientRouteKey) {
+              void this.router.navigate(['/clients', this.clientRouteKey]);
+            } else {
+              void this.router.navigate(['/clients']);
+            }
           },
 
           error: (error) => {
             logApiFailure(error);
 
-            this.errorMessage.set(getApiErrorMessage(error, 'Unable to update client.'));
+            this.errorMessage.set(getApiErrorMessage(error, 'Unable to update resident.'));
           },
         });
 
@@ -322,15 +368,15 @@ export class ClientForm implements OnInit {
         }),
       )
       .subscribe({
-        next: (client) => {
+        next: () => {
           this.toast.success('Resident created successfully.');
-          void this.router.navigate(['/clients', client.id]);
+          void this.router.navigate(['/clients']);
         },
 
         error: (error) => {
           logApiFailure(error);
 
-          this.errorMessage.set(getApiErrorMessage(error, 'Unable to create client.'));
+          this.errorMessage.set(getApiErrorMessage(error, 'Unable to create resident.'));
         },
       });
   }

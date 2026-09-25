@@ -1,0 +1,186 @@
+<div class="page">
+  <app-page-header
+    title="Accounts receivable"
+    subtitle="Outstanding debt, ageing, and collection focus across funders and care homes."
+  >
+    <button mat-stroked-button type="button" (click)="refresh()">Refresh</button>
+  </app-page-header>
+
+  <app-api-error
+    [title]="errorMessage() ? loadErrorTitle : null"
+    [message]="errorMessage()"
+    [showRetry]="!!errorMessage()"
+    (retry)="refresh()"
+  />
+
+  @if (isLoading() && !summary()) {
+    <app-loading-state label="Loading receivables..." />
+  }
+
+  @if (summary(); as s) {
+    <section class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+      <app-kpi-card
+        label="Total outstanding"
+        [value]="'£' + (s.totalOutstanding | number: '1.2-2')"
+        [hint]="s.openInvoiceCount + ' open invoices'"
+        icon="account_balance_wallet"
+        tone="finance"
+      />
+      <app-kpi-card
+        label="Overdue"
+        [value]="'£' + (s.totalOverdue | number: '1.2-2')"
+        icon="warning"
+        tone="attention"
+      />
+      <app-kpi-card
+        label="Due this week"
+        [value]="'£' + (s.dueThisWeek | number: '1.2-2')"
+        icon="event"
+        tone="info"
+      />
+      <app-kpi-card
+        label="90+ days"
+        [value]="'£' + (s.days90Plus | number: '1.2-2')"
+        icon="schedule"
+        tone="critical"
+      />
+    </section>
+
+    <section class="mb-6 panel p-4">
+      <h2 class="text-lg font-semibold mb-3">Ageing</h2>
+      <div class="grid grid-cols-2 gap-3 md:grid-cols-5 text-sm">
+        <div>Current — <strong>£{{ s.ageing.current | number: '1.0-0' }}</strong></div>
+        <div>1–30 — <strong>£{{ s.ageing.days1To30 | number: '1.0-0' }}</strong></div>
+        <div>31–60 — <strong>£{{ s.ageing.days31To60 | number: '1.0-0' }}</strong></div>
+        <div>61–90 — <strong>£{{ s.ageing.days61To90 | number: '1.0-0' }}</strong></div>
+        <div>90+ — <strong>£{{ s.ageing.days90Plus | number: '1.0-0' }}</strong></div>
+      </div>
+    </section>
+  }
+
+  <mat-tab-group [(selectedIndex)]="selectedTab" (selectedIndexChange)="selectedTab = $event">
+    <mat-tab label="Invoices">
+      <app-filter-bar [toolbar]="true" class="mt-4">
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Invoice number</mat-label>
+          <input matInput [(ngModel)]="invoiceNumber" (ngModelChange)="onFilterChange()" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Collection status</mat-label>
+          <mat-select [(ngModel)]="paymentStatus" (selectionChange)="onFilterChange()">
+            <mat-option value="">All</mat-option>
+            <mat-option value="Unpaid">Unpaid</mat-option>
+            <mat-option value="Overdue">Overdue</mat-option>
+            <mat-option value="PartiallyPaid">Partially paid</mat-option>
+            <mat-option value="Paid">Paid</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Overdue only</mat-label>
+          <mat-select [(ngModel)]="overdueOnly" (selectionChange)="onFilterChange()">
+            <mat-option [value]="false">No</mat-option>
+            <mat-option [value]="true">Yes</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </app-filter-bar>
+
+      @if (!errorMessage() && invoices().length === 0) {
+        <app-empty-state title="No open receivables" message="Adjust filters or generate invoices from billing." />
+      } @else {
+        <div class="table-shell overflow-x-auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Invoice</th>
+                <th>Resident</th>
+                <th>Funder</th>
+                <th>Care home</th>
+                <th>Invoice date</th>
+                <th>Due date</th>
+                <th class="num">Original</th>
+                <th class="num">Credits</th>
+                <th class="num">Paid</th>
+                <th class="num">Outstanding</th>
+                <th class="num">Days overdue</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of invoices(); track row.invoiceId) {
+                <tr>
+                  <td>
+                    <a [routerLink]="invoiceLink(row)" class="link">{{ row.invoiceNumber }}</a>
+                  </td>
+                  <td>{{ row.residentName || '—' }}</td>
+                  <td>{{ row.funderName }}</td>
+                  <td>{{ row.careHomeName }}</td>
+                  <td>{{ row.invoiceDate | displayDate }}</td>
+                  <td>{{ row.dueDate | displayDate }}</td>
+                  <td class="num">£{{ row.originalAmount | number: '1.2-2' }}</td>
+                  <td class="num">£{{ row.creditedAmount | number: '1.2-2' }}</td>
+                  <td class="num">£{{ row.paidAmount | number: '1.2-2' }}</td>
+                  <td class="num">£{{ row.outstandingAmount | number: '1.2-2' }}</td>
+                  <td class="num">{{ row.daysOverdue }}</td>
+                  <td><app-status-badge [value]="row.paymentStatus" /></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <app-table-pagination
+          [page]="page"
+          [pageSize]="pageSize"
+          [totalCount]="totalCount()"
+          (pageChange)="page = $event; loadInvoices()"
+          (pageSizeChange)="pageSize = $event; page = 1; loadInvoices()"
+        />
+      }
+    </mat-tab>
+
+    <mat-tab label="Funders">
+      <div class="table-shell overflow-x-auto mt-4">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Funder</th>
+              <th class="num">Outstanding</th>
+              <th class="num">90+</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (f of funders(); track f.fundingAuthorityId) {
+              <tr>
+                <td>{{ f.funderName }}</td>
+                <td class="num">£{{ f.totalOutstanding | number: '1.2-2' }}</td>
+                <td class="num">£{{ f.ageing.days90Plus | number: '1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Care homes">
+      <div class="table-shell overflow-x-auto mt-4">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Care home</th>
+              <th class="num">Outstanding</th>
+              <th class="num">Overdue</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (h of careHomes(); track h.careHomeId) {
+              <tr>
+                <td>{{ h.careHomeName }}</td>
+                <td class="num">£{{ h.totalOutstanding | number: '1.2-2' }}</td>
+                <td class="num">£{{ h.totalOverdue | number: '1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>

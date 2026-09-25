@@ -1,5 +1,6 @@
 export interface Company {
   id: number;
+  publicId?: string;
   name: string;
   isActive: boolean;
   careHomeCount?: number;

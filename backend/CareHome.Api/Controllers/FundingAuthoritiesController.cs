@@ -4,6 +4,7 @@ using CareHome.Api.Data;
 using CareHome.Api.Dtos.FundingAuthorities;
 using CareHome.Api.Models;
 using CareHome.Api.Security;
+using CareHome.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,7 +16,8 @@ namespace CareHome.Api.Controllers
     public class FundingAuthoritiesController(
         CareHomeDbContext dbContext,
         ITenantContext tenantContext,
-        AuditService audit) : ControllerBase
+        AuditService audit,
+        MasterDataUsageService usage) : ControllerBase
     {
         private static readonly string[] AllowedTypes =
         [
@@ -48,31 +50,22 @@ namespace CareHome.Api.Controllers
                 query = query.Where(x => x.IsActive);
             }
 
-            var projected = query
-                .OrderBy(x => x.Name)
-                .Select(x => new FundingAuthorityDto
-                {
-                    Id = x.Id,
-                    Code = x.Code,
-                    Name = x.Name,
-                    Type = x.Type,
-                    ContactName = x.ContactName,
-                    Phone = x.Phone,
-                    Email = x.Email,
-                    Address = x.Address,
-                    BillingFrequency = x.BillingFrequency,
-                    BillingIntervalDays = x.BillingIntervalDays,
-                    IsActive = x.IsActive
-                });
+            var entities = await query.OrderBy(x => x.Name).ToListAsync();
+            var usageMap = await usage.GetFundingAuthorityUsagesAsync(
+                tenantContext.TenantId,
+                entities.Select(x => x.Id).ToList());
+            var dtos = entities
+                .Select(x => MapToDto(x, usageMap.GetValueOrDefault(x.Id)))
+                .ToList();
 
             if (!Pagination.IsRequested(page, pageSize))
             {
-                return Ok(await projected.ToListAsync());
+                return Ok(dtos);
             }
 
             var (p, ps) = Pagination.Normalize(page, pageSize);
-            var total = await projected.CountAsync();
-            var items = await projected.Skip((p - 1) * ps).Take(ps).ToListAsync();
+            var total = dtos.Count;
+            var items = dtos.Skip((p - 1) * ps).Take(ps).ToList();
             return Ok(new PagedResult<FundingAuthorityDto>
             {
                 Items = items,
@@ -82,34 +75,27 @@ namespace CareHome.Api.Controllers
             });
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<FundingAuthorityDto>> GetFundingAuthority(int id)
+        [HttpGet("{key}")]
+        public async Task<ActionResult<FundingAuthorityDto>> GetFundingAuthority(string key)
         {
-            var authority = await dbContext.FundingAuthorities
-                .AsNoTracking()
-                .Where(x => x.Id == id && x.TenantId == tenantContext.TenantId)
-                .Select(x => new FundingAuthorityDto
-                {
-                    Id = x.Id,
-                    Code = x.Code,
-                    Name = x.Name,
-                    Type = x.Type,
-                    ContactName = x.ContactName,
-                    Phone = x.Phone,
-                    Email = x.Email,
-                    Address = x.Address,
-                    BillingFrequency = x.BillingFrequency,
-                    BillingIntervalDays = x.BillingIntervalDays,
-                    IsActive = x.IsActive
-                })
-                .FirstOrDefaultAsync();
-
-            if (authority is null)
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
             {
                 return NotFound();
             }
 
-            return Ok(authority);
+            var entity = await dbContext.FundingAuthorities
+                .AsNoTracking()
+                .Where(x => x.TenantId == tenantContext.TenantId)
+                .Where(x => publicId != default ? x.PublicId == publicId : x.Id == id)
+                .FirstOrDefaultAsync();
+
+            if (entity is null)
+            {
+                return NotFound();
+            }
+
+            var usageDto = await usage.GetFundingAuthorityUsageAsync(tenantContext.TenantId, entity.Id);
+            return Ok(MapToDto(entity, usageDto));
         }
 
         [HttpPost]
@@ -158,7 +144,7 @@ namespace CareHome.Api.Controllers
                 Type = request.Type.Trim(),
                 ContactName = request.ContactName?.Trim(),
                 Phone = request.Phone?.Trim(),
-                Email = request.Email?.Trim(),
+                Email = OptionalContactFields.NormalizeEmail(request.Email),
                 Address = request.Address?.Trim(),
                 BillingFrequency = billingFrequency,
                 BillingIntervalDays = billingIntervalDays,
@@ -172,17 +158,24 @@ namespace CareHome.Api.Controllers
 
             return CreatedAtAction(
                 nameof(GetFundingAuthority),
-                new { id = authority.Id },
-                MapToDto(authority));
+                new { key = authority.PublicId.ToString() },
+                MapToDto(authority, new()));
         }
 
-        [HttpPut("{id:int}")]
+        [HttpPut("{key}")]
         public async Task<ActionResult<FundingAuthorityDto>> UpdateFundingAuthority(
-            int id,
+            string key,
             UpdateFundingAuthorityRequest request)
         {
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
+            {
+                return NotFound();
+            }
+
             var authority = await dbContext.FundingAuthorities
-                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
+                .FirstOrDefaultAsync(x =>
+                    x.TenantId == tenantContext.TenantId &&
+                    (publicId != default ? x.PublicId == publicId : x.Id == id));
 
             if (authority is null)
             {
@@ -194,7 +187,7 @@ namespace CareHome.Api.Controllers
             var duplicateCode = await dbContext.FundingAuthorities
                 .AnyAsync(x =>
                     x.TenantId == tenantContext.TenantId &&
-                    x.Id != id &&
+                    x.Id != authority.Id &&
                     x.Code == code);
 
             if (duplicateCode)
@@ -227,7 +220,7 @@ namespace CareHome.Api.Controllers
             authority.Type = request.Type.Trim();
             authority.ContactName = request.ContactName?.Trim();
             authority.Phone = request.Phone?.Trim();
-            authority.Email = request.Email?.Trim();
+            authority.Email = OptionalContactFields.NormalizeEmail(request.Email);
             authority.Address = request.Address?.Trim();
             authority.BillingFrequency = billingFrequency;
             authority.BillingIntervalDays =
@@ -239,7 +232,8 @@ namespace CareHome.Api.Controllers
             await dbContext.SaveChangesAsync();
             await audit.LogAsync("FundingAuthority", authority.Id.ToString(), "Update", null, request, "Updated funding authority.");
 
-            return Ok(MapToDto(authority));
+            var usageDto = await usage.GetFundingAuthorityUsageAsync(tenantContext.TenantId, authority.Id);
+            return Ok(MapToDto(authority, usageDto));
         }
 
         [HttpDelete("{id:int}")]
@@ -305,11 +299,14 @@ namespace CareHome.Api.Controllers
             return null;
         }
 
-        private static FundingAuthorityDto MapToDto(FundingAuthority authority)
+        private static FundingAuthorityDto MapToDto(
+            FundingAuthority authority,
+            Dtos.Common.MasterDataUsageDto? usageDto)
         {
             return new FundingAuthorityDto
             {
                 Id = authority.Id,
+                PublicId = authority.PublicId,
                 Code = authority.Code,
                 Name = authority.Name,
                 Type = authority.Type,
@@ -319,7 +316,9 @@ namespace CareHome.Api.Controllers
                 Address = authority.Address,
                 BillingFrequency = authority.BillingFrequency,
                 BillingIntervalDays = authority.BillingIntervalDays,
-                IsActive = authority.IsActive
+                IsActive = authority.IsActive,
+                ConfigurationSource = "Organisation",
+                Usage = usageDto
             };
         }
     }

@@ -52,25 +52,84 @@ namespace CareHome.Api.Controllers
             });
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<CareHomeDto>> GetCareHome(int id)
+        [HttpGet("{key}")]
+        public async Task<ActionResult<CareHomeDto>> GetCareHome(string key)
         {
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
+            {
+                return NotFound();
+            }
+
             var careHome = await ProjectToDto(
                     dbContext.CareHomes.AsNoTracking()
-                        .Where(x => x.TenantId == tenantContext.TenantId))
-                .FirstOrDefaultAsync(x => x.Id == id);
+                        .Where(x => x.TenantId == tenantContext.TenantId)
+                        .Where(x => publicId != default ? x.PublicId == publicId : x.Id == id))
+                .FirstOrDefaultAsync();
 
             if (careHome is null)
             {
                 return NotFound();
             }
 
-            if (!await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, id))
+            if (!await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, careHome.Id))
             {
                 return NotFound();
             }
 
             return Ok(careHome);
+        }
+
+        [HttpPut("{key}/portal-appearance")]
+        public async Task<ActionResult<CareHomeDto>> UpdatePortalAppearance(
+            string key,
+            UpdateCareHomePortalAppearanceRequest request)
+        {
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
+            {
+                return NotFound();
+            }
+
+            var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "green", "blue", "teal", "purple", "slate"
+            };
+            var theme = request.PortalAccentTheme.Trim().ToLowerInvariant();
+            if (!allowed.Contains(theme))
+            {
+                return BadRequest(new { message = "Invalid portal accent theme." });
+            }
+
+            var careHome = await dbContext.CareHomes
+                .FirstOrDefaultAsync(x =>
+                    x.TenantId == tenantContext.TenantId &&
+                    (publicId != default ? x.PublicId == publicId : x.Id == id));
+
+            if (careHome is null)
+            {
+                return NotFound();
+            }
+
+            if (!await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, careHome.Id))
+            {
+                return NotFound();
+            }
+
+            careHome.PortalAccentTheme = theme;
+            await dbContext.SaveChangesAsync();
+            await audit.LogAsync(
+                "CareHome",
+                careHome.Id.ToString(),
+                "UpdatePortalAppearance",
+                null,
+                new { careHome.PortalAccentTheme },
+                "Updated care home portal appearance.");
+
+            var dto = await ProjectToDto(
+                    dbContext.CareHomes.AsNoTracking()
+                        .Where(x => x.Id == careHome.Id))
+                .FirstAsync();
+
+            return Ok(dto);
         }
 
         [HttpPost]
@@ -109,10 +168,10 @@ namespace CareHome.Api.Controllers
                 BedCapacity = request.BedCapacity,
                 Address = request.Address?.Trim(),
                 Phone = request.Phone?.Trim(),
-                Email = request.Email?.Trim(),
+                Email = OptionalContactFields.NormalizeEmail(request.Email),
                 ManagerName = request.ManagerName?.Trim(),
                 ManagerPhone = request.ManagerPhone?.Trim(),
-                ManagerEmail = request.ManagerEmail?.Trim(),
+                ManagerEmail = OptionalContactFields.NormalizeEmail(request.ManagerEmail),
                 IsActive = true
             };
 
@@ -127,19 +186,31 @@ namespace CareHome.Api.Controllers
 
             return CreatedAtAction(
                 nameof(GetCareHome),
-                new { id = careHome.Id },
+                new { key = careHome.PublicId },
                 dto);
         }
 
-        [HttpPut("{id:int}")]
+        [HttpPut("{key}")]
         public async Task<ActionResult<CareHomeDto>> UpdateCareHome(
-            int id,
+            string key,
             UpdateCareHomeRequest request)
         {
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
+            {
+                return NotFound();
+            }
+
             var careHome = await dbContext.CareHomes
-                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
+                .FirstOrDefaultAsync(x =>
+                    x.TenantId == tenantContext.TenantId &&
+                    (publicId != default ? x.PublicId == publicId : x.Id == id));
 
             if (careHome is null)
+            {
+                return NotFound();
+            }
+
+            if (!await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, careHome.Id))
             {
                 return NotFound();
             }
@@ -159,7 +230,7 @@ namespace CareHome.Api.Controllers
             var duplicateCode = await dbContext.CareHomes
                 .AnyAsync(x =>
                     x.TenantId == tenantContext.TenantId &&
-                    x.Id != id &&
+                    x.Id != careHome.Id &&
                     x.Code == code);
 
             if (duplicateCode)
@@ -173,7 +244,7 @@ namespace CareHome.Api.Controllers
             if (careHome.IsActive && !request.IsActive)
             {
                 var deactivationError =
-                    await RejectIfDeactivatingWithCurrentClients(id);
+                    await RejectIfDeactivatingWithCurrentClients(careHome.Id);
 
                 if (deactivationError is not null)
                 {
@@ -187,10 +258,10 @@ namespace CareHome.Api.Controllers
             careHome.BedCapacity = request.BedCapacity;
             careHome.Address = request.Address?.Trim();
             careHome.Phone = request.Phone?.Trim();
-            careHome.Email = request.Email?.Trim();
+            careHome.Email = OptionalContactFields.NormalizeEmail(request.Email);
             careHome.ManagerName = request.ManagerName?.Trim();
             careHome.ManagerPhone = request.ManagerPhone?.Trim();
-            careHome.ManagerEmail = request.ManagerEmail?.Trim();
+            careHome.ManagerEmail = OptionalContactFields.NormalizeEmail(request.ManagerEmail);
             careHome.IsActive = request.IsActive;
 
             await dbContext.SaveChangesAsync();
@@ -203,13 +274,25 @@ namespace CareHome.Api.Controllers
             return Ok(dto);
         }
 
-        [HttpDelete("{id:int}")]
-        public async Task<IActionResult> DeactivateCareHome(int id)
+        [HttpDelete("{key}")]
+        public async Task<IActionResult> DeactivateCareHome(string key)
         {
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
+            {
+                return NotFound();
+            }
+
             var careHome = await dbContext.CareHomes
-                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
+                .FirstOrDefaultAsync(x =>
+                    x.TenantId == tenantContext.TenantId &&
+                    (publicId != default ? x.PublicId == publicId : x.Id == id));
 
             if (careHome is null)
+            {
+                return NotFound();
+            }
+
+            if (!await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, careHome.Id))
             {
                 return NotFound();
             }
@@ -217,7 +300,7 @@ namespace CareHome.Api.Controllers
             if (careHome.IsActive)
             {
                 var deactivationError =
-                    await RejectIfDeactivatingWithCurrentClients(id);
+                    await RejectIfDeactivatingWithCurrentClients(careHome.Id);
 
                 if (deactivationError is not null)
                 {
@@ -228,7 +311,7 @@ namespace CareHome.Api.Controllers
             careHome.IsActive = false;
 
             await dbContext.SaveChangesAsync();
-            await audit.LogAsync("CareHome", id.ToString(), "Deactivate", null, null, "Deactivated care home.");
+            await audit.LogAsync("CareHome", careHome.Id.ToString(), "Deactivate", null, null, "Deactivated care home.");
 
             return NoContent();
         }
@@ -239,6 +322,7 @@ namespace CareHome.Api.Controllers
             return query.Select(x => new CareHomeDto
             {
                 Id = x.Id,
+                PublicId = x.PublicId,
                 CompanyId = x.CompanyId,
                 CompanyName = x.Company.Name,
                 Code = x.Code,
@@ -251,7 +335,8 @@ namespace CareHome.Api.Controllers
                 ManagerPhone = x.ManagerPhone,
                 ManagerEmail = x.ManagerEmail,
                 LogoPath = x.LogoPath,
-                IsActive = x.IsActive
+                IsActive = x.IsActive,
+                PortalAccentTheme = x.PortalAccentTheme
             });
         }
 

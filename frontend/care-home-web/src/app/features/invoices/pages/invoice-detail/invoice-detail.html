@@ -14,73 +14,7 @@
   }
 
   @if (invoice(); as inv) {
-    <app-page-header [title]="inv.invoiceNumber" [subtitle]="invoiceSubtitle(inv)">
-      <a mat-stroked-button routerLink="/invoices">Back</a>
-    </app-page-header>
-
-    <section class="panel invoice-hero">
-      <div>
-        <div class="flex flex-wrap items-center gap-3">
-          <app-labeled-status kind="Invoice" [value]="inv.status" />
-        </div>
-        @if (inv.lines?.length) {
-          <p class="mt-3 mb-0 text-lg font-semibold">
-            @if (inv.lines[0].clientId) {
-              <a [routerLink]="['/clients', inv.lines[0].clientId]">{{ inv.lines[0].clientName }}</a>
-            } @else {
-              {{ inv.lines[0].clientName }}
-            }
-          </p>
-          <p class="mt-1 mb-0 text-sm text-[var(--app-text-muted)]">
-            {{ inv.periodStart | displayDate }} – {{ inv.periodEnd | displayDate }}
-          </p>
-        }
-      </div>
-      <div class="invoice-hero__amount">
-        <p class="m-0 text-supporting">Total</p>
-        <p class="m-0 amount-hero">£{{ inv.totalAmount | number: '1.2-2' }}</p>
-      </div>
-    </section>
-
-    <div class="panel panel--flat mb-4 payment-status-panel">
-      <div class="payment-status-panel__row">
-        <div>
-          <p class="m-0 text-supporting">Payment status</p>
-          <app-labeled-status kind="Payment" [value]="inv.paymentStatus" />
-        </div>
-        @if (auth.canWrite()) {
-          <div class="payment-status-panel__actions">
-            @if (inv.paymentStatus !== 'Paid') {
-              <button
-                mat-flat-button
-                color="primary"
-                type="button"
-                (click)="confirmPay('Paid')"
-                [disabled]="isPaying()"
-              >
-                @if (isPaying()) {
-                  Updating...
-                } @else {
-                  Mark as paid
-                }
-              </button>
-            }
-            @if (inv.paymentStatus !== 'NotPaid') {
-              <button
-                mat-stroked-button
-                type="button"
-                (click)="confirmPay('NotPaid')"
-                [disabled]="isPaying()"
-              >
-                Mark as unpaid
-              </button>
-            }
-          </div>
-        }
-      </div>
-    </div>
-
-    <div class="panel panel--flat mb-4 actions-bar actions-bar--primary-first actions-bar--invoice">
+    <app-page-header class="page-header--sr-title" [title]="inv.invoiceNumber" subtitle="">
       <button
         mat-flat-button
         color="primary"
@@ -91,30 +25,159 @@
         @if (isPdfLoading()) {
           Preparing PDF...
         } @else {
-          <span class="inline-flex items-center gap-1">
-            <mat-icon class="align-middle">download</mat-icon>
-            Download PDF
-          </span>
+          Download PDF
         }
       </button>
-      @if (auth.canWrite()) {
-        <button mat-stroked-button type="button" (click)="send()" [disabled]="isSending()">
-          @if (isSending()) {
-            Sending...
-          } @else {
-            <span class="inline-flex items-center gap-1">
-              <mat-icon class="align-middle">mail</mat-icon>
-              Email
-            </span>
+    </app-page-header>
+
+    <section class="panel invoice-hero" aria-labelledby="invoice-hero-title">
+      <div class="invoice-hero__main">
+        <div class="invoice-hero__title-row">
+          <h2 id="invoice-hero-title" class="invoice-hero__number m-0">{{ inv.invoiceNumber }}</h2>
+          <p class="m-0 amount-hero invoice-hero__total">
+            £{{ (inv.netBilledAmount ?? inv.totalAmount) | number: '1.2-2' }}
+          </p>
+          @if (inv.netBilledAmount != null && inv.netBilledAmount !== inv.totalAmount) {
+            <p class="m-0 text-sm text-[var(--app-text-muted)]">
+              Original invoice total £{{ inv.totalAmount | number: '1.2-2' }}
+            </p>
           }
+        </div>
+        <div class="invoice-hero__statuses">
+          <app-labeled-status kind="Invoice" [value]="inv.status" />
+          <app-labeled-status kind="Payment" [value]="inv.collectionStatus || inv.paymentStatus" />
+        </div>
+        @if (inv.lines?.length) {
+          <p class="invoice-hero__resident m-0">
+            @if (clientProfileLink(inv.lines[0]); as clientLink) {
+              <a [routerLink]="clientLink">{{ inv.lines[0].clientName }}</a>
+            } @else {
+              {{ inv.lines[0].clientName }}
+            }
+          </p>
+          @if (inv.lines[0].clientReference) {
+            <p class="invoice-hero__reference m-0">{{ inv.lines[0].clientReference }}</p>
+          }
+        }
+        <p class="invoice-hero__period m-0 text-sm text-[var(--app-text-muted)]">
+          Service period: {{ inv.periodStart | displayDate }} – {{ inv.periodEnd | displayDate }}
+        </p>
+      </div>
+    </section>
+
+    @if (commercialRevenueEnabled) {
+      <section class="panel panel--flat payment-status-panel" aria-labelledby="collection-status-heading">
+        <h2 id="collection-status-heading" class="payment-status-panel__heading m-0">Collection status</h2>
+        <div class="payment-status-panel__row">
+          <dl class="payment-status-panel__metrics">
+            <div>
+              <dt>Payment status</dt>
+              <dd>
+                <app-labeled-status kind="Payment" [value]="inv.collectionStatus || inv.paymentStatus" />
+              </dd>
+            </div>
+            @if (inv.outstandingAmount !== undefined) {
+              <div>
+                <dt>Outstanding</dt>
+                <dd class="payment-status-panel__amount">£{{ inv.outstandingAmount | number: '1.2-2' }}</dd>
+              </div>
+              <div>
+                <dt>Paid</dt>
+                <dd class="payment-status-panel__amount">£{{ inv.paidAmount | number: '1.2-2' }}</dd>
+              </div>
+            }
+          </dl>
+          <div class="payment-status-panel__actions">
+            <a
+              mat-flat-button
+              color="primary"
+              routerLink="/payments"
+              [queryParams]="paymentsHandoffQueryParams(inv)"
+              >Record payment &amp; allocate</a
+            >
+            <p class="payment-status-panel__hint m-0">
+              Record cash here, then you will be taken to allocate to this invoice when possible.
+            </p>
+          </div>
+        </div>
+      </section>
+    } @else {
+      <section class="panel panel--flat payment-status-panel" aria-labelledby="payment-status-heading">
+        <h2 id="payment-status-heading" class="payment-status-panel__heading m-0">Payment status</h2>
+        <div class="payment-status-panel__row">
+          <app-status-badge [value]="inv.paymentStatus" />
+          @if (showPaymentStatusActions()) {
+            <div class="payment-status-panel__actions">
+              @if (isPaymentPaid()) {
+                <button
+                  mat-stroked-button
+                  type="button"
+                  (click)="confirmPay('NotPaid')"
+                  [disabled]="isPaying()"
+                >
+                  @if (isPaying()) {
+                    Updating...
+                  } @else {
+                    Mark as unpaid
+                  }
+                </button>
+              } @else {
+                <button
+                  mat-flat-button
+                  color="primary"
+                  type="button"
+                  (click)="confirmPay('Paid')"
+                  [disabled]="isPaying()"
+                >
+                  @if (isPaying()) {
+                    Updating...
+                  } @else {
+                    Mark as paid
+                  }
+                </button>
+              }
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <div class="panel panel--flat mb-4 actions-bar actions-bar--invoice">
+      @if (auth.canWrite()) {
+        <button
+          mat-icon-button
+          type="button"
+          (click)="send()"
+          [disabled]="isSending()"
+          aria-label="Send invoice email"
+          matTooltip="Send invoice email"
+        >
+          <mat-icon>mail</mat-icon>
         </button>
-        <a mat-stroked-button routerLink="/credit-notes" [queryParams]="creditNoteQueryParams(inv)">
-          <mat-icon class="mr-1 align-middle">undo</mat-icon>
-          Credit note
+        <a
+          mat-icon-button
+          routerLink="/credit-notes"
+          [queryParams]="creditNoteQueryParams(inv)"
+          aria-label="Create credit note"
+          matTooltip="Create credit note"
+        >
+          <mat-icon>undo</mat-icon>
         </a>
-        <button mat-stroked-button color="warn" type="button" class="btn-void" (click)="voidInvoice()">
-          Void invoice
+        <button
+          mat-icon-button
+          type="button"
+          [matMenuTriggerFor]="invoiceMore"
+          aria-label="More invoice actions"
+          matTooltip="More"
+        >
+          <mat-icon>more_vert</mat-icon>
         </button>
+        <mat-menu #invoiceMore="matMenu">
+          <button mat-menu-item type="button" (click)="voidInvoice()">
+            <mat-icon>block</mat-icon>
+            <span>Void invoice</span>
+          </button>
+        </mat-menu>
       }
     </div>
     <p class="mb-4 text-sm text-[var(--app-text-muted)]">
@@ -125,14 +188,12 @@
       <section class="panel">
         <h2 class="mt-0 text-section">Resident</h2>
         @if (inv.lines?.length) {
-          <dl class="dl-grid">
+          <dl class="dl-grid dl-grid--entity">
             <div>
               <dt>Name</dt>
               <dd>
-                @if (inv.lines[0].clientId) {
-                  <a [routerLink]="['/clients', inv.lines[0].clientId]">{{
-                    inv.lines[0].clientName
-                  }}</a>
+                @if (clientProfileLink(inv.lines[0]); as clientLink) {
+                  <a [routerLink]="clientLink">{{ inv.lines[0].clientName }}</a>
                 } @else {
                   {{ inv.lines[0].clientName }}
                 }
@@ -140,11 +201,17 @@
             </div>
             <div>
               <dt>Reference</dt>
-              <dd>{{ inv.lines[0].clientReference }}</dd>
+              <dd>
+                @if (clientProfileLink(inv.lines[0]); as clientLink) {
+                  <a [routerLink]="clientLink">{{ inv.lines[0].clientReference || '—' }}</a>
+                } @else {
+                  {{ inv.lines[0].clientReference || '—' }}
+                }
+              </dd>
             </div>
             <div>
               <dt>Sage ID</dt>
-              <dd>{{ inv.lines[0].sageId }}</dd>
+              <dd>{{ inv.lines[0].sageId || '—' }}</dd>
             </div>
           </dl>
         } @else {
@@ -153,20 +220,32 @@
       </section>
       <section class="panel">
         <h2 class="mt-0 text-section">Funding</h2>
-        <dl class="dl-grid">
+        <dl class="dl-grid dl-grid--entity">
           <div>
             <dt>Funding authority</dt>
-            <dd>{{ inv.fundingAuthorityName }}</dd>
+            <dd>
+              @if (fundingAuthorityEditLink(inv); as faLink) {
+                <a [routerLink]="faLink">{{ inv.fundingAuthorityName }}</a>
+              } @else {
+                {{ inv.fundingAuthorityName }}
+              }
+            </dd>
           </div>
           <div>
             <dt>Category</dt>
-            <dd>{{ inv.invoiceCategoryName }}</dd>
+            <dd>
+              @if (invoiceCategoryEditLink(inv); as categoryLink) {
+                <a [routerLink]="categoryLink">{{ inv.invoiceCategoryName }}</a>
+              } @else {
+                {{ inv.invoiceCategoryName }}
+              }
+            </dd>
           </div>
           <div>
             <dt>Care home</dt>
             <dd>
-              @if (inv.careHomeId) {
-                <a [routerLink]="['/care-homes', inv.careHomeId, 'dashboard']">{{ inv.careHomeName }}</a>
+              @if (careHomeDashboardLink(inv); as homeLink) {
+                <a [routerLink]="homeLink">{{ inv.careHomeName }}</a>
               } @else {
                 {{ inv.careHomeName }}
               }
@@ -174,12 +253,18 @@
           </div>
           <div>
             <dt>Company</dt>
-            <dd>{{ inv.companyName }}</dd>
+            <dd>
+              @if (companyDetailLink(inv); as coLink) {
+                <a [routerLink]="coLink">{{ inv.companyName }}</a>
+              } @else {
+                {{ inv.companyName }}
+              }
+            </dd>
           </div>
         </dl>
       </section>
       <section class="panel md:col-span-2">
-        <h2 class="mt-0 text-section">Billing period & dates</h2>
+        <h2 class="mt-0 text-section">Billing period &amp; dates</h2>
         <dl class="dl-grid">
           <div>
             <dt>Service period</dt>
@@ -200,15 +285,15 @@
     <section class="panel mt-4">
       <h2 class="mt-0 text-section">Invoice lines</h2>
       <div class="table-container">
-        <table class="data-table">
+        <table class="data-table data-table--responsive-hide-sm">
           <thead>
             <tr>
               <th>Resident</th>
               <th>Description</th>
-              <th>Period</th>
+              <th class="col-hide-sm">Period</th>
               <th class="num">Days</th>
               <th class="num">Rate</th>
-              <th>Nominal</th>
+              <th class="col-hide-sm">Nominal</th>
               <th class="num">Amount</th>
             </tr>
           </thead>
@@ -216,14 +301,19 @@
             @for (line of inv.lines; track line.id) {
               <tr>
                 <td>
-                  @if (line.clientId) {
-                    <a [routerLink]="['/clients', line.clientId]">{{ line.clientName }}</a>
+                  @if (clientProfileLink(line); as clientLink) {
+                    <a [routerLink]="clientLink">{{ line.clientName }}</a>
                   } @else {
                     {{ line.clientName }}
                   }
                 </td>
-                <td>{{ line.description }}</td>
                 <td>
+                  <div>{{ line.description }}</div>
+                  @if (lineAmountHint(line); as hint) {
+                    <p class="invoice-line-hint m-0">{{ hint }}</p>
+                  }
+                </td>
+                <td class="col-hide-sm">
                   {{ line.servicePeriodStart | displayDate }} –
                   {{ line.servicePeriodEnd | displayDate }}
                 </td>
@@ -231,7 +321,7 @@
                 <td class="num">
                   £{{ line.rateAmount | number: '1.2-2' }} {{ line.rateFrequency }}
                 </td>
-                <td>{{ line.nominalCode }}</td>
+                <td class="col-hide-sm">{{ line.nominalCode }}</td>
                 <td class="num">£{{ line.lineAmount | number: '1.2-2' }}</td>
               </tr>
             }
@@ -240,6 +330,10 @@
       </div>
       <p class="mt-4 mb-0 text-right text-lg font-semibold">
         Total £{{ inv.totalAmount | number: '1.2-2' }}
+      </p>
+      <p class="mt-2 mb-0 text-sm text-[var(--app-text-muted)]">
+        Line amounts are calculated by billing from eligible days and contracted rates; the invoice
+        service period may differ from an individual line period when charges are pro-rated.
       </p>
     </section>
   }

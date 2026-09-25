@@ -2,10 +2,11 @@ import { Component, computed, input, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatSelectModule } from '@angular/material/select';
+import { MatIconModule } from '@angular/material/icon';
 
 @Component({
   selector: 'app-table-pagination',
-  imports: [MatButtonModule, MatFormFieldModule, MatSelectModule],
+  imports: [MatButtonModule, MatFormFieldModule, MatSelectModule, MatIconModule],
   template: `
     @if (totalCount() > 0) {
       <nav class="table-pagination" aria-label="Table pagination">
@@ -14,7 +15,7 @@ import { MatSelectModule } from '@angular/material/select';
         </p>
         <div class="table-pagination__controls">
           <mat-form-field appearance="outline" class="table-pagination__size">
-            <mat-label>Page size</mat-label>
+            <mat-label>Rows</mat-label>
             <mat-select
               [value]="pageSize()"
               (selectionChange)="pageSizeChange.emit($event.value)"
@@ -32,9 +33,26 @@ import { MatSelectModule } from '@angular/material/select';
             [disabled]="page() <= 1 || disabled()"
             aria-label="Previous page"
           >
-            Previous
+            <mat-icon>chevron_left</mat-icon>
           </button>
-          <span class="table-pagination__page" aria-live="polite">Page {{ page() }} of {{ totalPages() }}</span>
+          @for (item of pageItems(); track $index) {
+            @if (item === 'ellipsis') {
+              <span class="table-pagination__ellipsis" aria-hidden="true">…</span>
+            } @else {
+              <button
+                mat-stroked-button
+                type="button"
+                class="table-pagination__num"
+                [class.table-pagination__num--active]="item === page()"
+                [attr.aria-current]="item === page() ? 'page' : null"
+                [attr.aria-label]="'Page ' + item"
+                [disabled]="disabled()"
+                (click)="pageChange.emit(item)"
+              >
+                {{ item }}
+              </button>
+            }
+          }
           <button
             mat-stroked-button
             type="button"
@@ -42,7 +60,7 @@ import { MatSelectModule } from '@angular/material/select';
             [disabled]="page() >= totalPages() || disabled()"
             aria-label="Next page"
           >
-            Next
+            <mat-icon>chevron_right</mat-icon>
           </button>
         </div>
       </nav>
@@ -75,29 +93,38 @@ import { MatSelectModule } from '@angular/material/select';
       gap: var(--space-2);
     }
 
-    .table-pagination__page {
-      font-size: 0.875rem;
-      color: var(--app-text);
-      min-width: 6.5rem;
-      text-align: center;
-    }
-
     .table-pagination__size {
-      width: 7.5rem;
+      width: 6.5rem;
       margin: 0;
     }
 
     .table-pagination__size ::ng-deep .mat-mdc-form-field-subscript-wrapper {
       display: none;
     }
+
+    .table-pagination__num {
+      min-width: 2.5rem;
+      padding: 0 0.5rem;
+    }
+
+    .table-pagination__num--active {
+      background: var(--app-primary-light);
+      color: var(--app-primary);
+      border-color: var(--app-primary);
+    }
+
+    .table-pagination__ellipsis {
+      padding: 0 var(--space-1);
+      color: var(--app-text-muted);
+    }
   `,
 })
 export class TablePaginationComponent {
   readonly page = input(1);
-  readonly pageSize = input(50);
+  readonly pageSize = input(20);
   readonly totalCount = input(0);
   readonly disabled = input(false);
-  readonly pageSizeOptions = input([25, 50, 100]);
+  readonly pageSizeOptions = input([20, 50, 100]);
 
   readonly pageChange = output<number>();
   readonly pageSizeChange = output<number>();
@@ -116,4 +143,24 @@ export class TablePaginationComponent {
   readonly rangeEnd = computed(() =>
     Math.min(this.page() * this.pageSize(), this.totalCount()),
   );
+
+  readonly pageItems = computed(() => {
+    const total = this.totalPages();
+    const current = this.page();
+    const items: Array<number | 'ellipsis'> = [];
+    const add = (value: number | 'ellipsis') => {
+      if (items[items.length - 1] !== value) {
+        items.push(value);
+      }
+    };
+
+    for (let i = 1; i <= total; i++) {
+      if (i === 1 || i === total || Math.abs(i - current) <= 1) {
+        add(i);
+      } else if (items[items.length - 1] !== 'ellipsis') {
+        add('ellipsis');
+      }
+    }
+    return items;
+  });
 }

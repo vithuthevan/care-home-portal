@@ -1,5 +1,6 @@
 using CareHome.Api.Audit;
 using CareHome.Api.Billing;
+using CareHome.Billing.Billing;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Documents;
@@ -7,6 +8,7 @@ using CareHome.Api.Dtos.Invoices;
 using CareHome.Api.Email;
 using CareHome.Api.Models;
 using CareHome.Api.Security;
+using CareHome.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,7 +23,8 @@ namespace CareHome.Api.Controllers
         IEmailSender email,
         AuditService audit,
         UserAccessService userAccess,
-        ITenantContext tenantContext) : ControllerBase
+        ITenantContext tenantContext,
+        InvoiceReceivableReadModel receivableReadModel) : ControllerBase
     {
         [HttpGet]
         public async Task<ActionResult<PagedResult<InvoiceListDto>>> List(
@@ -105,6 +108,7 @@ namespace CareHome.Api.Controllers
                 .Select(x => new InvoiceListDto
                 {
                     Id = x.Id,
+                    PublicId = x.PublicId,
                     InvoiceNumber = x.InvoiceNumber,
                     CompanyName = x.SnapshotCompanyName,
                     CareHomeName = x.SnapshotCareHomeName,
@@ -121,6 +125,8 @@ namespace CareHome.Api.Controllers
                 })
                 .ToListAsync();
 
+            await receivableReadModel.EnrichListAsync(tenantContext.TenantId, items, HttpContext.RequestAborted);
+
             return Ok(new PagedResult<InvoiceListDto>
             {
                 Items = items,
@@ -130,19 +136,29 @@ namespace CareHome.Api.Controllers
             });
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<InvoiceDetailDto>> Get(int id)
+        [HttpGet("{key}")]
+        public async Task<ActionResult<InvoiceDetailDto>> Get(string key)
         {
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
+            {
+                return NotFound();
+            }
+
             var today = DateOnly.FromDateTime(DateTime.UtcNow.Date);
             var invoice = await dbContext.Invoices.AsNoTracking()
-                .Where(x => x.Id == id && x.TenantId == tenantContext.TenantId)
+                .Where(x => x.TenantId == tenantContext.TenantId)
+                .Where(x => publicId != default ? x.PublicId == publicId : x.Id == id)
                 .Select(x => new InvoiceDetailDto
                 {
                     Id = x.Id,
+                    PublicId = x.PublicId,
                     InvoiceNumber = x.InvoiceNumber,
                     CompanyId = x.CompanyId,
+                    CompanyPublicId = x.Company.PublicId,
                     CareHomeId = x.CareHomeId,
+                    CareHomePublicId = x.CareHome.PublicId,
                     FundingAuthorityId = x.FundingAuthorityId,
+                    FundingAuthorityPublicId = x.FundingAuthority.PublicId,
                     InvoiceCategoryId = x.InvoiceCategoryId,
                     CompanyName = x.SnapshotCompanyName,
                     CareHomeName = x.SnapshotCareHomeName,
@@ -162,6 +178,7 @@ namespace CareHome.Api.Controllers
                     {
                         Id = l.Id,
                         ClientId = l.ClientId,
+                        ClientPublicId = l.Client.PublicId,
                         ClientName = l.SnapshotClientName,
                         ClientReference = l.SnapshotClientReferenceNumber,
                         SageId = l.SnapshotSageId,
@@ -172,7 +189,8 @@ namespace CareHome.Api.Controllers
                         RateFrequency = l.RateFrequency,
                         RateAmount = l.RateAmount,
                         LineAmount = l.LineAmount,
-                        Description = l.Description
+                        Description = l.Description,
+                        AmountBasis = l.AmountBasis
                     }).ToList()
                 })
                 .FirstOrDefaultAsync();
@@ -185,6 +203,22 @@ namespace CareHome.Api.Controllers
             if (!await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, invoice.CareHomeId))
             {
                 return NotFound();
+            }
+
+            await receivableReadModel.EnrichDetailAsync(tenantContext.TenantId, invoice, HttpContext.RequestAborted);
+
+            foreach (var line in invoice.Lines)
+            {
+                if (!string.IsNullOrWhiteSpace(line.AmountBasis))
+                {
+                    continue;
+                }
+
+                line.AmountBasis = InvoiceLineAmountBasis.Format(
+                    line.EligibleDays,
+                    line.RateFrequency,
+                    line.RateAmount,
+                    string.Equals(line.RateFrequency, "AdHoc", StringComparison.OrdinalIgnoreCase));
             }
 
             return Ok(invoice);
@@ -272,7 +306,7 @@ namespace CareHome.Api.Controllers
 
             if (request.PaymentStatus is not "Paid" and not "NotPaid")
             {
-                return BadRequest(new { message = "Payment status must be Paid or NotPaid." });
+                return BadRequest(new { message = "Payment status must be paid or unpaid." });
             }
 
             if (invoice.Status == "Void")
@@ -292,7 +326,7 @@ namespace CareHome.Api.Controllers
         {
             if (request.PaymentStatus is not "Paid" and not "NotPaid")
             {
-                return BadRequest(new { message = "Payment status must be Paid or NotPaid." });
+                return BadRequest(new { message = "Payment status must be paid or unpaid." });
             }
 
             var homes = await userAccess.GetScopedCareHomeIdsAsync(tenantContext.TenantId);

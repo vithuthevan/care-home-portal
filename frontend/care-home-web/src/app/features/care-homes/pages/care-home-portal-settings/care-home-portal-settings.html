@@ -1,0 +1,58 @@
+<div class="page page--narrow">
+  <app-page-header
+    title="Care home portal settings"
+    subtitle="Appearance applies only while you work in this care home's dashboard and settings."
+  >
+    <a mat-stroked-button [routerLink]="dashboardLink()">Back to dashboard</a>
+  </app-page-header>
+
+  <app-api-error [message]="errorMessage()" />
+
+  @if (isLoading()) {
+    <app-loading-state label="Loading settings..." />
+  }
+
+  @if (home(); as location) {
+    <section class="panel">
+      <h2 class="mt-0 text-section">Appearance</h2>
+      <p class="mt-0 mb-3 text-sm text-[var(--app-text-muted)]">Portal colour</p>
+      <div class="theme-option-grid">
+        @for (theme of themeOptions; track theme.id) {
+          <button
+            type="button"
+            class="theme-option-button"
+            (click)="selectTheme(theme.id)"
+            [attr.aria-current]="selectedTheme() === theme.id ? 'true' : null"
+          >
+            <span
+              class="theme-swatch"
+              [class.theme-swatch--green]="theme.id === 'green'"
+              [class.theme-swatch--blue]="theme.id === 'blue'"
+              [class.theme-swatch--teal]="theme.id === 'teal'"
+              [class.theme-swatch--purple]="theme.id === 'purple'"
+              [class.theme-swatch--slate]="theme.id === 'slate'"
+            ></span>
+            {{ theme.label }}
+          </button>
+        }
+      </div>
+      @if (auth.canWrite()) {
+        <div class="mt-4 flex justify-end gap-2">
+          <button
+            mat-flat-button
+            color="primary"
+            type="button"
+            (click)="save()"
+            [disabled]="isSaving()"
+          >
+            @if (isSaving()) {
+              Saving...
+            } @else {
+              Save
+            }
+          </button>
+        </div>
+      }
+    </section>
+  }
+</div>

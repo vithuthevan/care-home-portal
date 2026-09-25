@@ -1,0 +1,205 @@
+name: Deploy CareHome to Oracle Cloud
+
+on:
+  push:
+    branches:
+      - revenue-cycle-v2
+
+  workflow_dispatch:
+
+concurrency:
+  group: carehome-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/care-home-web/package-lock.json
+
+      # -------------------------
+      # Build Angular frontend
+      # -------------------------
+
+      - name: Install frontend dependencies
+        working-directory: frontend/care-home-web
+        run: npm ci
+
+      - name: Build Angular frontend
+        working-directory: frontend/care-home-web
+        run: npm run build -- --configuration production
+
+      # -------------------------
+      # Build ASP.NET Core API
+      # -------------------------
+
+      - name: Restore .NET dependencies
+        run: dotnet restore backend/CareHome.Api/CareHome.Api.csproj
+
+      - name: Publish API
+        run: |
+          dotnet publish backend/CareHome.Api/CareHome.Api.csproj \
+            -c Release \
+            -o publish/api \
+            --no-restore
+
+      # -------------------------
+      # Put Angular inside API
+      # wwwroot
+      # -------------------------
+
+      - name: Copy Angular build into API
+        run: |
+          FRONTEND_PATH="frontend/care-home-web/dist/care-home-web/browser"
+
+          if [ ! -d "$FRONTEND_PATH" ]; then
+            echo "Angular build output not found at $FRONTEND_PATH"
+            find frontend/care-home-web/dist -maxdepth 3 -type d || true
+            exit 1
+          fi
+
+          rm -rf publish/api/wwwroot
+          mkdir -p publish/api/wwwroot
+
+          cp -a "$FRONTEND_PATH"/. publish/api/wwwroot/
+
+      - name: Copy ops scripts into publish bundle
+        run: |
+          mkdir -p publish/api/scripts
+          cp scripts/apply-database-migrations-on-host.sh publish/api/scripts/
+
+      # -------------------------
+      # Prepare SSH
+      # -------------------------
+
+      - name: Configure deployment SSH key
+        env:
+          OCI_SSH_KEY: ${{ secrets.OCI_SSH_KEY }}
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$OCI_SSH_KEY" > ~/.ssh/carehome_deploy
+          chmod 600 ~/.ssh/carehome_deploy
+
+          ssh-keyscan -H "$OCI_HOST" >> ~/.ssh/known_hosts
+
+      # -------------------------
+      # Package deployment
+      # App_Data is excluded so
+      # uploaded documents survive
+      # -------------------------
+
+      - name: Package application
+        run: |
+          tar \
+            --exclude='./App_Data' \
+            -czf carehome-deploy.tar.gz \
+            -C publish/api .
+
+      # -------------------------
+      # Upload
+      # -------------------------
+
+      - name: Upload deployment package
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+          OCI_USER: ${{ secrets.OCI_USER }}
+        run: |
+          scp \
+            -i ~/.ssh/carehome_deploy \
+            carehome-deploy.tar.gz \
+            "$OCI_USER@$OCI_HOST:/tmp/carehome-deploy.tar.gz"
+
+      # -------------------------
+      # Deploy
+      # -------------------------
+
+      - name: Deploy and restart service
+        env:
+          OCI_HOST: ${{ secrets.OCI_HOST }}
+          OCI_USER: ${{ secrets.OCI_USER }}
+        run: |
+          ssh -T -i ~/.ssh/carehome_deploy "$OCI_USER@$OCI_HOST" << 'EOF'
+            set -e
+
+            echo "Stopping CareHome API..."
+            sudo systemctl stop carehome-api
+
+            echo "Removing previous application files..."
+            find /home/ubuntu/api \
+              -mindepth 1 \
+              -maxdepth 1 \
+              ! -name App_Data \
+              -exec rm -rf {} +
+
+            echo "Extracting new deployment..."
+            tar -xzf /tmp/carehome-deploy.tar.gz \
+              -C /home/ubuntu/api
+
+            rm -f /tmp/carehome-deploy.tar.gz
+
+            echo "Applying database migrations..."
+
+            if ! bash /home/ubuntu/api/scripts/apply-database-migrations-on-host.sh /home/ubuntu/api; then
+              echo "Database migration failed."
+
+              echo "Restarting CareHome API so the site is not left offline..."
+              sudo systemctl start carehome-api || true
+
+              echo "Recent application logs:"
+              sudo journalctl -u carehome-api -n 100 --no-pager || true
+
+              exit 1
+            fi
+
+            echo "Starting CareHome API..."
+            sudo systemctl start carehome-api
+
+            echo "Checking service..."
+            sudo systemctl is-active --quiet carehome-api
+
+            echo "Waiting for API to become healthy..."
+
+            HEALTHY=false
+
+            for i in {1..30}; do
+              if curl -fsS http://127.0.0.1:5000/health/live > /dev/null; then
+                echo "API is healthy."
+                HEALTHY=true
+                break
+              fi
+
+              echo "API not ready yet - attempt $i/30"
+              sleep 5
+            done
+
+            if [ "$HEALTHY" != "true" ]; then
+              echo "API failed to become healthy within 150 seconds."
+
+              echo "Service status:"
+              sudo systemctl status carehome-api --no-pager -l || true
+
+              echo "Recent application logs:"
+              sudo journalctl -u carehome-api -n 100 --no-pager || true
+
+              exit 1
+            fi
+
+            echo "Deployment completed successfully."
+          EOF

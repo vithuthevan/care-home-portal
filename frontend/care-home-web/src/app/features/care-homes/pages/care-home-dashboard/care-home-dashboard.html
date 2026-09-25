@@ -8,103 +8,143 @@
   @if (data(); as data) {
     <app-page-header [title]="data.name" [subtitle]="profileLine()">
       @if (auth.canWrite()) {
-        <a mat-stroked-button [routerLink]="['/care-homes', data.careHomeId, 'edit']">Edit home</a>
+        <a mat-stroked-button [routerLink]="portalSettingsLink()">Portal settings</a>
+        <a mat-stroked-button [routerLink]="editHomeLink()">Edit home</a>
+        <a mat-flat-button color="primary" routerLink="/billing" [queryParams]="billingQueryParams()"
+          >Preview billing</a
+        >
       }
     </app-page-header>
 
-    <div class="mb-4 flex flex-wrap gap-2 text-sm text-[var(--app-text-muted)]">
-      @if (home()) {
-        <span>{{ home()!.code }}</span>
-        <span>·</span>
-        <span>{{ home()!.companyName }}</span>
-        <span>·</span>
-        <app-status-badge [value]="home()!.isActive ? 'Active' : 'Inactive'" />
+    <app-entity-summary-strip [items]="summaryStrip()" />
+
+    @if (home(); as location) {
+      <section class="panel mt-4">
+        <h2 class="mt-0 text-section">Contact &amp; location</h2>
+        <dl class="dl-grid">
+          <div>
+            <dt>Address</dt>
+            <dd>{{ location.address || '—' }}</dd>
+          </div>
+          <div>
+            <dt>Phone</dt>
+            <dd>{{ location.phone || '—' }}</dd>
+          </div>
+          <div>
+            <dt>Email</dt>
+            <dd>{{ location.email || '—' }}</dd>
+          </div>
+          <div>
+            <dt>Manager</dt>
+            <dd>{{ location.managerName || data.managerName || 'Not set' }}</dd>
+          </div>
+        </dl>
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <app-status-badge [value]="location.isActive ? 'Active' : 'Inactive'" />
+        </div>
+      </section>
+    }
+
+    <section class="table-shell mt-4">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--app-border)] px-4 py-3">
+        <h2 class="m-0 text-section">Current residents</h2>
+        <a class="text-sm font-medium no-underline" routerLink="/clients" [queryParams]="residentsQueryParams()"
+          >View all →</a
+        >
+      </div>
+      @if (residents().length) {
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Resident</th>
+                <th class="col-ref">Reference</th>
+                <th class="col-status">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (resident of residents(); track resident.id) {
+                <tr
+                  class="row-clickable"
+                  [routerLink]="['/clients', entityRouteKey(resident)]"
+                  tabindex="0"
+                  (keydown.enter)="navigateToClient(resident)"
+                  (keydown.space)="$event.preventDefault(); navigateToClient(resident)"
+                >
+                  <td class="font-medium">{{ resident.firstName }} {{ resident.lastName }}</td>
+                  <td>{{ resident.referenceNumber }}</td>
+                  <td><app-status-badge [value]="resident.status" /></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <app-empty-state
+          title="No residents yet"
+          message="Add residents to this care home to begin tracking occupancy, funding and billing."
+        >
+          @if (auth.canWrite()) {
+            <a mat-flat-button color="primary" routerLink="/clients/new" [queryParams]="addResidentQueryParams()"
+              >Add resident</a
+            >
+          }
+        </app-empty-state>
       }
-      <span>Manager: {{ data.managerName || 'Not set' }}</span>
-    </div>
-
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      <div class="panel kpi-card">
-        <div class="kpi-icon"><mat-icon>hotel</mat-icon></div>
-        <div>
-          <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Capacity</h3>
-          <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.capacity }}</p>
-          <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">Registered beds</p>
-        </div>
-      </div>
-      <div class="panel kpi-card">
-        <div class="kpi-icon"><mat-icon>groups</mat-icon></div>
-        <div>
-          <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Occupancy</h3>
-          <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.occupied }}</p>
-          <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">Current residents</p>
-        </div>
-      </div>
-      <div class="panel kpi-card">
-        <div class="kpi-icon"><mat-icon>bed</mat-icon></div>
-        <div>
-          <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Available beds</h3>
-          <p class="mt-1 mb-0 text-2xl font-semibold">{{ data.available }}</p>
-          <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">Capacity remaining</p>
-        </div>
-      </div>
-      <div class="panel kpi-card">
-        <div class="kpi-icon"><mat-icon>request_quote</mat-icon></div>
-        <div>
-          <h3 class="m-0 text-sm font-medium text-[var(--app-text-muted)]">Outstanding</h3>
-          <p class="mt-1 mb-0 text-2xl font-semibold">
-            £{{ data.outstandingAmount | number: '1.2-2' }}
-          </p>
-          <p class="mt-1 mb-0 text-xs text-[var(--app-text-muted)]">Unpaid invoices</p>
-        </div>
-      </div>
-    </div>
-
-    <section class="panel mt-4">
-      <h2 class="mt-0 mb-3 text-lg font-semibold">Current residents</h2>
-      <ul class="m-0 list-disc pl-5">
-        @if (residents().length) {
-          @for (resident of residents(); track resident.id) {
-            <li>
-              <a [routerLink]="['/clients', resident.id]"
-                >{{ resident.firstName }} {{ resident.lastName }}</a
-              >
-            </li>
-          }
-        } @else {
-          @for (name of data.currentClients; track name) {
-            <li>{{ name }}</li>
-          } @empty {
-            <li>No current residents.</li>
-          }
-        }
-      </ul>
     </section>
 
-    <section class="panel mt-4">
-      <h2 class="mt-0 mb-3 text-lg font-semibold">Recent invoices</h2>
-      <div class="table-container">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th>Number</th>
-              <th class="num">Amount</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (row of data.recentInvoices; track row.id) {
-              <tr>
-                <td>
-                  <a [routerLink]="['/invoices', row.id]">{{ row.invoiceNumber }}</a>
-                </td>
-                <td class="num">£{{ row.totalAmount | number: '1.2-2' }}</td>
-                <td><app-status-badge [value]="row.status" /></td>
-              </tr>
-            }
-          </tbody>
-        </table>
+    <section class="table-shell mt-4">
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--app-border)] px-4 py-3">
+        <h2 class="m-0 text-section">Recent invoices</h2>
+        <a class="text-sm font-medium no-underline" routerLink="/invoices" [queryParams]="invoicesQueryParams()"
+          >View all →</a
+        >
       </div>
+      @if (data.recentInvoices?.length) {
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Invoice</th>
+                <th class="col-hide-sm">Resident</th>
+                <th class="col-hide-sm">Period</th>
+                <th class="num">Net billed</th>
+                <th class="col-status">Payment</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of data.recentInvoices; track row.id) {
+                <tr
+                  class="row-clickable"
+                  [routerLink]="invoiceLink(row)"
+                  tabindex="0"
+                  (keydown.enter)="navigateToInvoice(row)"
+                  (keydown.space)="$event.preventDefault(); navigateToInvoice(row)"
+                >
+                  <td class="font-medium">{{ row.invoiceNumber }}</td>
+                  <td class="col-hide-sm">{{ row.clientName || '—' }}</td>
+                  <td class="col-hide-sm">{{ formatInvoicePeriod(row) }}</td>
+                  <td class="num">£{{ (row.netBilledAmount ?? row.totalAmount) | number: '1.2-2' }}</td>
+                  <td class="col-status">
+                    <app-labeled-status kind="Payment" [value]="row.paymentStatus" />
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <app-empty-state
+          title="No invoices yet"
+          message="Invoices generated for this care home will appear here."
+        >
+          @if (auth.canWrite()) {
+            <a mat-flat-button color="primary" routerLink="/billing" [queryParams]="billingQueryParams()"
+              >View billing</a
+            >
+          }
+        </app-empty-state>
+      }
     </section>
   }
 </div>

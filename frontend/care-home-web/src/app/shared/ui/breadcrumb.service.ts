@@ -2,7 +2,7 @@ import { Injectable, signal } from '@angular/core';
 
 export interface BreadcrumbItem {
   label: string;
-  routerLink?: string;
+  routerLink?: string | readonly (string | number)[];
 }
 
 @Injectable({
@@ -24,22 +24,29 @@ export class BreadcrumbService {
     if (path.startsWith('/clients/new')) {
       return [{ label: 'Residents', routerLink: '/clients' }, { label: 'New resident' }];
     }
-    if (/^\/clients\/\d+\/edit/.test(path)) {
+    if (/^\/clients\/[^/]+\/edit/.test(path)) {
       return [{ label: 'Residents', routerLink: '/clients' }, { label: 'Edit resident' }];
     }
-    if (/^\/clients\/\d+/.test(path)) {
+    if (/^\/clients\/[^/]+/.test(path) && path !== '/clients/new') {
       return [{ label: 'Residents', routerLink: '/clients' }, { label: 'Resident' }];
     }
     if (path.startsWith('/clients')) {
       return [{ label: 'Residents' }];
     }
-    if (/^\/care-homes\/\d+\/dashboard/.test(path)) {
+    if (/^\/care-homes\/[^/]+\/dashboard/.test(path)) {
       return [{ label: 'Care Homes', routerLink: '/care-homes' }, { label: 'Care home' }];
+    }
+    if (/^\/care-homes\/[^/]+\/settings/.test(path)) {
+      return [
+        { label: 'Care Homes', routerLink: '/care-homes' },
+        { label: 'Care home' },
+        { label: 'Portal settings' },
+      ];
     }
     if (path.startsWith('/care-homes/new')) {
       return [{ label: 'Care Homes', routerLink: '/care-homes' }, { label: 'New care home' }];
     }
-    if (/^\/care-homes\/\d+\/edit/.test(path)) {
+    if (/^\/care-homes\/[^/]+\/edit/.test(path)) {
       return [{ label: 'Care Homes', routerLink: '/care-homes' }, { label: 'Edit care home' }];
     }
     if (path.startsWith('/care-homes')) {
@@ -48,10 +55,17 @@ export class BreadcrumbService {
     if (path.startsWith('/companies/new')) {
       return [{ label: 'Companies', routerLink: '/companies' }, { label: 'New company' }];
     }
-    if (/^\/companies\/\d+\/edit/.test(path)) {
+    if (/^\/companies\/[^/]+\/care-homes/.test(path)) {
+      return [
+        { label: 'Companies', routerLink: '/companies' },
+        { label: 'Company' },
+        { label: 'Care homes' },
+      ];
+    }
+    if (/^\/companies\/[^/]+\/edit/.test(path)) {
       return [{ label: 'Companies', routerLink: '/companies' }, { label: 'Edit company' }];
     }
-    if (/^\/companies\/\d+$/.test(path)) {
+    if (/^\/companies\/[^/]+$/.test(path)) {
       return [{ label: 'Companies', routerLink: '/companies' }, { label: 'Company' }];
     }
     if (path.startsWith('/companies')) {
@@ -60,7 +74,7 @@ export class BreadcrumbService {
     if (path.startsWith('/billing')) {
       return [{ label: 'Billing', routerLink: '/billing' }];
     }
-    if (/^\/invoices\/\d+/.test(path)) {
+    if (/^\/invoices\/[^/]+/.test(path)) {
       return [
         { label: 'Billing', routerLink: '/billing' },
         { label: 'Invoices', routerLink: '/invoices' },
@@ -70,17 +84,80 @@ export class BreadcrumbService {
     if (path.startsWith('/invoices')) {
       return [{ label: 'Billing', routerLink: '/billing' }, { label: 'Invoices' }];
     }
+    if (/^\/payments\/[^/]+/.test(path)) {
+      return [{ label: 'Payments', routerLink: '/payments' }, { label: 'Payment' }];
+    }
+    if (path.startsWith('/payments')) {
+      return [{ label: 'Payments' }];
+    }
+    if (path.startsWith('/receivables')) {
+      return [{ label: 'Accounts receivable' }];
+    }
+    if (path.startsWith('/banking')) {
+      return [{ label: 'Banking' }];
+    }
+    if (path.startsWith('/remittances')) {
+      return [{ label: 'Remittances' }];
+    }
+    if (path.startsWith('/collections')) {
+      return [{ label: 'Collections' }];
+    }
+    if (path.startsWith('/disputes')) {
+      return [{ label: 'Disputes' }];
+    }
+    if (path.startsWith('/revenue-assurance')) {
+      return [{ label: 'Revenue assurance' }];
+    }
+    if (path.startsWith('/contract-renewals')) {
+      return [{ label: 'Contract renewals' }];
+    }
     if (path.startsWith('/credit-notes')) {
       return [
         { label: 'Billing', routerLink: '/billing' },
         { label: 'Credit notes', routerLink: '/credit-notes' },
       ];
     }
+    if (path.startsWith('/funding-authorities/new')) {
+      return [
+        { label: 'Funding Authorities', routerLink: '/funding-authorities' },
+        { label: 'Add authority' },
+      ];
+    }
+    if (/^\/funding-authorities\/[^/]+\/edit/.test(path)) {
+      return [
+        { label: 'Funding Authorities', routerLink: '/funding-authorities' },
+        { label: 'Edit authority' },
+      ];
+    }
     if (path.startsWith('/funding-authorities')) {
       return [{ label: 'Funding Authorities' }];
     }
+    if (path.startsWith('/invoice-categories/new')) {
+      return [
+        { label: 'Invoice Categories', routerLink: '/invoice-categories' },
+        { label: 'Add category' },
+      ];
+    }
+    if (/^\/invoice-categories\/[^/]+\/edit/.test(path)) {
+      return [
+        { label: 'Invoice Categories', routerLink: '/invoice-categories' },
+        { label: 'Edit category' },
+      ];
+    }
     if (path.startsWith('/invoice-categories')) {
       return [{ label: 'Invoice Categories' }];
+    }
+    if (path.startsWith('/nominal-codes/new')) {
+      return [
+        { label: 'Nominal Codes', routerLink: '/nominal-codes' },
+        { label: 'Add nominal code' },
+      ];
+    }
+    if (/^\/nominal-codes\/[^/]+\/edit/.test(path)) {
+      return [
+        { label: 'Nominal Codes', routerLink: '/nominal-codes' },
+        { label: 'Edit nominal code' },
+      ];
     }
     if (path.startsWith('/nominal-codes')) {
       return [{ label: 'Nominal Codes' }];
@@ -88,7 +165,13 @@ export class BreadcrumbService {
     if (path.startsWith('/invoice-templates/new')) {
       return [
         { label: 'Invoice Templates', routerLink: '/invoice-templates' },
-        { label: 'New template' },
+        { label: 'Add template' },
+      ];
+    }
+    if (/^\/invoice-templates\/[^/]+\/edit/.test(path)) {
+      return [
+        { label: 'Invoice Templates', routerLink: '/invoice-templates' },
+        { label: 'Edit template' },
       ];
     }
     if (path.startsWith('/invoice-templates')) {

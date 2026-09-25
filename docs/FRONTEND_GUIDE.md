@@ -3,7 +3,7 @@
 Angular 22 standalone app in `frontend/care-home-web`.
 
 - Proxy: `proxy.conf.json` → `http://localhost:5092`
-- Dates: `yyyy-MM-dd` strings and `<input type="date">`. Do not wrap them in JavaScript `Date` objects.
+- Dates: `yyyy-MM-dd` strings in forms and API payloads. Use `app-date-field` (Material calendar picker) in the UI; do not wrap values in JavaScript `Date` objects in request models.
 - API errors: `src/app/core/api-error.ts`
 - Auth: `AuthService` (signal + localStorage), `authInterceptor`, `authGuard` / `adminGuard`
 

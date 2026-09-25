@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using CareHome.Api.Common;
 
 namespace CareHome.Api.Dtos.CareHomes
 {
@@ -25,7 +26,7 @@ namespace CareHome.Api.Dtos.CareHomes
         public string? Phone { get; set; }
 
         [MaxLength(150)]
-        [EmailAddress]
+        [OptionalEmailAddress]
         public string? Email { get; set; }
 
         [MaxLength(150)]
@@ -35,7 +36,7 @@ namespace CareHome.Api.Dtos.CareHomes
         public string? ManagerPhone { get; set; }
 
         [MaxLength(150)]
-        [EmailAddress]
+        [OptionalEmailAddress]
         public string? ManagerEmail { get; set; }
 
         public bool IsActive { get; set; }

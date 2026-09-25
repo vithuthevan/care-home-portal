@@ -1,0 +1,89 @@
+<div class="page">
+  <app-page-header
+    title="Payments"
+    subtitle="Cash received, allocations, and unapplied balances"
+  />
+
+  <section class="panel panel--flat mb-4">
+    <h2 class="m-0 mb-1 text-section">Record payment</h2>
+    <p class="m-0 mb-4 text-sm text-[var(--app-text-muted)]">
+      Record cash received, then open the payment to allocate it to invoices.
+    </p>
+    <div class="filter-row payment-record-form">
+      <app-date-field label="Received date" [(ngModel)]="newReceivedDate" [required]="true" />
+      <mat-form-field appearance="outline">
+        <mat-label>Amount</mat-label>
+        <input matInput type="number" min="0" step="0.01" required [(ngModel)]="newAmount" />
+      </mat-form-field>
+      <mat-form-field appearance="outline">
+        <mat-label>Payment reference</mat-label>
+        <input matInput [(ngModel)]="newReference" placeholder="Optional" />
+      </mat-form-field>
+      <button
+        mat-flat-button
+        color="primary"
+        type="button"
+        (click)="recordPayment()"
+        [disabled]="saving() || !newAmount || newAmount <= 0"
+      >
+        Record payment
+      </button>
+    </div>
+  </section>
+
+  @if (errorMessage()) {
+    <app-api-error [message]="errorMessage()!" />
+  }
+
+  <mat-tab-group [(selectedIndex)]="tabIndex" (selectedIndexChange)="onTabChange($event)">
+    <mat-tab label="Received" />
+    <mat-tab label="Allocated" />
+    <mat-tab label="Unapplied cash" />
+    <mat-tab label="Reversed" />
+  </mat-tab-group>
+
+  @if (loading()) {
+    <app-loading-state label="Loading payments..." />
+  } @else if (rows().length === 0) {
+    <app-empty-state title="No payments" message="Record a manual payment to get started." />
+  } @else {
+    <div class="table-container">
+      <table class="data-table data-table--responsive-hide-sm">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Reference</th>
+            <th class="col-hide-sm">Payer</th>
+            <th class="num">Amount</th>
+            <th class="num col-hide-sm">Allocated</th>
+            <th class="num">Unapplied</th>
+            <th>Status</th>
+            <th class="col-actions"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.publicId) {
+            <tr>
+              <td>{{ row.receivedDate | displayDate }}</td>
+              <td>{{ row.reference || '—' }}</td>
+              <td class="col-hide-sm">{{ row.payerName || '—' }}</td>
+              <td class="num">£{{ row.amount | number: '1.2-2' }}</td>
+              <td class="num col-hide-sm">£{{ row.allocatedAmount | number: '1.2-2' }}</td>
+              <td class="num">£{{ row.unappliedAmount | number: '1.2-2' }}</td>
+              <td><app-status-badge [value]="row.status" /></td>
+              <td class="col-actions">
+                <a mat-button [routerLink]="['/payments', row.publicId]">Open</a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <app-table-pagination
+      [page]="page"
+      [pageSize]="pageSize"
+      [totalCount]="totalCount()"
+      (pageChange)="page = $event; load()"
+    />
+  }
+</div>

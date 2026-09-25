@@ -26,6 +26,8 @@ import { Client } from '../../../clients/models/client.model';
 import { ClientService } from '../../../clients/services/client.service';
 import { PagedResult } from '../../../../core/models';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
+import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
+import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 @Component({
   selector: 'app-credit-note-workspace',
@@ -46,6 +48,7 @@ import { TablePaginationComponent } from '../../../../shared/ui/table-pagination
     CurrencyDisplayComponent,
     IconActionButtonComponent,
     TablePaginationComponent,
+    AppDateFieldComponent,
   ],
   templateUrl: './credit-note-workspace.html',
 })
@@ -63,12 +66,16 @@ export class CreditNoteWorkspacePage implements OnInit {
   readonly notes = signal<any[]>([]);
   readonly notesTotalCount = signal(0);
   notesPage = 1;
-  notesPageSize = 50;
+  notesPageSize = 20;
   readonly errorMessage = signal<string | null>(null);
   readonly isWorking = signal(false);
+  readonly sourceInvoiceId = signal<number | null>(null);
   readonly sourceInvoiceNumber = signal<string | null>(null);
   readonly sourceResidentName = signal<string | null>(null);
   readonly sourceClientReference = signal<string | null>(null);
+  readonly highlightedCreditNote = signal<{ creditNoteNumber: string; invoiceNumber?: string } | null>(
+    null,
+  );
 
   selectedClientId: number | null = null;
   periodStart = '';
@@ -150,6 +157,16 @@ export class CreditNoteWorkspacePage implements OnInit {
     return client.referenceNumber ? `${name} — ${client.referenceNumber}` : name;
   }
 
+  invoiceLink(note: {
+    invoiceId: number;
+    invoicePublicId?: string;
+  }): (string | number)[] {
+    return [
+      '/invoices',
+      entityRouteKey({ id: note.invoiceId, publicId: note.invoicePublicId ?? null }),
+    ];
+  }
+
   onResidentQueryChange(value: string | Client | null): void {
     if (value && typeof value === 'object') {
       this.onResidentSelected(value);
@@ -164,6 +181,11 @@ export class CreditNoteWorkspacePage implements OnInit {
   }
 
   runPreview(): void {
+    const validationError = this.validateCreateForm();
+    if (validationError) {
+      this.errorMessage.set(validationError);
+      return;
+    }
     this.errorMessage.set(null);
     this.isWorking.set(true);
     this.http
@@ -176,14 +198,30 @@ export class CreditNoteWorkspacePage implements OnInit {
   }
 
   generate(): void {
+    const validationError = this.validateCreateForm();
+    if (validationError) {
+      this.errorMessage.set(validationError);
+      return;
+    }
     this.errorMessage.set(null);
     this.isWorking.set(true);
     this.http
       .post('/api/credit-notes/generate', this.body())
       .pipe(finalize(() => this.isWorking.set(false)))
       .subscribe({
-        next: () => {
-          this.toast.success('Credit note generated successfully.');
+        next: (result: { id?: number; creditNoteNumber?: string }) => {
+          const label = result?.creditNoteNumber ? ` (${result.creditNoteNumber})` : '';
+          this.toast.success(`Credit note generated successfully${label}.`);
+          this.preview.set(null);
+          this.reason = '';
+          this.residentQuery.set('');
+          this.selectedClientId = null;
+          this.periodStart = '';
+          this.periodEnd = '';
+          this.sourceInvoiceId.set(null);
+          this.sourceInvoiceNumber.set(null);
+          this.sourceResidentName.set(null);
+          this.sourceClientReference.set(null);
           this.loadNotes();
         },
         error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Generate failed.')),
@@ -196,8 +234,25 @@ export class CreditNoteWorkspacePage implements OnInit {
     });
   }
 
+  private validateCreateForm(): string | null {
+    if (!this.periodStart?.trim()) {
+      return 'Period start is required.';
+    }
+    if (!this.periodEnd?.trim()) {
+      return 'Period end is required.';
+    }
+    if (this.periodEnd < this.periodStart) {
+      return 'Period end cannot be before period start.';
+    }
+    if (!this.reason?.trim()) {
+      return 'A reason is required before previewing or generating a credit note.';
+    }
+    return null;
+  }
+
   private body() {
     return {
+      invoiceId: this.sourceInvoiceId() ?? null,
       clientId: this.selectedClientId || null,
       periodStart: this.periodStart,
       periodEnd: this.periodEnd,
@@ -208,12 +263,39 @@ export class CreditNoteWorkspacePage implements OnInit {
 
   private applyQueryContext(): void {
     const params = this.route.snapshot.queryParamMap;
+    const invoiceId = Number(params.get('invoiceId') || 0);
     const clientId = Number(params.get('clientId') || 0);
     const invoiceNumber = params.get('invoiceNumber')?.trim() || '';
     const clientName = params.get('clientName')?.trim() || '';
     const clientReference = params.get('clientReference')?.trim() || '';
     const periodStart = this.toDateInput(params.get('periodStart'));
     const periodEnd = this.toDateInput(params.get('periodEnd'));
+    const creditNoteId = Number(params.get('creditNoteId') || 0);
+
+    if (creditNoteId > 0) {
+      this.http.get<{ creditNoteNumber?: string; invoiceNumber?: string }>(`/api/credit-notes/${creditNoteId}`).subscribe({
+        next: (note) => {
+          this.highlightedCreditNote.set({
+            creditNoteNumber: note.creditNoteNumber ?? `#${creditNoteId}`,
+            invoiceNumber: note.invoiceNumber,
+          });
+          this.breadcrumbs.set([
+            { label: 'Billing', routerLink: '/billing' },
+            { label: 'Credit notes', routerLink: '/credit-notes' },
+            { label: note.creditNoteNumber ?? 'Credit note' },
+          ]);
+        },
+        error: () => this.highlightedCreditNote.set(null),
+      });
+    } else {
+      this.highlightedCreditNote.set(null);
+    }
+
+    if (invoiceId > 0) {
+      this.sourceInvoiceId.set(invoiceId);
+    } else {
+      this.sourceInvoiceId.set(null);
+    }
 
     if (invoiceNumber) {
       this.sourceInvoiceNumber.set(invoiceNumber);

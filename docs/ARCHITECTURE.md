@@ -33,6 +33,12 @@ ASP.NET Core Identity + JWT Bearer. Global `[Authorize]` filter; `[AllowAnonymou
 
 See `docs/MULTI_TENANCY.md`.
 
+Named capability policies (`CareHomePolicies`) complement role checks on sensitive controllers. See `docs/AUTHORIZATION.md`.
+
+## Observability
+
+OpenTelemetry instruments HTTP, outbound HTTP, and EF Core. Custom meters cover billing generate and email failures. Correlation IDs flow through `CorrelationIdMiddleware` and request logging scopes. Azure Monitor activates when `APPLICATIONINSIGHTS_CONNECTION_STRING` is set.
+
 ## Documents
 
 Generated PDFs and Sage files are stored under `tenants/{publicId}/invoices|credit-notes|sage-exports/` inside `App_Data/documents` (or `DocumentStorage:RootPath`).

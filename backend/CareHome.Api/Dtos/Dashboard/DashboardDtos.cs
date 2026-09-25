@@ -20,16 +20,25 @@ namespace CareHome.Api.Dtos.Dashboard
 
         public List<RecentInvoiceDto> RecentInvoices { get; set; } = [];
 
-        public List<string> BillingExceptions { get; set; } = [];
+        public List<DashboardBillingExceptionDto> BillingExceptions { get; set; } = [];
 
         public List<UpcomingInvoiceDto> UpcomingInvoices { get; set; } = [];
 
         public List<string> SetupHints { get; set; } = [];
     }
 
+    public class DashboardBillingExceptionDto
+    {
+        public string Code { get; set; } = string.Empty;
+
+        public string Message { get; set; } = string.Empty;
+    }
+
     public class OccupancyCardDto
     {
         public int CareHomeId { get; set; }
+
+        public Guid PublicId { get; set; }
 
         public string CareHomeName { get; set; } = string.Empty;
 
@@ -44,17 +53,36 @@ namespace CareHome.Api.Dtos.Dashboard
     {
         public int Id { get; set; }
 
+        public Guid PublicId { get; set; }
+
         public string InvoiceNumber { get; set; } = string.Empty;
 
         public string CareHomeName { get; set; } = string.Empty;
 
+        public string ClientName { get; set; } = string.Empty;
+
+        public DateOnly PeriodStart { get; set; }
+
+        public DateOnly PeriodEnd { get; set; }
+
         public decimal TotalAmount { get; set; }
 
+        /// <summary>Sum of net line amounts (after non-void credits), aligned with Sage export and invoice reports.</summary>
+        public decimal NetBilledAmount { get; set; }
+
         public string Status { get; set; } = string.Empty;
+
+        public string PaymentStatus { get; set; } = string.Empty;
     }
 
     public class UpcomingInvoiceDto
     {
+        public int CareHomeId { get; set; }
+
+        public Guid CareHomePublicId { get; set; }
+
+        public Guid CompanyPublicId { get; set; }
+
         public string CareHomeName { get; set; } = string.Empty;
 
         public string FundingAuthorityName { get; set; } = string.Empty;

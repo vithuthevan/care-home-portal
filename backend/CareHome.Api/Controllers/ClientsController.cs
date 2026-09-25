@@ -23,6 +23,7 @@ namespace CareHome.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<PagedResult<ClientDto>>> GetClients(
             string? search = null,
+            string? company = null,
             int? companyId = null,
             int? careHomeId = null,
             int? fundingAuthorityId = null,
@@ -45,7 +46,25 @@ namespace CareHome.Api.Controllers
                 query = query.Where(x => !x.IsArchived);
             }
 
-            if (companyId.HasValue)
+            if (!string.IsNullOrWhiteSpace(company))
+            {
+                if (!EntityRouteKey.TryParse(company.Trim(), out var companyPublicId, out var parsedCompanyId))
+                {
+                    return Ok(new PagedResult<ClientDto>
+                    {
+                        Items = [],
+                        TotalCount = 0,
+                        Page = page,
+                        PageSize = pageSize
+                    });
+                }
+
+                query = query.Where(x =>
+                    companyPublicId != default
+                        ? x.CareHome.Company.PublicId == companyPublicId
+                        : x.CareHome.CompanyId == parsedCompanyId);
+            }
+            else if (companyId.HasValue)
             {
                 query = query.Where(x => x.CareHome.CompanyId == companyId.Value);
             }
@@ -84,8 +103,7 @@ namespace CareHome.Api.Controllers
 
             var total = await query.CountAsync();
             var clients = await ProjectToDto(query)
-                .OrderBy(x => x.FirstName)
-                .ThenBy(x => x.LastName)
+                .OrderByDescending(x => x.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -99,13 +117,19 @@ namespace CareHome.Api.Controllers
             });
         }
 
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<ClientDto>> GetClient(int id)
+        [HttpGet("{key}")]
+        public async Task<ActionResult<ClientDto>> GetClient(string key)
         {
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
+            {
+                return NotFound();
+            }
+
             var client = await ProjectToDto(
                     dbContext.Clients.AsNoTracking()
-                        .Where(x => x.TenantId == tenantContext.TenantId))
-                .FirstOrDefaultAsync(x => x.Id == id);
+                        .Where(x => x.TenantId == tenantContext.TenantId)
+                        .Where(x => publicId != default ? x.PublicId == publicId : x.Id == id))
+                .FirstOrDefaultAsync();
 
             if (client is null)
             {
@@ -198,7 +222,7 @@ namespace CareHome.Api.Controllers
 
                 AdmissionDate = request.AdmissionDate,
 
-                Email = request.Email?.Trim(),
+                Email = OptionalContactFields.NormalizeEmail(request.Email),
                 Phone = request.Phone?.Trim(),
                 Notes = request.Notes?.Trim(),
 
@@ -223,17 +247,24 @@ namespace CareHome.Api.Controllers
 
             return CreatedAtAction(
                 nameof(GetClient),
-                new { id = client.Id },
+                new { key = client.PublicId },
                 dto);
         }
 
-        [HttpPut("{id:int}")]
+        [HttpPut("{key}")]
         public async Task<ActionResult<ClientDto>> UpdateClient(
-            int id,
+            string key,
             UpdateClientRequest request)
         {
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
+            {
+                return NotFound();
+            }
+
             var client = await dbContext.Clients
-                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
+                .FirstOrDefaultAsync(x =>
+                    x.TenantId == tenantContext.TenantId &&
+                    (publicId != default ? x.PublicId == publicId : x.Id == id));
 
             if (client is null)
             {
@@ -258,7 +289,7 @@ namespace CareHome.Api.Controllers
             var duplicateSageId =
                 await dbContext.Clients.AnyAsync(x =>
                     x.TenantId == tenantContext.TenantId &&
-                    x.Id != id &&
+                    x.Id != client.Id &&
                     x.SageId == sageId);
 
             if (duplicateSageId)
@@ -273,7 +304,7 @@ namespace CareHome.Api.Controllers
             var duplicateReference =
                 await dbContext.Clients.AnyAsync(x =>
                     x.TenantId == tenantContext.TenantId &&
-                    x.Id != id &&
+                    x.Id != client.Id &&
                     x.ReferenceNumber == referenceNumber);
 
             if (duplicateReference)
@@ -367,8 +398,7 @@ namespace CareHome.Api.Controllers
                     request.IsArchived;
             }
 
-            client.Email =
-                request.Email?.Trim();
+            client.Email = OptionalContactFields.NormalizeEmail(request.Email);
 
             client.Phone =
                 request.Phone?.Trim();
@@ -393,11 +423,18 @@ namespace CareHome.Api.Controllers
             return Ok(dto);
         }
 
-        [HttpDelete("{id:int}")]
-        public async Task<IActionResult> ArchiveClient(int id)
+        [HttpDelete("{key}")]
+        public async Task<IActionResult> ArchiveClient(string key)
         {
+            if (!EntityRouteKey.TryParse(key, out var publicId, out var id))
+            {
+                return NotFound();
+            }
+
             var client = await dbContext.Clients
-                .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
+                .FirstOrDefaultAsync(x =>
+                    x.TenantId == tenantContext.TenantId &&
+                    (publicId != default ? x.PublicId == publicId : x.Id == id));
 
             if (client is null)
             {
@@ -434,8 +471,11 @@ namespace CareHome.Api.Controllers
             return query.Select(x => new ClientDto
             {
                 Id = x.Id,
+                PublicId = x.PublicId,
                 CareHomeId = x.CareHomeId,
+                CareHomePublicId = x.CareHome.PublicId,
                 CompanyId = x.CareHome.CompanyId,
+                CompanyPublicId = x.CareHome.Company.PublicId,
                 CareHomeName = x.CareHome.Name,
                 CompanyName = x.CareHome.Company.Name,
                 SageId = x.SageId,

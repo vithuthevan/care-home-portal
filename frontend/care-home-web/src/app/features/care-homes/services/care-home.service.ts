@@ -33,19 +33,28 @@ export class CareHomeService {
     return this.http.get<PagedResult<CareHomeLocation>>(this.apiUrl, { params });
   }
 
-  getCareHome(id: number): Observable<CareHomeLocation> {
+  getCareHome(id: number | string): Observable<CareHomeLocation> {
     return this.http.get<CareHomeLocation>(`${this.apiUrl}/${id}`);
+  }
+
+  updatePortalAppearance(
+    id: number | string,
+    portalAccentTheme: string,
+  ): Observable<CareHomeLocation> {
+    return this.http.put<CareHomeLocation>(`${this.apiUrl}/${id}/portal-appearance`, {
+      portalAccentTheme,
+    });
   }
 
   createCareHome(request: CreateCareHomeRequest): Observable<CareHomeLocation> {
     return this.http.post<CareHomeLocation>(this.apiUrl, request);
   }
 
-  updateCareHome(id: number, request: UpdateCareHomeRequest): Observable<CareHomeLocation> {
+  updateCareHome(id: number | string, request: UpdateCareHomeRequest): Observable<CareHomeLocation> {
     return this.http.put<CareHomeLocation>(`${this.apiUrl}/${id}`, request);
   }
 
-  deactivateCareHome(id: number): Observable<void> {
+  deactivateCareHome(id: number | string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
 }

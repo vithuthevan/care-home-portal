@@ -1,5 +1,21 @@
 # Authorization
 
+## Capability policies (Phase 1)
+
+Named policies in `Security/Authorization/CareHomePolicies.cs` map roles to commercial capabilities:
+
+| Policy | Typical roles |
+|--------|----------------|
+| `CanManageOrganisation` | TenantAdmin, Administrator |
+| `CanViewAudit` | TenantAdmin, Administrator |
+| `CanManageBilling` | TenantAdmin, Administrator, LocationManager |
+| `CanManageFunding` | TenantAdmin, Administrator, LocationManager |
+| `CanManageReceivables` | TenantAdmin, Administrator, LocationManager |
+| `CanViewFinancialReports` | All tenant roles including ReadOnly |
+| `PlatformOnly` | PlatformAdmin, SuperAdmin |
+
+Care-home scoping for LocationManager remains in `UserAccessService` (policies are not sufficient alone).
+
 ## Roles
 
 | Role | TenantId | Access |

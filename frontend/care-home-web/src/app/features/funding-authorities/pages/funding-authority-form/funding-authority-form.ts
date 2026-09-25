@@ -5,6 +5,7 @@ import { finalize } from 'rxjs';
 
 import { FundingAuthorityService } from '../../services/funding-authority.service';
 import { getApiErrorMessage, logApiFailure } from '../../../../core/api-error';
+import { optionalEmail } from '../../../../shared/format/optional-email';
 import { AuthService } from '../../../../core/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -14,7 +15,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
-import { ToastService } from '../../../../shared/ui/toast.service';
 
 @Component({
   selector: 'app-funding-authority-form',
@@ -37,10 +37,9 @@ export class FundingAuthorityForm implements OnInit {
   private readonly fundingAuthorityService = inject(FundingAuthorityService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly toast = inject(ToastService);
   readonly auth = inject(AuthService);
 
-  fundingAuthorityId: number | null = null;
+  fundingAuthorityRouteKey: string | null = null;
 
   isEditMode = false;
   readonly isLoading = signal(false);
@@ -72,7 +71,7 @@ export class FundingAuthorityForm implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
 
     if (id) {
-      this.fundingAuthorityId = Number(id);
+      this.fundingAuthorityRouteKey = id;
       this.isEditMode = true;
       this.loadFundingAuthority();
     }
@@ -92,7 +91,7 @@ export class FundingAuthorityForm implements OnInit {
   }
 
   private loadFundingAuthority(): void {
-    if (this.fundingAuthorityId === null) {
+    if (this.fundingAuthorityRouteKey === null) {
       return;
     }
 
@@ -100,7 +99,7 @@ export class FundingAuthorityForm implements OnInit {
     this.errorMessage.set(null);
 
     this.fundingAuthorityService
-      .getFundingAuthority(this.fundingAuthorityId)
+      .getFundingAuthority(this.fundingAuthorityRouteKey)
       .pipe(
         finalize(() => {
           this.isLoading.set(false);
@@ -152,16 +151,16 @@ export class FundingAuthorityForm implements OnInit {
       type: value.type,
       contactName: value.contactName,
       phone: value.phone,
-      email: value.email,
+      email: optionalEmail(value.email),
       address: value.address,
       billingFrequency: value.billingFrequency,
       billingIntervalDays:
         value.billingFrequency === 'CustomDays' ? value.billingIntervalDays : null,
     };
 
-    if (this.isEditMode && this.fundingAuthorityId !== null) {
+    if (this.isEditMode && this.fundingAuthorityRouteKey !== null) {
       this.fundingAuthorityService
-        .updateFundingAuthority(this.fundingAuthorityId, {
+        .updateFundingAuthority(this.fundingAuthorityRouteKey, {
           ...request,
           isActive: value.isActive,
         })
@@ -194,14 +193,7 @@ export class FundingAuthorityForm implements OnInit {
       )
       .subscribe({
         next: () => {
-          this.toast.success('Funding authority created.');
-          this.form.reset({
-            type: '',
-            billingFrequency: '',
-            billingIntervalDays: null,
-            isActive: true,
-          });
-          this.form.markAsPristine();
+          void this.router.navigate(['/funding-authorities']);
         },
 
         error: (error) => {

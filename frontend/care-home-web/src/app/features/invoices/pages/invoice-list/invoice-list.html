@@ -9,42 +9,128 @@
     <div class="feedback-banner feedback-banner--success">{{ bulkMessage() }}</div>
   }
 
-  <app-filter-bar>
-    <div class="filter-bar__fields filter-bar__fields--3">
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Invoice number</mat-label>
-        <input matInput [(ngModel)]="invoiceNumber" (keyup.enter)="load()" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Status</mat-label>
-        <mat-select [(ngModel)]="status">
-          <mat-option value="">All statuses</mat-option>
-          <mat-option value="Generated">Generated</mat-option>
-          <mat-option value="Sent">Sent</mat-option>
-          <mat-option value="Void">Void</mat-option>
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Payment status</mat-label>
-        <mat-select [(ngModel)]="paymentStatus">
-          <mat-option value="">All payment</mat-option>
-          <mat-option value="NotPaid">Not paid</mat-option>
-          <mat-option value="Paid">Paid</mat-option>
-        </mat-select>
-      </mat-form-field>
-    </div>
-    <div filterActions>
-      <button mat-flat-button color="primary" type="button" (click)="page = 1; load()">Search</button>
-      @if (auth.canWrite()) {
-        <button mat-stroked-button type="button" (click)="bulkSend()">Email selected</button>
-        <button mat-stroked-button type="button" (click)="bulkPay('Paid')">Mark paid</button>
-        <button mat-stroked-button type="button" (click)="bulkPay('NotPaid')">Mark unpaid</button>
-      }
-    </div>
-  </app-filter-bar>
-
   @if (isLoading()) {
     <app-loading-state label="Loading invoices..." />
+  }
+
+  @if (!isLoading() && (items().length || hasActiveFilters())) {
+    <div class="table-shell list-view-table--from-md">
+      <app-filter-bar [toolbar]="true">
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-icon matPrefix>search</mat-icon>
+          <mat-label>Invoice number</mat-label>
+          <input
+            matInput
+            [(ngModel)]="invoiceNumber"
+            (ngModelChange)="onSearchChange()"
+            (keyup.enter)="page = 1; load()"
+            placeholder="Search invoices..."
+          />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Status</mat-label>
+          <mat-select [(ngModel)]="status" (selectionChange)="page = 1; load()">
+            <mat-option value="">All statuses</mat-option>
+            <mat-option value="Generated">Generated</mat-option>
+            <mat-option value="Sent">Sent</mat-option>
+            <mat-option value="Void">Void</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Payment status</mat-label>
+          <mat-select [(ngModel)]="paymentStatus" (selectionChange)="page = 1; load()">
+            <mat-option value="">All</mat-option>
+            <mat-option value="NotPaid">Unpaid</mat-option>
+            <mat-option value="Paid">Paid</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <div filterActions>
+          @if (auth.canWrite()) {
+            <button mat-stroked-button type="button" (click)="bulkSend()" [disabled]="!selected.size">
+              Email selected
+            </button>
+            @if (canMarkPaid()) {
+              <button
+                mat-flat-button
+                color="primary"
+                type="button"
+                (click)="bulkPay('Paid')"
+                [disabled]="isBulkPaying()"
+              >
+                @if (isBulkPaying()) {
+                  Updating...
+                } @else {
+                  Mark as paid
+                }
+              </button>
+            }
+            @if (canMarkUnpaid()) {
+              <button
+                mat-stroked-button
+                type="button"
+                (click)="bulkPay('NotPaid')"
+                [disabled]="isBulkPaying()"
+              >
+                @if (isBulkPaying()) {
+                  Updating...
+                } @else {
+                  Mark as unpaid
+                }
+              </button>
+            }
+          }
+        </div>
+      </app-filter-bar>
+
+      @if (items().length) {
+        <div class="table-container table-container--sticky">
+          <table class="data-table data-table--responsive-hide-sm">
+            <thead>
+              <tr>
+                <th scope="col" aria-label="Select invoices"></th>
+                <th>Invoice</th>
+                <th class="col-hide-sm">Period</th>
+                <th class="col-hide-sm">Date</th>
+                <th>Care home</th>
+                <th class="col-hide-sm">Funding</th>
+                <th>Status</th>
+                <th>Payment status</th>
+                <th class="num">Net billed</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of items(); track item.id) {
+                <tr class="row-clickable" [routerLink]="['/invoices', entityRouteKey(item)]">
+                  <td (click)="$event.stopPropagation()">
+                    <mat-checkbox
+                      (change)="toggle(item.id, $any($event).checked)"
+                      [attr.aria-label]="'Select invoice ' + item.invoiceNumber"
+                    />
+                  </td>
+                  <td class="font-medium" (click)="$event.stopPropagation()">
+                    <a class="table-cell-link" [routerLink]="['/invoices', entityRouteKey(item)]">{{
+                      item.invoiceNumber
+                    }}</a>
+                  </td>
+                  <td class="col-hide-sm">{{ formatPeriod(item) }}</td>
+                  <td class="col-hide-sm">{{ item.invoiceDate | displayDate }}</td>
+                  <td class="cell-truncate">{{ item.careHomeName }}</td>
+                  <td class="col-hide-sm cell-truncate">{{ item.fundingAuthorityName }}</td>
+                  <td><app-labeled-status kind="Invoice" [value]="item.status" /></td>
+                  <td>
+                    <app-labeled-status kind="Payment" [value]="item.collectionStatus || item.paymentStatus" />
+                    @if (item.isDue) {
+                      <app-status-badge value="Due" class="ml-1" />
+                    }
+                  </td>
+                  <td class="num">£{{ (item.netBilledAmount ?? item.totalAmount) | number: '1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
   }
 
   @if (!isLoading() && items().length === 0) {
@@ -65,54 +151,11 @@
   }
 
   @if (!isLoading() && items().length) {
-    <div class="table-container panel panel--flat list-view-table--from-md table-container--sticky">
-      <table class="data-table data-table--responsive-hide-sm">
-        <thead>
-          <tr>
-            <th scope="col" aria-label="Select invoices"></th>
-            <th>Invoice</th>
-            <th class="col-hide-sm">Period</th>
-            <th class="col-hide-sm">Date</th>
-            <th>Care home</th>
-            <th class="col-hide-sm">Funding</th>
-            <th>Status</th>
-            <th>Payment</th>
-            <th class="num">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (item of items(); track item.id) {
-            <tr class="row-clickable" [routerLink]="['/invoices', item.id]">
-              <td (click)="$event.stopPropagation()">
-                <mat-checkbox
-                  (change)="toggle(item.id, $any($event).checked)"
-                  [attr.aria-label]="'Select invoice ' + item.invoiceNumber"
-                />
-              </td>
-              <td class="font-medium">{{ item.invoiceNumber }}</td>
-              <td class="col-hide-sm">{{ formatPeriod(item) }}</td>
-              <td class="col-hide-sm">{{ item.invoiceDate | displayDate }}</td>
-              <td class="cell-truncate">{{ item.careHomeName }}</td>
-              <td class="col-hide-sm cell-truncate">{{ item.fundingAuthorityName }}</td>
-              <td><app-labeled-status kind="Invoice" [value]="item.status" /></td>
-              <td>
-                <app-labeled-status kind="Payment" [value]="item.paymentStatus" />
-                @if (item.isDue) {
-                  <app-status-badge value="Due" class="ml-1" />
-                }
-              </td>
-              <td class="num">£{{ item.totalAmount | number: '1.2-2' }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </div>
-
     <div class="mobile-card-list mobile-card-list--breakpoint-md">
       @for (item of items(); track item.id) {
         <article class="mobile-data-card">
           <div class="flex items-start justify-between gap-2">
-            <a class="text-lg font-semibold no-underline" [routerLink]="['/invoices', item.id]">{{
+            <a class="table-cell-link text-lg" [routerLink]="['/invoices', entityRouteKey(item)]">{{
               item.invoiceNumber
             }}</a>
             <mat-checkbox
@@ -125,8 +168,8 @@
             <span>{{ formatPeriod(item) }}</span>
           </div>
           <div class="mobile-data-card__row">
-            <span class="mobile-data-card__label">Total</span>
-            <span class="amount-lg">£{{ item.totalAmount | number: '1.2-2' }}</span>
+            <span class="mobile-data-card__label">Net billed</span>
+            <span class="amount-lg">£{{ (item.netBilledAmount ?? item.totalAmount) | number: '1.2-2' }}</span>
           </div>
           <div class="mobile-data-card__row">
             <span class="mobile-data-card__label">Care home</span>
@@ -136,14 +179,14 @@
             <span class="mobile-data-card__label">Status</span>
             <span class="flex flex-wrap gap-1">
               <app-labeled-status kind="Invoice" [value]="item.status" />
-              <app-labeled-status kind="Payment" [value]="item.paymentStatus" />
+              <app-labeled-status kind="Payment" [value]="item.collectionStatus || item.paymentStatus" />
             </span>
           </div>
           <div class="mobile-data-card__actions">
             <app-icon-action
               icon="visibility"
               ariaLabel="Open invoice"
-              [routerLink]="['/invoices', item.id]"
+              [routerLink]="['/invoices', entityRouteKey(item)]"
             />
           </div>
         </article>

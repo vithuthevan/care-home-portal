@@ -1,29 +1,95 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
+
+
   <PropertyGroup>
+
     <TargetFramework>net10.0</TargetFramework>
+
     <Nullable>enable</Nullable>
+
     <ImplicitUsings>enable</ImplicitUsings>
+
     <!-- Web apps keep public controllers/DTOs; this rule is aimed at class libraries. -->
+
     <NoWarn>$(NoWarn);CA1515</NoWarn>
+
   </PropertyGroup>
 
-  <ItemGroup>
-    <Using Include="CareHome.Api.Common" />
-    <Using Include="CareHome.Api.Security" />
-    <InternalsVisibleTo Include="CareHome.Api.Tests" />
-  </ItemGroup>
+
 
   <ItemGroup>
-    <PackageReference Include="ClosedXML" Version="0.105.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.11" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.*">
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      <PrivateAssets>all</PrivateAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.*" />
-    <PackageReference Include="QuestPDF" Version="2024.12.3" />
+
+    <Using Include="CareHome.Api.Abstractions" />
+
+    <Using Include="CareHome.Api.Common" />
+
+    <Using Include="CareHome.Api.Security" />
+
+    <InternalsVisibleTo Include="CareHome.Api.Tests" />
+
   </ItemGroup>
+
+
+
+  <ItemGroup>
+
+    <ProjectReference Include="..\CareHome.Abstractions\CareHome.Abstractions.csproj" />
+
+    <ProjectReference Include="..\CareHome.Billing\CareHome.Billing.csproj" />
+
+    <ProjectReference Include="..\CareHome.Data\CareHome.Data.csproj" />
+
+    <ProjectReference Include="..\CareHome.Funding\CareHome.Funding.csproj" />
+
+    <ProjectReference Include="..\CareHome.Receivables\CareHome.Receivables.csproj" />
+
+    <ProjectReference Include="..\CareHome.Payments\CareHome.Payments.csproj" />
+
+    <ProjectReference Include="..\CareHome.Reconciliation\CareHome.Reconciliation.csproj" />
+
+    <ProjectReference Include="..\CareHome.Remittance\CareHome.Remittance.csproj" />
+
+    <ProjectReference Include="..\CareHome.RevenueAssurance\CareHome.RevenueAssurance.csproj" />
+
+  </ItemGroup>
+
+
+
+  <ItemGroup>
+
+    <PackageReference Include="ClosedXML" Version="0.105.0" />
+
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
+
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.11" />
+
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.*">
+
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+
+      <PrivateAssets>all</PrivateAssets>
+
+    </PackageReference>
+
+    <PackageReference Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.3.0" />
+
+    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.12.0" />
+
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />
+
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.12.0" />
+
+    <PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" Version="1.12.0-beta.1" />
+
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.12.0" />
+
+    <PackageReference Include="QuestPDF" Version="2024.12.3" />
+
+  </ItemGroup>
+
+
 
 </Project>
+
+

@@ -6,93 +6,156 @@
 
   <app-api-error [message]="errorMessage()" />
 
-  <app-workflow-steps [steps]="workflowSteps" [activeIndex]="workflowActiveIndex()" />
+  <app-workflow-steps
+    [steps]="workflowSteps"
+    [activeIndex]="workflowActiveIndex()"
+    [blockedIndex]="workflowBlockedIndex()"
+  />
 
   @if (contextClientName()) {
     <div class="alert-banner alert-banner--info">
-      Opened from resident profile: <strong>{{ contextClientName() }}</strong>. Company and care
-      home are preselected.
-      @if (isSingleResidentScope()) {
-        Preview and generate apply to this resident within the selected scope.
-      } @else {
-        Preview billing to see eligible residents and calculated charges.
+      <p class="m-0 font-semibold">Billing for {{ contextClientName() }}</p>
+      <p class="m-0 mt-1 text-sm">
+        @if (selectedCareHomeName()) {
+          {{ selectedCareHomeName() }}
+        }
+        @if (billingPeriodHeading(); as periodLabel) {
+          @if (periodLabel !== 'Billing preview') {
+            · {{ periodLabel }}
+          }
+        }
+      </p>
+      <p class="m-0 mt-2 text-sm text-[var(--app-text-muted)]">
+        Company and care home have been preselected.
+        @if (isSingleResidentScope()) {
+          Preview and generate apply to this resident within the selected scope.
+        }
+      </p>
+    </div>
+  } @else if (contextCareHomeScope()) {
+    <div class="alert-banner alert-banner--info">
+      Billing for:
+      @if (selectedCareHomeName()) {
+        <strong>{{ selectedCareHomeName() }}</strong>
+        @if (selectedCompanyName()) {
+          · {{ selectedCompanyName() }}
+        }
+      } @else if (selectedCompanyName()) {
+        <strong>{{ selectedCompanyName() }}</strong>
       }
+      . Company and care home are preselected for this run.
     </div>
   }
 
   <section class="panel mb-4">
-    <h2 class="mt-0 text-section">Step 1 — Scope</h2>
-    <p class="mt-0 mb-4 text-sm text-[var(--app-text-muted)]">
-      Choose the company, care home, category, and billing period to include in this run.
-    </p>
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Company</mat-label>
-        <mat-select [(ngModel)]="companyId">
-          <mat-option [value]="0">Select company</mat-option>
-          @for (company of companies(); track company.id) {
-            <mat-option [value]="company.id">{{ company.name }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Care home</mat-label>
-        <mat-select [(ngModel)]="careHomeId">
-          <mat-option [value]="0">All care homes</mat-option>
-          @for (home of careHomesForSelect(); track home.id) {
-            <mat-option [value]="home.id">{{ home.name }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Invoice category</mat-label>
-        <mat-select [(ngModel)]="invoiceCategoryId">
-          <mat-option [value]="0">All categories</mat-option>
-          @for (category of categories(); track category.id) {
-            <mat-option [value]="category.id">{{ category.name }}</mat-option>
-          }
-        </mat-select>
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Period start</mat-label>
-        <input matInput type="date" [(ngModel)]="periodStart" />
-      </mat-form-field>
-      <mat-form-field appearance="outline" class="w-full">
-        <mat-label>Period end</mat-label>
-        <input matInput type="date" [(ngModel)]="periodEnd" />
-      </mat-form-field>
-    </div>
-    @if (periodSummary(); as summary) {
-      <p class="mt-0 mb-0 text-sm text-[var(--app-text-muted)]">
-        Billing period: <strong>{{ summary }}</strong>
-      </p>
-    }
-    <div class="mt-2">
-      <button
-        mat-flat-button
-        color="primary"
-        type="button"
-        (click)="runPreview()"
-        [disabled]="isWorking() || !companyId"
-      >
-        @if (isWorking()) {
-          Previewing...
+    <div class="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h2 class="mt-0 text-section">Step 1 — Scope</h2>
+        @if (preview() && !scopeEditing()) {
+          <p class="mt-0 mb-0 text-sm text-[var(--app-text-muted)]">
+            Scope for the current preview. Change scope and preview again to refresh results.
+          </p>
         } @else {
-          Preview billing
+          <p class="mt-0 mb-0 text-sm text-[var(--app-text-muted)]">
+            Choose the company, care home, category, and billing period to include in this run.
+          </p>
         }
-      </button>
+      </div>
+      @if (preview() && !scopeEditing()) {
+        <button mat-stroked-button type="button" (click)="enableScopeEditing()">Change</button>
+      }
     </div>
+
+    @if (preview() && !scopeEditing()) {
+      <dl class="billing-scope-readonly mt-4">
+        <div>
+          <dt>Company</dt>
+          <dd>{{ selectedCompanyName() || '—' }}</dd>
+        </div>
+        <div>
+          <dt>Care home</dt>
+          <dd>{{ selectedCareHomeScopeLabel() }}</dd>
+        </div>
+        <div>
+          <dt>Invoice category</dt>
+          <dd>{{ selectedInvoiceCategoryName() }}</dd>
+        </div>
+        <div>
+          <dt>Billing period</dt>
+          <dd>{{ periodSummary() || '—' }}</dd>
+        </div>
+      </dl>
+    } @else {
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-3 mt-4">
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Company</mat-label>
+          <mat-select [(ngModel)]="companyId">
+            <mat-option [value]="0">Select company</mat-option>
+            @for (company of companies(); track company.id) {
+              <mat-option [value]="company.id">{{ company.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Care home</mat-label>
+          <mat-select [(ngModel)]="careHomeId">
+            <mat-option [value]="0">All care homes</mat-option>
+            @for (home of careHomesForSelect(); track home.id) {
+              <mat-option [value]="home.id">{{ home.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Invoice category</mat-label>
+          <mat-select [(ngModel)]="invoiceCategoryId">
+            <mat-option [value]="0">All categories</mat-option>
+            @for (category of categories(); track category.id) {
+              <mat-option [value]="category.id">{{ category.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+        <app-date-field label="Period start" [(ngModel)]="periodStart" />
+        <app-date-field label="Period end" [(ngModel)]="periodEnd" />
+      </div>
+      @if (periodSummary(); as summary) {
+        <p class="mt-3 mb-0 text-sm text-[var(--app-text-muted)]">
+          Billing period: <strong>{{ summary }}</strong>
+        </p>
+      }
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+        <button
+          mat-flat-button
+          color="primary"
+          type="button"
+          (click)="runPreview()"
+          [disabled]="isWorking() || !companyId"
+        >
+          @if (isPreviewing()) {
+            Previewing...
+          } @else {
+            Preview billing
+          }
+        </button>
+        <a mat-stroked-button routerLink="/misc-charges" [queryParams]="billingScopeQueryParams()">
+          Import miscellaneous charges
+        </a>
+      </div>
+    }
   </section>
 
-  @if (!preview() && isWorking()) {
+  @if (!preview() && isPreviewing()) {
     <app-loading-state label="Previewing billing..." />
   }
 
   @if (!preview() && !isWorking()) {
     <app-empty-state
       title="Select scope and preview billing"
-      message="Choose your billing scope and period, then select Preview billing to see eligible residents, charges, and anything that needs attention before invoices are generated."
-    />
+      message="Choose a company, care home and billing period, then preview billing to see eligible residents. Import ad-hoc charges first if needed."
+    >
+      <a mat-stroked-button routerLink="/misc-charges" [queryParams]="billingScopeQueryParams()">
+        Import miscellaneous charges
+      </a>
+    </app-empty-state>
   }
 
   @if (generateResult(); as generated) {
@@ -104,67 +167,54 @@
   }
 
   @if (preview(); as previewData) {
-    @if (previewData.canGenerate) {
-      <div class="alert-banner alert-banner--success">Ready to generate — review the lines below.</div>
-    } @else {
-      <div class="alert-banner alert-banner--warning">
-        @if (hasFullyBilledException(previewData)) {
-          Already fully billed for the selected scope and period. Adjust the period or scope to
-          preview billable residents.
-        } @else {
-          Generation blocked — resolve exceptions before creating invoices.
+    <section class="billing-status-summary panel mb-4" aria-live="polite">
+      @if (previewData.canGenerate) {
+        <div class="alert-banner alert-banner--success mb-4">
+          <strong>Ready to bill</strong>
+          @if (previewAttentionCount(previewData) > 0) {
+            — some residents have informational notices; generation is still allowed for billable lines.
+          } @else {
+            — preview found billable lines with no blocking exceptions.
+          }
+        </div>
+      } @else {
+        <div class="alert-banner alert-banner--warning mb-4">
+          <strong>Requires attention</strong> — resolve blocking exceptions below before generating invoices.
+        </div>
+      }
+      <div>
+        <p class="billing-status-summary__title">{{ billingPeriodHeading() }}</p>
+        <p class="billing-status-summary__scope">
+          {{ selectedScopeLabel() }} · {{ eligibleResidentsLabel(previewData) }}
+        </p>
+        @if (previewAttentionCount(previewData) > 0) {
+          <p class="billing-status-summary__hint">{{ attentionSummary(previewData) }}</p>
         }
       </div>
-    }
+      <div class="billing-status-summary__metrics">
+        <div>
+          <span class="billing-status-summary__metric-label">Billable total</span>
+          <span class="amount-hero">£{{ previewData.totalAmount | number: '1.2-2' }}</span>
+        </div>
+        <div>
+          <span class="billing-status-summary__metric-label">Exceptions</span>
+          <span class="text-lg font-semibold">{{ previewAttentionCount(previewData) }}</span>
+        </div>
+      </div>
+    </section>
 
     <section class="panel mb-4">
       <h2 class="mt-0 text-section">Step 2 — Preview</h2>
-      <p class="text-sm text-[var(--app-text-muted)]">
+      <p class="mt-0 text-sm text-[var(--app-text-muted)]">
         {{ previewData.requestedPeriodStart | displayDate }} →
         {{ previewData.requestedPeriodEnd | displayDate }}
       </p>
       <p class="text-sm font-medium">
-        {{ previewEligibleResidents(previewData) }} resident(s) eligible
+        {{ eligibleResidentsLabel(previewData) }}
         @if (previewAttentionCount(previewData) > 0) {
-          · {{ previewAttentionCount(previewData) }} require attention
+          · {{ attentionSummary(previewData) }}
         }
       </p>
-
-      @if (previewData.lines?.length) {
-        <div class="table-container mt-3 list-view-table--from-md">
-          <table class="data-table data-table--responsive-hide-sm">
-            <thead>
-              <tr>
-                <th>Resident</th>
-                <th class="num">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (line of previewData.lines; track $index) {
-                <tr>
-                  <td>{{ line.clientName }}</td>
-                  <td class="num">£{{ line.amount | number: '1.2-2' }}</td>
-                </tr>
-              }
-              <tr>
-                <td class="font-semibold">Total</td>
-                <td class="num font-semibold">£{{ previewData.totalAmount | number: '1.2-2' }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="mobile-card-list mobile-card-list--breakpoint-md">
-          @for (line of previewData.lines; track $index) {
-            <article class="mobile-data-card">
-              <div class="font-semibold">{{ line.clientName }}</div>
-              <div class="mobile-data-card__row">
-                <span class="mobile-data-card__label">Amount</span>
-                <span>£{{ line.amount | number: '1.2-2' }}</span>
-              </div>
-            </article>
-          }
-        </div>
-      }
 
       @if (previewData.coverage?.length) {
         <details class="mt-4 text-sm">
@@ -218,61 +268,187 @@
             </table>
           </div>
         </details>
+      } @else if (!previewData.lines?.length && !previewAttentionCount(previewData)) {
+        <p class="mb-0 mt-3 text-sm text-[var(--app-text-muted)]">
+          No billable lines for this scope and period.
+        </p>
       }
     </section>
 
     <section class="panel mb-4">
       <h2 class="mt-0 text-section">Step 3 — Review</h2>
-      @for (item of previewData.exceptions; track item.code + item.message) {
-        <div
-          class="alert-banner mb-3"
-          [class.alert-banner--warning]="item.severity !== 'Info'"
-          [class.alert-banner--info]="item.severity === 'Info'"
-        >
-          @if (item.clientName) {
-            <div class="font-medium">
-              {{ item.clientName }} — {{ exceptionHeadline(item.code) }}
+
+      @if (blockingExceptions(previewData).length) {
+        <div class="billing-exceptions">
+          <p class="billing-exceptions__title">{{ attentionSummary(previewData) }}</p>
+          @for (item of blockingExceptions(previewData); track item.code + item.message + $index) {
+            <div class="billing-exception-item">
+              @if (item.clientName) {
+                <div class="billing-exception-item__name">{{ item.clientName }}</div>
+              } @else {
+                <div class="billing-exception-item__name">
+                  {{ exceptionHeadline(item.code) }}
+                </div>
+              }
+              <p class="billing-exception-item__message">
+                {{ exceptionLabel(item.code, item.message) }}
+              </p>
+              @if (
+                item.clientId &&
+                  (residentLink(item.clientId) ||
+                    showFixFundingAction(item.code) ||
+                    exceptionSetupLink(item))
+              ) {
+                <div class="actions-bar mt-2">
+                  @if (residentLink(item.clientId); as profileLink) {
+                    <a mat-stroked-button [routerLink]="profileLink">View resident</a>
+                  }
+                  @if (fixFundingLink(item.clientId, item.code); as fundingLink) {
+                    <a mat-stroked-button [routerLink]="fundingLink">Fix funding</a>
+                  }
+                  @if (exceptionSetupLink(item); as setupLink) {
+                    <a
+                      mat-stroked-button
+                      [routerLink]="setupLink"
+                      [queryParams]="setupLink[0] === '/misc-charges' ? billingScopeQueryParams() : null"
+                      >{{ exceptionSetupActionLabel(item) }}</a
+                    >
+                  }
+                </div>
+              } @else if (exceptionSetupLink(item); as setupLink) {
+                <div class="actions-bar mt-2">
+                  <a
+                    mat-stroked-button
+                    [routerLink]="setupLink"
+                    [queryParams]="setupLink[0] === '/misc-charges' ? billingScopeQueryParams() : null"
+                    >{{ exceptionSetupActionLabel(item) }}</a
+                  >
+                </div>
+              }
             </div>
-            <p class="mt-1 mb-0 text-sm">{{ exceptionLabel(item.code, item.message) }}</p>
-          } @else {
-            <div class="font-medium">{{ exceptionLabel(item.code, item.message) }}</div>
           }
         </div>
-      } @empty {
-        <p class="mb-0 text-sm text-[var(--app-text-muted)]">No exceptions for this preview.</p>
+      } @else {
+        <p class="mb-0 text-sm text-[var(--app-text-muted)]">No blocking exceptions for this preview.</p>
       }
 
       <div class="table-container mt-4">
-        <table class="data-table">
+        <table class="data-table data-table--responsive-hide-sm">
           <thead>
             <tr>
               <th>Resident</th>
               <th>Period</th>
               <th class="num">Rate</th>
               <th class="num">Amount</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
-            @for (line of previewData.lines; track $index) {
+            @for (row of reviewRows(previewData); track row.clientId + row.clientName + $index) {
               <tr>
-                <td>{{ line.clientName }}</td>
-                <td>{{ line.serviceFrom | displayDate }} → {{ line.serviceTo | displayDate }}</td>
-                <td class="num">£{{ line.rate | number: '1.2-2' }} {{ line.frequency }}</td>
-                <td class="num">£{{ line.amount | number: '1.2-2' }}</td>
+                <td>
+                  @if (residentLink(row.clientId); as profileLink) {
+                    <a [routerLink]="profileLink">{{ row.clientName }}</a>
+                  } @else {
+                    {{ row.clientName }}
+                  }
+                  @if (row.reason) {
+                    <div class="text-sm text-[var(--app-text-muted)] mt-1">{{ row.reason }}</div>
+                  }
+                </td>
+                <td>{{ row.periodLabel }}</td>
+                <td class="num">{{ row.rateLabel }}</td>
+                <td class="num">£{{ row.amount | number: '1.2-2' }}</td>
+                <td>
+                  <span [class]="row.statusClass">
+                    @if (row.statusLabel === 'Cannot bill') {
+                      ⚠ {{ row.statusLabel }}
+                    } @else {
+                      {{ row.statusLabel }}
+                    }
+                  </span>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="text-[var(--app-text-muted)]">
+                  No residents to review for this preview.
+                </td>
               </tr>
             }
           </tbody>
         </table>
       </div>
+      <div class="mobile-card-list mobile-card-list--breakpoint-md">
+        @for (row of reviewRows(previewData); track row.clientId + row.clientName + $index) {
+          <article class="mobile-data-card">
+            <div class="font-semibold">
+              @if (residentLink(row.clientId); as profileLink) {
+                <a [routerLink]="profileLink">{{ row.clientName }}</a>
+              } @else {
+                {{ row.clientName }}
+              }
+            </div>
+            @if (row.reason) {
+              <p class="m-0 mt-1 text-sm text-[var(--app-text-muted)]">{{ row.reason }}</p>
+            }
+            <div class="mobile-data-card__row">
+              <span class="mobile-data-card__label">Period</span>
+              <span>{{ row.periodLabel }}</span>
+            </div>
+            <div class="mobile-data-card__row">
+              <span class="mobile-data-card__label">Rate</span>
+              <span>{{ row.rateLabel }}</span>
+            </div>
+            <div class="mobile-data-card__row">
+              <span class="mobile-data-card__label">Amount</span>
+              <span>£{{ row.amount | number: '1.2-2' }}</span>
+            </div>
+            <div class="mobile-data-card__row">
+              <span class="mobile-data-card__label">Status</span>
+              <span [class]="row.statusClass">
+                @if (row.statusLabel === 'Cannot bill') {
+                  ⚠ {{ row.statusLabel }}
+                } @else {
+                  {{ row.statusLabel }}
+                }
+              </span>
+            </div>
+          </article>
+        }
+      </div>
     </section>
 
     <section class="panel">
       <h2 class="mt-0 text-section">Step 4 — Generate</h2>
+
+      @if (!previewData.canGenerate) {
+        <div class="billing-generation-blocked">
+          <p class="m-0 font-semibold">Generation blocked</p>
+          <p class="m-0 mt-1 text-sm text-[var(--app-text-secondary)]">
+            {{ generationBlockedMessage(previewData) }}
+          </p>
+        </div>
+      } @else {
+        <div class="billing-generation-ready">
+          <p class="m-0 font-semibold">Ready to generate</p>
+          <p class="m-0 mt-1 text-sm text-[var(--app-text-secondary)]">
+            {{ eligibleResidentsLabel(previewData) }} · Billable total £{{
+              previewData.totalAmount | number: '1.2-2'
+            }}
+          </p>
+        </div>
+      }
+
       <p class="text-sm text-[var(--app-text-muted)]">
-        This will create invoice records for the lines above. Re-run preview after generation to
-        avoid duplicate billing for the same period.
+        This will create invoice records for the billable lines above. Re-run preview after
+        generation to avoid duplicate billing for the same period.
       </p>
-      <p class="amount-hero m-0">Total £{{ previewData.totalAmount | number: '1.2-2' }}</p>
+
+      @if (isGenerating()) {
+        <app-loading-state label="Generating invoices..." />
+      }
+
       @if (auth.canWrite()) {
         <div class="actions-bar mt-4">
           <button
@@ -282,7 +458,7 @@
             (click)="generate()"
             [disabled]="isWorking() || !previewData.canGenerate"
           >
-            @if (isWorking()) {
+            @if (isGenerating()) {
               Generating...
             } @else {
               Generate invoices

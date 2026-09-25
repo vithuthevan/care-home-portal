@@ -20,6 +20,7 @@ export class ClientService {
     pageSize = 50,
     extra?: {
       companyId?: number;
+      company?: string;
       status?: string;
       fundingAuthorityId?: number;
       contractStatus?: string;
@@ -36,7 +37,9 @@ export class ClientService {
     if (careHomeId) {
       params = params.set('careHomeId', careHomeId);
     }
-    if (extra?.companyId) {
+    if (extra?.company) {
+      params = params.set('company', extra.company);
+    } else if (extra?.companyId) {
       params = params.set('companyId', extra.companyId);
     }
     if (extra?.status) {
@@ -52,7 +55,7 @@ export class ClientService {
     return this.http.get<PagedResult<Client>>(this.apiUrl, { params });
   }
 
-  getClient(id: number): Observable<Client> {
+  getClient(id: number | string): Observable<Client> {
     return this.http.get<Client>(`${this.apiUrl}/${id}`);
   }
 
@@ -60,7 +63,7 @@ export class ClientService {
     return this.http.post<Client>(this.apiUrl, request);
   }
 
-  updateClient(id: number, request: UpdateClientRequest): Observable<Client> {
+  updateClient(id: number | string, request: UpdateClientRequest): Observable<Client> {
     return this.http.put<Client>(`${this.apiUrl}/${id}`, request);
   }
 

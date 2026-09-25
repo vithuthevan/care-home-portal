@@ -1,60 +1,133 @@
 <div class="page">
   <app-page-header
     title="Invoice Categories"
-    subtitle="Categories used when grouping invoice lines."
+    subtitle="Manage categories used when creating and generating invoices."
   >
     @if (auth.canWrite()) {
-      <a mat-flat-button color="primary" routerLink="/invoice-categories/new">Add Category</a>
+      <a mat-flat-button color="primary" routerLink="/invoice-categories/new">Add category</a>
     }
   </app-page-header>
-  <app-api-error [message]="errorMessage()" />
-  @if (isLoading()) {
+
+  @if (errorMessage()) {
+    <div class="list-error-row">
+      <app-api-error [message]="errorMessage()" />
+      <button
+        mat-stroked-button
+        type="button"
+        (click)="loadInvoiceCategories()"
+        [disabled]="isLoading()"
+      >
+        Retry
+      </button>
+    </div>
+  }
+
+  @if (isLoading() && invoiceCategories().length === 0 && !errorMessage()) {
     <app-loading-state label="Loading invoice categories..." />
   }
-  @if (!isLoading()) {
-    <div class="table-container panel panel--flat">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>Code</th>
-            <th>Name</th>
-            <th class="col-status">Status</th>
-            <th class="col-actions">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (category of invoiceCategories(); track category.id) {
-            <tr [class.inactive-row]="!category.isActive">
-              <td>{{ category.code }}</td>
-              <td class="font-medium">{{ category.name }}</td>
-              <td class="col-status"><app-status-badge [value]="category.isActive ? 'Active' : 'Inactive'" /></td>
-              <td class="actions-cell col-actions">
-                @if (auth.canWrite()) {
-                  <span class="table-actions">
-                    <app-icon-action
-                      icon="edit"
-                      ariaLabel="Edit invoice category"
-                      [routerLink]="['/invoice-categories', category.id, 'edit']"
-                    />
-                    @if (category.isActive) {
-                      <app-icon-action
-                        icon="block"
-                        ariaLabel="Deactivate invoice category"
-                        [warn]="true"
-                        (action)="deactivateInvoiceCategory(category)"
-                      />
-                    }
-                  </span>
-                }
-              </td>
-            </tr>
-          } @empty {
+
+  @if (!isLoading() && invoiceCategories().length === 0 && !errorMessage()) {
+    <app-empty-state
+      title="No invoice categories"
+      message="Add a category before generating invoices or running category reports."
+    >
+      @if (auth.canWrite()) {
+        <a mat-flat-button color="primary" routerLink="/invoice-categories/new">Add category</a>
+      }
+    </app-empty-state>
+  }
+
+  @if (invoiceCategories().length) {
+    <div class="table-shell list-view-table--from-md">
+      <div class="table-container">
+        <table class="data-table data-table--responsive-hide-sm">
+          <thead>
             <tr>
-              <td colspan="4">No invoice categories found.</td>
+              <th>Category</th>
+              <th>Usage</th>
+              <th class="col-status">Status</th>
+              <th class="col-actions">Actions</th>
             </tr>
+          </thead>
+          <tbody>
+            @for (category of invoiceCategories(); track category.id) {
+              <tr [class.inactive-row]="!category.isActive">
+                <td>
+                  <div class="table-cell-stack">
+                    <span class="table-cell-stack__primary">{{ category.name }}</span>
+                    <span class="table-cell-stack__secondary">{{ category.code }}</span>
+                    <app-configuration-source-badge [source]="category.configurationSource" />
+                  </div>
+                </td>
+                <td class="text-sm text-[var(--app-text-muted)]">
+                  {{ categoryUsageLabel(category.usage) }}
+                </td>
+                <td class="col-status">
+                  <app-status-badge [value]="category.isActive ? 'Active' : 'Inactive'" />
+                </td>
+                <td class="actions-cell col-actions">
+                  @if (auth.canWrite()) {
+                    <span class="table-actions">
+                      <app-icon-action
+                        icon="edit"
+                        ariaLabel="Edit invoice category"
+                        [routerLink]="['/invoice-categories', category.id, 'edit']"
+                      />
+                      @if (category.isActive && !isSystemDefault(category)) {
+                        <app-icon-action
+                          icon="block"
+                          ariaLabel="Deactivate invoice category"
+                          [warn]="true"
+                          (action)="deactivateInvoiceCategory(category)"
+                        />
+                      }
+                    </span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="mobile-card-list mobile-card-list--breakpoint-md">
+      @for (category of invoiceCategories(); track category.id) {
+        <article class="mobile-data-card" [class.inactive-row]="!category.isActive">
+          <div class="table-cell-stack">
+            <span class="table-cell-stack__primary">{{ category.name }}</span>
+            <span class="table-cell-stack__secondary">{{ category.code }}</span>
+            <app-configuration-source-badge [source]="category.configurationSource" />
+          </div>
+          <div class="mobile-data-card__row">
+            <span class="mobile-data-card__label">Usage</span>
+            <span>{{ categoryUsageLabel(category.usage) }}</span>
+          </div>
+          <div class="mobile-data-card__row">
+            <span class="mobile-data-card__label">Status</span>
+            <app-status-badge [value]="category.isActive ? 'Active' : 'Inactive'" />
+          </div>
+          @if (auth.canWrite()) {
+            <div class="mobile-data-card__actions">
+              <span class="table-actions">
+                <app-icon-action
+                  icon="edit"
+                  ariaLabel="Edit invoice category"
+                  [routerLink]="['/invoice-categories', category.id, 'edit']"
+                />
+                @if (category.isActive && !isSystemDefault(category)) {
+                  <app-icon-action
+                    icon="block"
+                    ariaLabel="Deactivate invoice category"
+                    [warn]="true"
+                    (action)="deactivateInvoiceCategory(category)"
+                  />
+                }
+              </span>
+            </div>
           }
-        </tbody>
-      </table>
+        </article>
+      }
     </div>
   }
 </div>

@@ -1,4 +1,6 @@
 using CareHome.Api.Security;
+using CareHome.Api.Security.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using CareHome.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +9,7 @@ namespace CareHome.Api.Controllers
     [ApiController]
     [Route("api/reports")]
     [RequireTenant]
+    [Authorize(Policy = CareHomePolicies.CanViewFinancialReports)]
     public class ReportsController(ReportService reports, ITenantContext tenantContext) : ControllerBase
     {
         [HttpGet("client-census")]
@@ -44,9 +47,19 @@ namespace CareHome.Api.Controllers
         }
 
         [HttpGet("income-by-category")]
-        public async Task<IActionResult> Income(DateOnly from, DateOnly to, string? format)
+        public async Task<IActionResult> Income(DateOnly? from, DateOnly? to, string? format)
         {
-            var rows = await reports.IncomeByCategoryAsync(tenantContext.TenantId, from, to, HttpContext.RequestAborted);
+            if (from is null || to is null)
+            {
+                return BadRequest(new { message = "From and to dates are required." });
+            }
+
+            if (to < from)
+            {
+                return BadRequest(new { message = "To date cannot be before from date." });
+            }
+
+            var rows = await reports.IncomeByCategoryAsync(tenantContext.TenantId, from.Value, to.Value, HttpContext.RequestAborted);
             return Export(format, "income-by-category", rows, rows.Select(r => $"{r.Category} {r.Amount}"));
         }
 

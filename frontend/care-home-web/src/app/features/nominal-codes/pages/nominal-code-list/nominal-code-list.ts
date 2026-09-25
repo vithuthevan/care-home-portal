@@ -13,6 +13,12 @@ import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
+import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
+import {
+  configurationSourceLabel,
+  deactivateMasterDataMessage,
+  masterDataUsageLabel,
+} from '../../../../shared/format/master-data-usage';
 
 @Component({
   selector: 'app-nominal-code-list',
@@ -24,6 +30,7 @@ import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-but
     LoadingStateComponent,
     StatusBadgeComponent,
     IconActionButtonComponent,
+    EmptyStateComponent,
   ],
   templateUrl: './nominal-code-list.html',
 })
@@ -59,11 +66,14 @@ export class NominalCodeList implements OnInit {
       });
   }
 
+  usageLabel = masterDataUsageLabel;
+  sourceLabel = configurationSourceLabel;
+
   deactivateNominalCode(nominalCode: NominalCode): void {
     this.confirm
       .confirm({
-        title: 'Deactivate nominal code',
-        message: `Deactivate ${nominalCode.name}? It will no longer be available for new billing.`,
+        title: 'Deactivate nominal code?',
+        message: deactivateMasterDataMessage(nominalCode.name, nominalCode.usage),
         confirmLabel: 'Deactivate',
       })
       .subscribe((ok) => {
