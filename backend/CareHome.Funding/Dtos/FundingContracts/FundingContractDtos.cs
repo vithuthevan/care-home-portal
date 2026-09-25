@@ -22,6 +22,8 @@ namespace CareHome.Api.Dtos.FundingContracts
 
         public int? InvoiceTemplateId { get; set; }
 
+        public string? InvoiceTemplateName { get; set; }
+
         public DateOnly ContractStartDate { get; set; }
 
         public DateOnly? ContractEndDate { get; set; }
