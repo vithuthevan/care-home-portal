@@ -86,7 +86,7 @@ export class ClientProfilePage implements OnInit {
   readonly entityRouteKey = entityRouteKey;
 
   companyRouteKey(client: Client): string {
-    return entityRouteKey({ id: client.companyId, publicId: client.companyPublicId });
+    return entityRouteKey({ id: client.companyId ?? 0, publicId: client.companyPublicId });
   }
 
   careHomeRouteKey(client: Client): string {
@@ -269,14 +269,20 @@ export class ClientProfilePage implements OnInit {
 
   billingQueryParams(client: Client): Record<string, string | number> {
     const period = this.suggestedBillingPeriod();
-    return {
-      company: entityRouteKey({ id: client.companyId, publicId: client.companyPublicId }),
+    const params: Record<string, string | number> = {
       careHome: entityRouteKey({ id: client.careHomeId, publicId: client.careHomePublicId }),
       client: entityRouteKey(client),
       clientName: `${client.firstName} ${client.lastName}`.trim(),
       periodStart: period.start,
       periodEnd: period.end,
     };
+    if (client.companyId) {
+      params['company'] = entityRouteKey({
+        id: client.companyId,
+        publicId: client.companyPublicId,
+      });
+    }
+    return params;
   }
 
   billingPeriodLabel(): string {

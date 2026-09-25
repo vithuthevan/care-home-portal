@@ -87,11 +87,16 @@
       <div class="attention-queue">
         @if (data.outstandingInvoices > 0) {
           <div class="attention-queue__item">
-            <span class="attention-queue__dot attention-queue__dot--warning" aria-hidden="true"></span>
+            <span
+              class="attention-queue__dot attention-queue__dot--warning"
+              aria-hidden="true"
+            ></span>
             <div class="attention-queue__content">
               <span class="attention-queue__title">Outstanding invoices</span>
               <p class="attention-queue__detail">
-                {{ data.outstandingInvoices }} invoice{{ data.outstandingInvoices === 1 ? '' : 's' }}
+                {{ data.outstandingInvoices }} invoice{{
+                  data.outstandingInvoices === 1 ? '' : 's'
+                }}
                 require attention · £{{ data.outstandingAmount | number: '1.2-2' }} outstanding.
               </p>
               <a
@@ -106,7 +111,10 @@
 
         @for (item of data.setupHints; track item) {
           <div class="attention-queue__item">
-            <span class="attention-queue__dot attention-queue__dot--warning" aria-hidden="true"></span>
+            <span
+              class="attention-queue__dot attention-queue__dot--warning"
+              aria-hidden="true"
+            ></span>
             <div class="attention-queue__content">
               <span class="attention-queue__title">{{ setupHintTitle(item) }}</span>
               <p class="attention-queue__detail">{{ item }}</p>
@@ -119,7 +127,10 @@
 
         @for (item of data.billingExceptions; track item.code + item.message) {
           <div class="attention-queue__item">
-            <span class="attention-queue__dot attention-queue__dot--danger" aria-hidden="true"></span>
+            <span
+              class="attention-queue__dot attention-queue__dot--danger"
+              aria-hidden="true"
+            ></span>
             <div class="attention-queue__content">
               <span class="attention-queue__title">{{ exceptionTitle(item) }}</span>
               <p class="attention-queue__detail">{{ exceptionDetail(item) }}</p>
@@ -131,12 +142,16 @@
         @if (financeAttention(); as finance) {
           @if (finance.contractsExpiringIn60Days > 0) {
             <div class="attention-queue__item">
-              <span class="attention-queue__dot attention-queue__dot--warning" aria-hidden="true"></span>
+              <span
+                class="attention-queue__dot attention-queue__dot--warning"
+                aria-hidden="true"
+              ></span>
               <div class="attention-queue__content">
                 <span class="attention-queue__title">Funding contracts expiring</span>
                 <p class="attention-queue__detail">
                   {{ finance.contractsExpiringIn60Days }} active
-                  {{ finance.contractsExpiringIn60Days === 1 ? 'contract' : 'contracts' }} end within 60 days.
+                  {{ finance.contractsExpiringIn60Days === 1 ? 'contract' : 'contracts' }} end
+                  within 60 days.
                 </p>
                 <a class="attention-queue__action" routerLink="/clients">Review residents</a>
               </div>
@@ -144,12 +159,17 @@
           }
           @if (finance.residentsRequiringBillingReview > 0) {
             <div class="attention-queue__item">
-              <span class="attention-queue__dot attention-queue__dot--warning" aria-hidden="true"></span>
+              <span
+                class="attention-queue__dot attention-queue__dot--warning"
+                aria-hidden="true"
+              ></span>
               <div class="attention-queue__content">
                 <span class="attention-queue__title">Billing review suggested</span>
                 <p class="attention-queue__detail">
                   {{ finance.residentsRequiringBillingReview }}
-                  {{ finance.residentsRequiringBillingReview === 1 ? 'resident may' : 'residents may' }}
+                  {{
+                    finance.residentsRequiringBillingReview === 1 ? 'resident may' : 'residents may'
+                  }}
                   need billing attention.
                 </p>
                 <a class="attention-queue__action" routerLink="/billing">Review billing</a>
@@ -159,7 +179,10 @@
           @if (commercialRevenueEnabled) {
             @if (finance.receivablesOverdue > 0) {
               <div class="attention-queue__item">
-                <span class="attention-queue__dot attention-queue__dot--warning" aria-hidden="true"></span>
+                <span
+                  class="attention-queue__dot attention-queue__dot--warning"
+                  aria-hidden="true"
+                ></span>
                 <div class="attention-queue__content">
                   <span class="attention-queue__title">Overdue receivables</span>
                   <p class="attention-queue__detail">
@@ -171,11 +194,15 @@
             }
             @if (finance.unallocatedCash > 0) {
               <div class="attention-queue__item">
-                <span class="attention-queue__dot attention-queue__dot--warning" aria-hidden="true"></span>
+                <span
+                  class="attention-queue__dot attention-queue__dot--warning"
+                  aria-hidden="true"
+                ></span>
                 <div class="attention-queue__content">
                   <span class="attention-queue__title">Unallocated cash</span>
                   <p class="attention-queue__detail">
-                    £{{ finance.unallocatedCash | number: '1.2-2' }} recorded on payments without full allocation.
+                    £{{ finance.unallocatedCash | number: '1.2-2' }} recorded on payments without
+                    full allocation.
                   </p>
                   <a class="attention-queue__action" routerLink="/payments">Open payments</a>
                 </div>
@@ -183,7 +210,10 @@
             }
             @if (finance.openDisputesCount > 0) {
               <div class="attention-queue__item">
-                <span class="attention-queue__dot attention-queue__dot--danger" aria-hidden="true"></span>
+                <span
+                  class="attention-queue__dot attention-queue__dot--danger"
+                  aria-hidden="true"
+                ></span>
                 <div class="attention-queue__content">
                   <span class="attention-queue__title">Open disputes</span>
                   <p class="attention-queue__detail">
@@ -202,10 +232,15 @@
 
         @if (attentionCount() === 0) {
           <div class="attention-queue__item">
-            <span class="attention-queue__dot attention-queue__dot--success" aria-hidden="true"></span>
+            <span
+              class="attention-queue__dot attention-queue__dot--success"
+              aria-hidden="true"
+            ></span>
             <div class="attention-queue__content">
               <span class="attention-queue__title">Everything looks up to date</span>
-              <p class="attention-queue__detail">No unpaid invoices or setup issues need action right now.</p>
+              <p class="attention-queue__detail">
+                No unpaid invoices or setup issues need action right now.
+              </p>
             </div>
           </div>
         }
@@ -213,13 +248,15 @@
     </section>
 
     <section class="dashboard-section" aria-labelledby="dashboard-billing-heading">
-      <h2 id="dashboard-billing-heading" class="dashboard-section__title">{{ billingMonthLabel() }}</h2>
+      <h2 id="dashboard-billing-heading" class="dashboard-section__title">
+        {{ billingMonthLabel() }}
+      </h2>
       <div class="panel dashboard-billing-panel">
         <div class="dashboard-billing-panel__copy">
           <h3 class="dashboard-billing-panel__title">Prepare your next billing run</h3>
           <p class="dashboard-billing-panel__text">
-            Use the billing workspace to preview who is billable and resolve any exceptions before you generate
-            invoices.
+            Use the billing workspace to preview who is billable and resolve any exceptions before
+            you generate invoices.
           </p>
           @if (data.upcomingBillingCount > 0) {
             <p class="dashboard-billing-panel__stat">
@@ -241,7 +278,9 @@
 
           @if (data.recentInvoices.length) {
             <div class="table-container table-container--sticky">
-              <table class="data-table data-table--responsive-hide-sm data-table--dashboard-invoices">
+              <table
+                class="data-table data-table--responsive-hide-sm data-table--dashboard-invoices"
+              >
                 <thead>
                   <tr>
                     <th>Invoice</th>
@@ -255,10 +294,14 @@
                   @for (row of data.recentInvoices; track row.publicId || row.id) {
                     <tr>
                       <td>
-                        <a class="invoice-link" [routerLink]="invoiceDetailLink(row)">{{ row.invoiceNumber }}</a>
+                        <a class="invoice-link" [routerLink]="invoiceDetailLink(row)">{{
+                          row.invoiceNumber
+                        }}</a>
                       </td>
                       <td class="col-hide-sm">{{ row.careHomeName }}</td>
-                      <td class="num">£{{ (row.netBilledAmount ?? row.totalAmount) | number: '1.2-2' }}</td>
+                      <td class="num">
+                        £{{ row.netBilledAmount ?? row.totalAmount | number: '1.2-2' }}
+                      </td>
                       <td><app-status-badge [value]="row.status" /></td>
                       <td class="col-hide-sm">
                         <app-labeled-status kind="Payment" [value]="row.paymentStatus" />
@@ -291,6 +334,7 @@
                     <th>Care home</th>
                     <th class="col-hide-sm">Funding authority</th>
                     <th>Frequency</th>
+                    <th>Next invoice date</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -315,6 +359,13 @@
                             >Billing</a
                           >
                         </div>
+                      </td>
+                      <td>
+                        @if (row.nextInvoiceDate) {
+                          {{ row.nextInvoiceDate | displayDate }}
+                        } @else {
+                          Dates chosen on each billing run
+                        }
                       </td>
                     </tr>
                   }
@@ -354,7 +405,9 @@
                 @for (row of data.occupancyByHome; track row.publicId || row.careHomeId) {
                   <tr>
                     <td>
-                      <a class="home-link" [routerLink]="careHomeDashboardLink(row)">{{ row.careHomeName }}</a>
+                      <a class="home-link" [routerLink]="careHomeDashboardLink(row)">{{
+                        row.careHomeName
+                      }}</a>
                     </td>
                     <td class="num">{{ row.occupied }}</td>
                     <td class="num">{{ row.capacity }}</td>

@@ -100,6 +100,11 @@
               <mat-error>Billing frequency is required.</mat-error>
             }
           </mat-form-field>
+          <app-date-field
+            label="Cycle start (optional)"
+            formControlName="cycleAnchorDate"
+            hint="First day of this funder's cycle. Leave empty to start each contract on its own start date."
+          />
           @if (isCustomDays) {
             <mat-form-field appearance="outline" class="w-full">
               <mat-label>Billing interval days</mat-label>

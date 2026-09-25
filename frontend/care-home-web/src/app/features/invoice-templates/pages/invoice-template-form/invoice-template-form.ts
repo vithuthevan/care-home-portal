@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonModule } from '@angular/material/button';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
+import { RichTextEditorComponent } from '../../../../shared/ui/rich-text-editor';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import {
@@ -30,6 +31,7 @@ import {
     MatCheckboxModule,
     MatButtonModule,
     PageHeaderComponent,
+    RichTextEditorComponent,
     ApiErrorComponent,
     LoadingStateComponent,
   ],
@@ -55,9 +57,6 @@ export class InvoiceTemplateFormPage implements OnInit {
     invoiceCategoryId: [0, Validators.min(1)],
     headerText1: [''],
     footerText: [''],
-    bankAccountName: [''],
-    sortCode: [''],
-    accountNumber: [''],
     contactName: [''],
     contactEmail: [''],
     emailSubjectTemplate: ['Invoice {{InvoiceNumber}}'],
@@ -102,9 +101,6 @@ export class InvoiceTemplateFormPage implements OnInit {
             invoiceCategoryId: template.invoiceCategoryId,
             headerText1: template.headerText1 ?? '',
             footerText: template.footerText ?? '',
-            bankAccountName: template.bankAccountName ?? '',
-            sortCode: template.sortCode ?? '',
-            accountNumber: template.accountNumber ?? '',
             contactName: template.contactName ?? '',
             contactEmail: template.contactEmail ?? '',
             emailSubjectTemplate:
@@ -134,9 +130,6 @@ export class InvoiceTemplateFormPage implements OnInit {
       invoiceCategoryId: raw.invoiceCategoryId,
       headerText1: raw.headerText1 || null,
       footerText: raw.footerText || null,
-      bankAccountName: raw.bankAccountName || null,
-      sortCode: raw.sortCode || null,
-      accountNumber: raw.accountNumber || null,
       contactName: raw.contactName || null,
       contactEmail: raw.contactEmail || null,
       emailSubjectTemplate: raw.emailSubjectTemplate,

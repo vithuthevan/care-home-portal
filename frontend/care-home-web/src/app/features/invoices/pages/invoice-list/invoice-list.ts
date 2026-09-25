@@ -79,6 +79,7 @@ export class InvoiceListPage implements OnInit {
   filterCareHomeId = 0;
   filterDateFrom = '';
   filterDateTo = '';
+  filterInvoiceIds: number[] = [];
   selected = new Set<number>();
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -100,6 +101,13 @@ export class InvoiceListPage implements OnInit {
       const careHomeId = Number(params.get('careHomeId') || 0);
       const from = params.get('from');
       const to = params.get('to');
+      const idsParam = params.get('ids');
+      this.filterInvoiceIds = idsParam
+        ? idsParam
+            .split(',')
+            .map((s) => Number(s.trim()))
+            .filter((id) => id > 0)
+        : [];
       if (from) {
         this.filterDateFrom = from.length >= 10 ? from.slice(0, 10) : from;
       }
@@ -198,7 +206,8 @@ export class InvoiceListPage implements OnInit {
       this.paymentStatus ||
       this.filterCareHomeId ||
       this.filterDateFrom ||
-      this.filterDateTo
+      this.filterDateTo ||
+      this.filterInvoiceIds.length
     );
   }
 
@@ -209,12 +218,14 @@ export class InvoiceListPage implements OnInit {
     this.filterCareHomeId = 0;
     this.filterDateFrom = '';
     this.filterDateTo = '';
+    this.filterInvoiceIds = [];
     this.page = 1;
     if (
       this.route.snapshot.queryParamMap.get('careHomeId') ||
       this.route.snapshot.queryParamMap.get('careHome') ||
       this.route.snapshot.queryParamMap.get('from') ||
-      this.route.snapshot.queryParamMap.get('to')
+      this.route.snapshot.queryParamMap.get('to') ||
+      this.route.snapshot.queryParamMap.get('ids')
     ) {
       void this.router.navigate(['/invoices']);
       return;
@@ -255,6 +266,9 @@ export class InvoiceListPage implements OnInit {
     if (this.filterCareHomeId) params = params.set('careHomeId', this.filterCareHomeId);
     if (this.filterDateFrom) params = params.set('from', this.filterDateFrom);
     if (this.filterDateTo) params = params.set('to', this.filterDateTo);
+    if (this.filterInvoiceIds.length) {
+      params = params.set('ids', this.filterInvoiceIds.join(','));
+    }
     this.http
       .get<PagedResult<any>>('/api/invoices', { params })
       .pipe(finalize(() => this.isLoading.set(false)))
@@ -262,6 +276,9 @@ export class InvoiceListPage implements OnInit {
         next: (result) => {
           this.items.set(result.items);
           this.totalCount.set(result.totalCount);
+          if (this.filterInvoiceIds.length) {
+            this.selected = new Set(result.items.map((item) => item.id));
+          }
         },
         error: (error) =>
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to load invoices.')),

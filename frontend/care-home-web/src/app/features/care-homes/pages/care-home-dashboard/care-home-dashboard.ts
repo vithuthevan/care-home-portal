@@ -61,6 +61,7 @@ interface CareHomeDashboardData {
     EmptyStateComponent,
     LabeledStatusComponent,
     EntitySummaryStripComponent,
+    DisplayDatePipe,
   ],
   templateUrl: './care-home-dashboard.html',
 })

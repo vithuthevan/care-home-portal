@@ -44,4 +44,14 @@ export class CompanyService {
   deactivateCompany(id: number | string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
+
+  getLogo(id: number | string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${id}/logo`, { responseType: 'blob' });
+  }
+
+  uploadLogo(id: number | string, file: File): Observable<Company> {
+    const body = new FormData();
+    body.append('file', file);
+    return this.http.post<Company>(`${this.apiUrl}/${id}/logo`, body);
+  }
 }

@@ -1,7 +1,7 @@
 <div class="page page--narrow">
   <app-page-header
     [title]="isEditMode ? 'Edit invoice template' : 'Add invoice template'"
-    subtitle="Layout and payment details used when generating invoices."
+    subtitle="Layout used when generating invoices."
   />
 
   <app-api-error [message]="errorMessage()" />
@@ -46,33 +46,15 @@
 
       <section class="form-section">
         <h2 class="form-section__title">Invoice text</h2>
-        <div class="form-grid form-grid--2">
-          <mat-form-field appearance="outline" class="w-full md:col-span-2">
-            <mat-label>Header (optional)</mat-label>
-            <input matInput formControlName="headerText1" />
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="w-full md:col-span-2">
-            <mat-label>Footer (optional)</mat-label>
-            <input matInput formControlName="footerText" />
-          </mat-form-field>
-        </div>
-      </section>
-
-      <section class="form-section">
-        <h2 class="form-section__title">Bank details</h2>
-        <div class="form-grid form-grid--2">
-          <mat-form-field appearance="outline" class="w-full">
-            <mat-label>Bank account (optional)</mat-label>
-            <input matInput formControlName="bankAccountName" />
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="w-full">
-            <mat-label>Sort code (optional)</mat-label>
-            <input matInput formControlName="sortCode" />
-          </mat-form-field>
-          <mat-form-field appearance="outline" class="w-full">
-            <mat-label>Account number (optional)</mat-label>
-            <input matInput formControlName="accountNumber" />
-          </mat-form-field>
+        <div class="grid gap-4">
+          <div>
+            <p class="m-0 mb-2 text-sm font-medium">Header</p>
+            <app-rich-text-editor formControlName="headerText1" />
+          </div>
+          <div>
+            <p class="m-0 mb-2 text-sm font-medium">Footer</p>
+            <app-rich-text-editor formControlName="footerText" />
+          </div>
         </div>
       </section>
 

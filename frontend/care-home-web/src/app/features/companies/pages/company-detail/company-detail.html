@@ -25,6 +25,24 @@
             <dt>Company name</dt>
             <dd>{{ co.name }}</dd>
           </div>
+          @if (logoPreviewUrl(); as logoUrl) {
+            <div>
+              <dt>Logo</dt>
+              <dd><img [src]="logoUrl" alt="" class="max-h-16 max-w-xs object-contain" /></dd>
+            </div>
+          }
+          <div>
+            <dt>Address</dt>
+            <dd class="whitespace-pre-line">{{ co.address || '—' }}</dd>
+          </div>
+          <div>
+            <dt>Phone</dt>
+            <dd>{{ co.phone || '—' }}</dd>
+          </div>
+          <div>
+            <dt>Email</dt>
+            <dd>{{ co.email || '—' }}</dd>
+          </div>
           <div>
             <dt>Status</dt>
             <dd><app-status-badge [value]="co.isActive ? 'Active' : 'Inactive'" /></dd>

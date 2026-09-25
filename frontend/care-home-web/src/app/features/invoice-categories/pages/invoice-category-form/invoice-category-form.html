@@ -45,6 +45,14 @@
         </div>
       </section>
 
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Invoice grouping</mat-label>
+        <mat-select formControlName="groupingMode">
+          <mat-option value="PerFunder">One invoice for the funder and care home</mat-option>
+          <mat-option value="PerResident">One invoice per resident</mat-option>
+        </mat-select>
+      </mat-form-field>
+
       @if (isEditMode && !isSystemDefaultCategory) {
         <mat-checkbox formControlName="isActive">Active</mat-checkbox>
       }

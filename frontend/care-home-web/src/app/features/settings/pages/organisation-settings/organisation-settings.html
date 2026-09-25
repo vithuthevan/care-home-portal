@@ -161,6 +161,40 @@
         </div>
       </section>
 
+      <section class="panel">
+        <h2 class="mt-0 text-lg font-semibold">Billing choices</h2>
+        <p class="mt-0 mb-4 text-sm text-[var(--app-text-muted)]">
+          Leave these on the defaults to keep the current billing process: typed dates, and one invoice
+          per funder and care home. Change them only when a customer bills differently.
+        </p>
+        <div class="grid grid-cols-1 gap-4">
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Billing period</mat-label>
+            <mat-select formControlName="billingPeriodMode">
+              <mat-option value="Manual">Typed dates on each billing run</mat-option>
+              <mat-option value="FunderCycle">Funder weekly, monthly, or day cycle</mat-option>
+            </mat-select>
+          </mat-form-field>
+          <p class="m-0 text-sm text-[var(--app-text-muted)]">
+            Invoice grouping is set on each invoice category. The default is one invoice for the funder.
+          </p>
+          <mat-checkbox formControlName="allowPrivatePayer">
+            Allow a private payee for miscellaneous charges that have no funding contract
+          </mat-checkbox>
+          <mat-checkbox formControlName="showGuardian">
+            Record a guardian on each resident
+          </mat-checkbox>
+          <mat-checkbox formControlName="financeModuleEnabled">
+            Banking, remittances, collections, and disputes
+          </mat-checkbox>
+          @if (!financeModuleAvailable()) {
+            <p class="m-0 text-sm text-[var(--app-text-muted)]">
+              The server currently keeps the finance module switched off for every organisation.
+            </p>
+          }
+        </div>
+      </section>
+
       <div>
         <button
           mat-flat-button

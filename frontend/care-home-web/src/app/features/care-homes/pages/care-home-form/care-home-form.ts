@@ -4,7 +4,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
-import { finalize } from 'rxjs';
+import { finalize, map, Observable, of, switchMap } from 'rxjs';
+import { CareHomeLocation } from '../../models/care-home.model';
 
 import { Company } from '../../../companies/models/company.model';
 
@@ -74,8 +75,12 @@ export class CareHomeForm implements OnInit {
 
   readonly errorMessage = signal<string | null>(null);
 
+  readonly logoPreviewUrl = signal<string | null>(null);
+
+  private logoFile: File | null = null;
+
   readonly form = this.formBuilder.nonNullable.group({
-    companyId: [0, [Validators.required, Validators.min(1)]],
+    companyId: [0],
 
     code: ['', [Validators.required, Validators.maxLength(30)]],
 
@@ -94,6 +99,8 @@ export class CareHomeForm implements OnInit {
     managerPhone: ['', Validators.maxLength(30)],
 
     managerEmail: ['', [Validators.email, Validators.maxLength(150)]],
+
+    bankDetails: [''],
 
     isActive: [true],
   });
@@ -188,8 +195,14 @@ export class CareHomeForm implements OnInit {
             { label: 'Edit care home' },
           ]);
 
+          if (careHome.logoPath && this.careHomeRouteKey) {
+            this.careHomeService.getLogo(this.careHomeRouteKey).subscribe({
+              next: (blob) => this.setLogoPreview(URL.createObjectURL(blob)),
+            });
+          }
+
           this.form.patchValue({
-            companyId: careHome.companyId,
+            companyId: careHome.companyId ?? 0,
 
             code: careHome.code,
 
@@ -208,6 +221,8 @@ export class CareHomeForm implements OnInit {
             managerPhone: careHome.managerPhone ?? '',
 
             managerEmail: careHome.managerEmail ?? '',
+
+            bankDetails: careHome.bankDetails ?? '',
 
             isActive: careHome.isActive,
           });
@@ -235,7 +250,7 @@ export class CareHomeForm implements OnInit {
     const value = this.form.getRawValue();
 
     const request = {
-      companyId: value.companyId,
+      companyId: value.companyId > 0 ? value.companyId : null,
 
       code: value.code,
 
@@ -254,6 +269,8 @@ export class CareHomeForm implements OnInit {
       managerPhone: value.managerPhone,
 
       managerEmail: optionalEmail(value.managerEmail),
+
+      bankDetails: value.bankDetails.trim() || null,
     };
 
     if (this.isEditMode && this.careHomeRouteKey !== null) {
@@ -263,6 +280,7 @@ export class CareHomeForm implements OnInit {
           isActive: value.isActive,
         })
         .pipe(
+          switchMap((careHome) => this.uploadLogo(entityRouteKey(careHome))),
           finalize(() => {
             this.isSaving.set(false);
           }),
@@ -286,6 +304,9 @@ export class CareHomeForm implements OnInit {
     this.careHomeService
       .createCareHome(request)
       .pipe(
+        switchMap((careHome) =>
+          this.uploadLogo(entityRouteKey(careHome)).pipe(map(() => careHome)),
+        ),
         finalize(() => {
           this.isSaving.set(false);
         }),
@@ -303,6 +324,7 @@ export class CareHomeForm implements OnInit {
             managerName: '',
             managerPhone: '',
             managerEmail: '',
+            bankDetails: '',
             isActive: true,
           });
           this.toast.success('Care home created successfully.');
@@ -315,5 +337,29 @@ export class CareHomeForm implements OnInit {
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to create care home.'));
         },
       });
+  }
+
+  onLogoSelected(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) {
+      return;
+    }
+    this.logoFile = file;
+    this.setLogoPreview(URL.createObjectURL(file));
+  }
+
+  private uploadLogo(key: string): Observable<CareHomeLocation | void> {
+    if (!this.logoFile) {
+      return of(undefined);
+    }
+    return this.careHomeService.uploadLogo(key, this.logoFile);
+  }
+
+  private setLogoPreview(url: string): void {
+    const current = this.logoPreviewUrl();
+    if (current?.startsWith('blob:')) {
+      URL.revokeObjectURL(current);
+    }
+    this.logoPreviewUrl.set(url);
   }
 }

@@ -9,6 +9,8 @@ import { AuthService } from '../../../../core/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatSelectModule } from '@angular/material/select';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
@@ -21,6 +23,8 @@ import { ToastService } from '../../../../shared/ui/toast.service';
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
+    MatSelectModule,
+    MatCheckboxModule,
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
@@ -55,16 +59,24 @@ export class OrganisationSettingsPage implements OnInit {
     emailFromName: [''],
     emailFromAddress: ['', Validators.email],
     primaryColour: [''],
+    billingPeriodMode: ['Manual', Validators.required],
+    allowPrivatePayer: [false],
+    showGuardian: [false],
+    financeModuleEnabled: [false],
   });
+  readonly financeModuleAvailable = signal(true);
 
   ngOnInit(): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.http
-      .get<typeof this.form.value>('/api/settings/organisation')
+      .get<typeof this.form.value & { financeModuleAvailable?: boolean }>('/api/settings/organisation')
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: (settings) => this.form.patchValue(settings),
+        next: (settings) => {
+          this.financeModuleAvailable.set(settings.financeModuleAvailable !== false);
+          this.form.patchValue(settings);
+        },
         error: (error) =>
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to load organisation settings.')),
       });
@@ -91,6 +103,7 @@ export class OrganisationSettingsPage implements OnInit {
         next: () => {
           this.savedMessage.set('Organisation settings saved.');
           this.toast.success('Organisation updated successfully.');
+          this.auth.refreshProfile().subscribe({ error: () => undefined });
         },
         error: (error) => {
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to save organisation settings.'));

@@ -9,6 +9,7 @@ import { AuthService } from '../../../../core/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
@@ -23,6 +24,7 @@ import { ConfigurationSourceBadgeComponent } from '../../../../shared/ui/configu
     MatFormFieldModule,
     MatInputModule,
     MatCheckboxModule,
+    MatSelectModule,
     MatButtonModule,
     PageHeaderComponent,
     ApiErrorComponent,
@@ -50,6 +52,7 @@ export class InvoiceCategoryForm implements OnInit {
     code: ['', [Validators.required, Validators.maxLength(30)]],
     name: ['', [Validators.required, Validators.maxLength(100)]],
     description: ['', Validators.maxLength(500)],
+    groupingMode: ['PerFunder', Validators.required],
     isActive: [true],
   });
 
@@ -85,6 +88,7 @@ export class InvoiceCategoryForm implements OnInit {
             code: category.code,
             name: category.name,
             description: category.description ?? '',
+            groupingMode: category.groupingMode || 'PerFunder',
             isActive: category.isActive,
           });
           if (this.isSystemDefaultCategory) {
@@ -115,6 +119,7 @@ export class InvoiceCategoryForm implements OnInit {
       code: (value.code || this.form.controls.code.value) as string,
       name: value.name,
       description: value.description,
+      groupingMode: value.groupingMode,
     };
 
     if (this.isEditMode && this.invoiceCategoryId !== null) {

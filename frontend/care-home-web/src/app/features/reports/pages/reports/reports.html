@@ -23,8 +23,10 @@
             <mat-option value="outstanding">Payment status / outstanding</mat-option>
           </mat-select>
         </mat-form-field>
-        <app-date-field label="From" [(ngModel)]="from" />
-        <app-date-field label="To" [(ngModel)]="to" />
+        @if (showDateFilter()) {
+          <app-date-field label="From" [(ngModel)]="from" />
+          <app-date-field label="To" [(ngModel)]="to" />
+        }
         @if (showCompanyFilter()) {
           <mat-form-field appearance="outline" class="w-full">
             <mat-label>Company</mat-label>
@@ -43,6 +45,61 @@
               <mat-option [value]="0">All care homes</mat-option>
               @for (home of careHomes(); track home.id) {
                 <mat-option [value]="home.id">{{ home.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+        @if (showClientStatusFilter()) {
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Resident status</mat-label>
+            <mat-select [(ngModel)]="selectedClientStatus">
+              <mat-option value="">All statuses</mat-option>
+              <mat-option value="Current">Current</mat-option>
+              <mat-option value="Left">Left</mat-option>
+              <mat-option value="Deceased">Deceased</mat-option>
+            </mat-select>
+          </mat-form-field>
+        }
+        @if (showFundingAuthorityFilter()) {
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Funding authority</mat-label>
+            <mat-select [(ngModel)]="selectedFundingAuthorityId">
+              <mat-option [value]="0">All authorities</mat-option>
+              @for (authority of fundingAuthorities(); track authority.id) {
+                <mat-option [value]="authority.id">{{ authority.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+        @if (showCategoryFilter()) {
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Invoice category</mat-label>
+            <mat-select [(ngModel)]="selectedCategoryId">
+              <mat-option [value]="0">All categories</mat-option>
+              @for (category of categories(); track category.id) {
+                <mat-option [value]="category.id">{{ category.name }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+        @if (showClientFilter() || showContractFilter()) {
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Resident</mat-label>
+            <mat-select [(ngModel)]="selectedClientId" (selectionChange)="onClientChange()">
+              <mat-option [value]="0">{{ showContractFilter() && !showClientFilter() ? 'Select resident' : 'All residents' }}</mat-option>
+              @for (client of clients(); track client.id) {
+                <mat-option [value]="client.id">{{ client.firstName }} {{ client.lastName }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+        }
+        @if (showContractFilter()) {
+          <mat-form-field appearance="outline" class="w-full">
+            <mat-label>Funding contract</mat-label>
+            <mat-select [(ngModel)]="selectedContractId">
+              <mat-option [value]="0">All contracts</mat-option>
+              @for (contract of contracts(); track contract.id) {
+                <mat-option [value]="contract.id">{{ contract.label }}</mat-option>
               }
             </mat-select>
           </mat-form-field>

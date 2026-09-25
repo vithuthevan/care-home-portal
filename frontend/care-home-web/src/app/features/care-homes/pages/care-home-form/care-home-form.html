@@ -4,7 +4,7 @@
     [subtitle]="
       isEditMode
         ? 'Update location details used for occupancy, residents, and billing.'
-        : 'Register a care home under a company before admitting residents.'
+        : 'Register a care home before admitting residents. A company is optional.'
     "
   />
 
@@ -24,9 +24,9 @@
         <h2 class="form-section__title">General information</h2>
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <mat-form-field appearance="outline" class="w-full md:col-span-2">
-            <mat-label>Company *</mat-label>
-            <mat-select formControlName="companyId" required>
-              <mat-option [value]="0">Select company</mat-option>
+            <mat-label>Company</mat-label>
+            <mat-select formControlName="companyId">
+              <mat-option [value]="0">None</mat-option>
               @for (company of selectableCompanies; track company.id) {
                 <mat-option [value]="company.id">
                   {{ company.name }}
@@ -36,9 +36,6 @@
                 </mat-option>
               }
             </mat-select>
-            @if (form.controls.companyId.touched && form.controls.companyId.hasError('min')) {
-              <mat-error>Company is required.</mat-error>
-            }
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="w-full">
@@ -109,7 +106,24 @@
               <mat-error>Please enter a valid email address.</mat-error>
             }
           </mat-form-field>
+
+          <div class="md:col-span-2">
+            <p class="m-0 text-sm font-medium text-[var(--app-text)]">Logo</p>
+            @if (logoPreviewUrl(); as logoUrl) {
+              <img [src]="logoUrl" alt="Care home logo" class="mt-2 max-h-16 max-w-xs object-contain" />
+            }
+            <input class="mt-2 block" type="file" accept="image/png,image/jpeg,image/webp,image/gif" (change)="onLogoSelected($event)" />
+            <p class="m-0 mt-1 text-sm text-[var(--app-text-muted)]">PNG, JPG, WEBP, or GIF up to 2 MB.</p>
+          </div>
         </div>
+      </section>
+
+      <section class="form-section">
+        <h2 class="form-section__title">Bank details</h2>
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Bank details</mat-label>
+          <textarea matInput formControlName="bankDetails" rows="4"></textarea>
+        </mat-form-field>
       </section>
 
       <section class="form-section">

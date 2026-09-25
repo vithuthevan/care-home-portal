@@ -29,14 +29,26 @@
   @if (!isLoading() && clients().length === 0) {
     <app-empty-state
       [title]="
-        companyContext() && !searchText.trim() && !selectedCareHomeId && !showArchived
+        companyContext() &&
+        !searchText.trim() &&
+        !selectedCareHomeId &&
+        !showArchived &&
+        !selectedFundingAuthorityId &&
+        !selectedStatus &&
+        !selectedContractStatus
           ? 'No residents yet'
           : hasActiveFilters()
             ? 'No residents found'
             : 'No residents yet'
       "
       [message]="
-        companyContext() && !searchText.trim() && !selectedCareHomeId && !showArchived
+        companyContext() &&
+        !searchText.trim() &&
+        !selectedCareHomeId &&
+        !showArchived &&
+        !selectedFundingAuthorityId &&
+        !selectedStatus &&
+        !selectedContractStatus
           ? 'This company has no active residents on record.'
           : hasActiveFilters()
             ? 'There are no residents matching the current filters.'
@@ -77,6 +89,32 @@
           }
         </mat-select>
       </mat-form-field>
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Funding authority</mat-label>
+        <mat-select [(ngModel)]="selectedFundingAuthorityId" (selectionChange)="search()">
+          <mat-option [value]="0">All authorities</mat-option>
+          @for (authority of fundingAuthorities(); track authority.id) {
+            <mat-option [value]="authority.id">{{ authority.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Resident status</mat-label>
+        <mat-select [(ngModel)]="selectedStatus" (selectionChange)="search()">
+          <mat-option value="">All statuses</mat-option>
+          <mat-option value="Current">Current</mat-option>
+          <mat-option value="Left">Left</mat-option>
+          <mat-option value="Deceased">Deceased</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Contract status</mat-label>
+        <mat-select [(ngModel)]="selectedContractStatus" (selectionChange)="search()">
+          <mat-option value="">All contracts</mat-option>
+          <mat-option value="Active">Active</mat-option>
+          <mat-option value="Inactive">Inactive</mat-option>
+        </mat-select>
+      </mat-form-field>
       <div class="flex min-h-[var(--touch-min)] items-center">
         <mat-checkbox [(ngModel)]="showArchived" (change)="loadClients()">Show archived</mat-checkbox>
       </div>
@@ -92,7 +130,6 @@
         <thead>
           <tr>
             <th>Resident</th>
-            <th class="col-ref">Reference</th>
             <th>Care home</th>
             <th class="col-hide-sm">Care type</th>
             <th class="col-status">Status</th>
@@ -110,7 +147,6 @@
               <td class="font-semibold">
                 {{ client.title }} {{ client.firstName }} {{ client.lastName }}
               </td>
-              <td>{{ client.referenceNumber }}</td>
               <td>{{ client.careHomeName }}</td>
               <td class="col-hide-sm">{{ client.careType }}</td>
               <td>
@@ -156,7 +192,7 @@
         <a class="entity-card panel--interactive" [routerLink]="['/clients', entityRouteKey(client)]">
           <div class="text-lg font-semibold">{{ client.firstName }} {{ client.lastName }}</div>
           <div class="mt-1 text-sm text-[var(--app-text-muted)]">
-            {{ client.referenceNumber }} · {{ client.careHomeName }}
+            {{ client.careHomeName }}
           </div>
           <div class="mt-2 text-sm">{{ client.careType }}</div>
           <div class="mt-2 flex flex-wrap gap-2">

@@ -15,6 +15,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
+import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 
 @Component({
   selector: 'app-funding-authority-form',
@@ -29,6 +30,7 @@ import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
+    AppDateFieldComponent,
   ],
   templateUrl: './funding-authority-form.html',
 })
@@ -56,6 +58,7 @@ export class FundingAuthorityForm implements OnInit {
     address: ['', Validators.maxLength(300)],
     billingFrequency: ['', Validators.required],
     billingIntervalDays: this.formBuilder.control<number | null>(null),
+    cycleAnchorDate: [''],
     isActive: [true],
   });
 
@@ -118,6 +121,7 @@ export class FundingAuthorityForm implements OnInit {
               address: authority.address ?? '',
               billingFrequency: authority.billingFrequency,
               billingIntervalDays: authority.billingIntervalDays,
+              cycleAnchorDate: authority.cycleAnchorDate ?? '',
               isActive: authority.isActive,
             },
             { emitEvent: false },
@@ -156,6 +160,7 @@ export class FundingAuthorityForm implements OnInit {
       billingFrequency: value.billingFrequency,
       billingIntervalDays:
         value.billingFrequency === 'CustomDays' ? value.billingIntervalDays : null,
+      cycleAnchorDate: value.cycleAnchorDate || null,
     };
 
     if (this.isEditMode && this.fundingAuthorityRouteKey !== null) {

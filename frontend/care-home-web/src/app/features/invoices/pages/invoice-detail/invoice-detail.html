@@ -15,11 +15,14 @@
 
   @if (invoice(); as inv) {
     <app-page-header class="page-header--sr-title" [title]="inv.invoiceNumber" subtitle="">
+      <button mat-stroked-button type="button" (click)="pdf('view')" [disabled]="isPdfLoading()">
+        View invoice
+      </button>
       <button
         mat-flat-button
         color="primary"
         type="button"
-        (click)="pdf()"
+        (click)="pdf('download')"
         [disabled]="isPdfLoading()"
       >
         @if (isPdfLoading()) {
@@ -55,9 +58,6 @@
               {{ inv.lines[0].clientName }}
             }
           </p>
-          @if (inv.lines[0].clientReference) {
-            <p class="invoice-hero__reference m-0">{{ inv.lines[0].clientReference }}</p>
-          }
         }
         <p class="invoice-hero__period m-0 text-sm text-[var(--app-text-muted)]">
           Service period: {{ inv.periodStart | displayDate }} – {{ inv.periodEnd | displayDate }}
@@ -199,20 +199,6 @@
                 }
               </dd>
             </div>
-            <div>
-              <dt>Reference</dt>
-              <dd>
-                @if (clientProfileLink(inv.lines[0]); as clientLink) {
-                  <a [routerLink]="clientLink">{{ inv.lines[0].clientReference || '—' }}</a>
-                } @else {
-                  {{ inv.lines[0].clientReference || '—' }}
-                }
-              </dd>
-            </div>
-            <div>
-              <dt>Sage ID</dt>
-              <dd>{{ inv.lines[0].sageId || '—' }}</dd>
-            </div>
           </dl>
         } @else {
           <p class="text-sm text-[var(--app-text-muted)]">No line items on this invoice.</p>
@@ -293,7 +279,6 @@
               <th class="col-hide-sm">Period</th>
               <th class="num">Days</th>
               <th class="num">Rate</th>
-              <th class="col-hide-sm">Nominal</th>
               <th class="num">Amount</th>
             </tr>
           </thead>
@@ -321,7 +306,6 @@
                 <td class="num">
                   £{{ line.rateAmount | number: '1.2-2' }} {{ line.rateFrequency }}
                 </td>
-                <td class="col-hide-sm">{{ line.nominalCode }}</td>
                 <td class="num">£{{ line.lineAmount | number: '1.2-2' }}</td>
               </tr>
             }
