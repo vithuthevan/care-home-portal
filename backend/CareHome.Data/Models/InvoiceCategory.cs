@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using CareHome.Api.Common;
 using CareHome.Api.Security;
 
 namespace CareHome.Api.Models
@@ -19,6 +20,11 @@ namespace CareHome.Api.Models
 
         [MaxLength(500)]
         public string? Description { get; set; }
+
+        /// <summary>PerFunder = one invoice for the funder and home. PerResident = one invoice per resident.</summary>
+        [Required]
+        [MaxLength(30)]
+        public string GroupingMode { get; set; } = InvoiceGroupingModes.PerFunder;
 
         public bool IsActive { get; set; } = true;
 

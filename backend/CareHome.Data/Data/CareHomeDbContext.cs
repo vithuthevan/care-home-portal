@@ -18,6 +18,7 @@ namespace CareHome.Api.Data
         public DbSet<Company> Companies => Set<Company>();
         public DbSet<CareHomeLocation> CareHomes => Set<CareHomeLocation>();
         public DbSet<Client> Clients => Set<Client>();
+        public DbSet<ClientGuardian> ClientGuardians => Set<ClientGuardian>();
         public DbSet<FundingAuthority> FundingAuthorities => Set<FundingAuthority>();
         public DbSet<InvoiceCategory> InvoiceCategories => Set<InvoiceCategory>();
         public DbSet<NominalCode> NominalCodes => Set<NominalCode>();
@@ -219,6 +220,30 @@ namespace CareHome.Api.Data
                     .WithMany(x => x.Clients)
                     .HasForeignKey(x => x.CareHomeId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(x => x.Guardian)
+                    .WithOne(x => x.Client)
+                    .HasForeignKey<ClientGuardian>(x => x.ClientId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<ClientGuardian>(entity =>
+            {
+                entity.HasKey(x => x.Id);
+
+                entity.Property(x => x.Name)
+                    .IsRequired()
+                    .HasMaxLength(150);
+
+                entity.HasIndex(x => x.ClientId)
+                    .IsUnique();
+
+                entity.HasIndex(x => x.TenantId);
+
+                entity.HasOne(x => x.Tenant)
+                    .WithMany()
+                    .HasForeignKey(x => x.TenantId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<FundingAuthority>(entity =>
@@ -247,6 +272,9 @@ namespace CareHome.Api.Data
                     .IsRequired()
                     .HasMaxLength(30);
 
+                entity.Property(x => x.CycleAnchorDate)
+                    .HasColumnType("date");
+
                 entity.HasIndex(x => new { x.TenantId, x.Code })
                     .IsUnique();
 
@@ -267,6 +295,10 @@ namespace CareHome.Api.Data
                 entity.Property(x => x.Name)
                     .IsRequired()
                     .HasMaxLength(100);
+
+                entity.Property(x => x.GroupingMode)
+                    .IsRequired()
+                    .HasMaxLength(30);
 
                 entity.HasIndex(x => new { x.TenantId, x.Code })
                     .IsUnique();
@@ -534,6 +566,7 @@ namespace CareHome.Api.Data
                 entity.HasOne(x => x.ClientFundingContract)
                     .WithMany()
                     .HasForeignKey(x => x.ClientFundingContractId)
+                    .IsRequired(false)
                     .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(x => x.FundingRate)

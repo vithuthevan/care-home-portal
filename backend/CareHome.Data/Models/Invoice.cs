@@ -15,7 +15,7 @@ namespace CareHome.Api.Models
         [MaxLength(40)]
         public string InvoiceNumber { get; set; } = string.Empty;
 
-        public int CompanyId { get; set; }
+        public int? CompanyId { get; set; }
 
         public int CareHomeId { get; set; }
 
@@ -86,14 +86,14 @@ namespace CareHome.Api.Models
         [MaxLength(150)]
         public string? SnapshotTemplateName { get; set; }
 
-        [MaxLength(300)]
         public string? SnapshotHeaderText1 { get; set; }
 
         [MaxLength(300)]
         public string? SnapshotHeaderText2 { get; set; }
 
-        [MaxLength(1000)]
         public string? SnapshotFooterText { get; set; }
+
+        public string? SnapshotBankDetails { get; set; }
 
         [MaxLength(150)]
         public string? SnapshotBankAccountName { get; set; }
@@ -118,7 +118,7 @@ namespace CareHome.Api.Models
 
         public Tenant Tenant { get; set; } = null!;
 
-        public Company Company { get; set; } = null!;
+        public Company? Company { get; set; }
 
         public CareHomeLocation CareHome { get; set; } = null!;
 

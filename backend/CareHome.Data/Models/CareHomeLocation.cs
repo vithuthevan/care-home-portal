@@ -11,7 +11,7 @@ namespace CareHome.Api.Models
 
         public int TenantId { get; set; }
 
-        public int CompanyId { get; set; }
+        public int? CompanyId { get; set; }
 
         [Required]
         [MaxLength(30)]
@@ -44,6 +44,8 @@ namespace CareHome.Api.Models
         [MaxLength(500)]
         public string? LogoPath { get; set; }
 
+        public string? BankDetails { get; set; }
+
         public bool IsActive { get; set; } = true;
 
         [MaxLength(20)]
@@ -51,7 +53,7 @@ namespace CareHome.Api.Models
 
         public Tenant Tenant { get; set; } = null!;
 
-        public Company Company { get; set; } = null!;
+        public Company? Company { get; set; }
 
         public ICollection<Client> Clients { get; set; }
             = new List<Client>();

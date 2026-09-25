@@ -398,6 +398,9 @@ namespace CareHome.Api.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("BankDetails")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("BedCapacity")
                         .HasColumnType("int");
 
@@ -406,7 +409,7 @@ namespace CareHome.Api.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
-                    b.Property<int>("CompanyId")
+                    b.Property<int?>("CompanyId")
                         .HasColumnType("int");
 
                     b.Property<string>("Email")
@@ -563,6 +566,51 @@ namespace CareHome.Api.Migrations
                     b.ToTable("Clients");
                 });
 
+            modelBuilder.Entity("CareHome.Api.Models.ClientGuardian", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<int>("ClientId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Relationship")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int>("TenantId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ClientId")
+                        .IsUnique();
+
+                    b.HasIndex("TenantId");
+
+                    b.ToTable("ClientGuardians");
+                });
+
             modelBuilder.Entity("CareHome.Api.Models.ClientFundingContract", b =>
                 {
                     b.Property<int>("Id")
@@ -684,13 +732,29 @@ namespace CareHome.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Address")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
+
+                    b.Property<string>("LogoPath")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<Guid>("PublicId")
                         .HasColumnType("uniqueidentifier");
@@ -968,6 +1032,9 @@ namespace CareHome.Api.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<DateOnly?>("CycleAnchorDate")
+                        .HasColumnType("date");
+
                     b.Property<string>("Email")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
@@ -1131,7 +1198,7 @@ namespace CareHome.Api.Migrations
                     b.Property<int>("CareHomeId")
                         .HasColumnType("int");
 
-                    b.Property<int>("CompanyId")
+                    b.Property<int?>("CompanyId")
                         .HasColumnType("int");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -1199,6 +1266,9 @@ namespace CareHome.Api.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<string>("SnapshotBankDetails")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("SnapshotCareHomeCode")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -1231,8 +1301,7 @@ namespace CareHome.Api.Migrations
                         .HasColumnType("nvarchar(30)");
 
                     b.Property<string>("SnapshotFooterText")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SnapshotFundingAuthorityCode")
                         .IsRequired()
@@ -1245,8 +1314,7 @@ namespace CareHome.Api.Migrations
                         .HasColumnType("nvarchar(150)");
 
                     b.Property<string>("SnapshotHeaderText1")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("SnapshotHeaderText2")
                         .HasMaxLength(300)
@@ -1330,6 +1398,11 @@ namespace CareHome.Api.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("GroupingMode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit");
@@ -1438,7 +1511,7 @@ namespace CareHome.Api.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("ClientFundingContractId")
+                    b.Property<int?>("ClientFundingContractId")
                         .HasColumnType("int");
 
                     b.Property<int>("ClientId")
@@ -1605,15 +1678,13 @@ namespace CareHome.Api.Migrations
                         .HasColumnType("nvarchar(300)");
 
                     b.Property<string>("FooterText")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("FundingAuthorityId")
                         .HasColumnType("int");
 
                     b.Property<string>("HeaderText1")
-                        .HasMaxLength(300)
-                        .HasColumnType("nvarchar(300)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("HeaderText2")
                         .HasMaxLength(300)
@@ -2531,6 +2602,14 @@ namespace CareHome.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("AllowPrivatePayer")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("BillingPeriodMode")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
                     b.Property<string>("CreditNotePrefix")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -2550,6 +2629,9 @@ namespace CareHome.Api.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<bool>("FinanceModuleEnabled")
+                        .HasColumnType("bit");
+
                     b.Property<string>("EmailFromName")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
@@ -2568,6 +2650,9 @@ namespace CareHome.Api.Migrations
                     b.Property<string>("PrimaryColour")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("ShowGuardian")
+                        .HasColumnType("bit");
 
                     b.Property<int>("TenantId")
                         .HasColumnType("int");
@@ -2940,8 +3025,7 @@ namespace CareHome.Api.Migrations
                     b.HasOne("CareHome.Api.Models.Company", "Company")
                         .WithMany("CareHomes")
                         .HasForeignKey("CompanyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("CareHome.Api.Models.Tenant", "Tenant")
                         .WithMany()
@@ -2969,6 +3053,27 @@ namespace CareHome.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("CareHome");
+
+                    b.Navigation("Guardian");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("CareHome.Api.Models.ClientGuardian", b =>
+                {
+                    b.HasOne("CareHome.Api.Models.Client", "Client")
+                        .WithOne("Guardian")
+                        .HasForeignKey("CareHome.Api.Models.ClientGuardian", "ClientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CareHome.Api.Models.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Client");
 
                     b.Navigation("Tenant");
                 });
@@ -3174,8 +3279,7 @@ namespace CareHome.Api.Migrations
                     b.HasOne("CareHome.Api.Models.Company", "Company")
                         .WithMany()
                         .HasForeignKey("CompanyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("CareHome.Api.Models.FundingAuthority", "FundingAuthority")
                         .WithMany()
@@ -3268,8 +3372,7 @@ namespace CareHome.Api.Migrations
                     b.HasOne("CareHome.Api.Models.ClientFundingContract", "ClientFundingContract")
                         .WithMany()
                         .HasForeignKey("ClientFundingContractId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("CareHome.Api.Models.Client", "Client")
                         .WithMany()
@@ -3746,6 +3849,8 @@ namespace CareHome.Api.Migrations
             modelBuilder.Entity("CareHome.Api.Models.Client", b =>
                 {
                     b.Navigation("FundingContracts");
+
+                    b.Navigation("Guardian");
                 });
 
             modelBuilder.Entity("CareHome.Api.Models.ClientFundingContract", b =>

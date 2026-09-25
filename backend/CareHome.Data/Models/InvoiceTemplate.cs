@@ -27,13 +27,11 @@ namespace CareHome.Api.Models
         [MaxLength(500)]
         public string? CompanyLogoPath { get; set; }
 
-        [MaxLength(300)]
         public string? HeaderText1 { get; set; }
 
         [MaxLength(300)]
         public string? HeaderText2 { get; set; }
 
-        [MaxLength(1000)]
         public string? FooterText { get; set; }
 
         [MaxLength(150)]

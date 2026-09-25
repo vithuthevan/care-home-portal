@@ -41,6 +41,9 @@ namespace CareHome.Api.Models
 
         public int? BillingIntervalDays { get; set; }
 
+        /// <summary>First day of the funder's billing cycle. When empty, each contract starts its own cycle.</summary>
+        public DateOnly? CycleAnchorDate { get; set; }
+
         public bool IsActive { get; set; } = true;
 
         public Tenant Tenant { get; set; } = null!;
