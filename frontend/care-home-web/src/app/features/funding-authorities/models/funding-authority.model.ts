@@ -27,7 +27,7 @@ export interface CreateFundingAuthorityRequest {
 
   contactName?: string;
   phone?: string;
-  email?: string;
+  email?: string | null;
   address?: string;
 
   billingFrequency: string;

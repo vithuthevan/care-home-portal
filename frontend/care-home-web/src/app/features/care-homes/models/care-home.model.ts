@@ -31,11 +31,11 @@ export interface CreateCareHomeRequest {
 
   address?: string;
   phone?: string;
-  email?: string;
+  email?: string | null;
 
   managerName?: string;
   managerPhone?: string;
-  managerEmail?: string;
+  managerEmail?: string | null;
 }
 
 export interface UpdateCareHomeRequest extends CreateCareHomeRequest {

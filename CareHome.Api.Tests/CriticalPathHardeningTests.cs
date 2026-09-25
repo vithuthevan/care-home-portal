@@ -95,7 +95,7 @@ public class MiscChargeResolveRowTests
             existingDuplicateKeys: new HashSet<string>(StringComparer.Ordinal));
 
         Assert.False(resolved.IsValid);
-        Assert.Contains("Unknown client", resolved.Error);
+        Assert.Contains("Unknown resident reference 'MISSING'", resolved.Error);
     }
 
     [Fact]

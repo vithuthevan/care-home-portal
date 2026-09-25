@@ -52,7 +52,7 @@ export interface CreateClientRequest {
 
   admissionDate: string;
 
-  email?: string;
+  email?: string | null;
   phone?: string;
 
   notes?: string;

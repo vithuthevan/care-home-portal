@@ -1,4 +1,3 @@
-import { DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
@@ -37,7 +36,6 @@ interface RemittanceDetail {
 @Component({
   selector: 'app-remittance-workspace',
   imports: [
-    DecimalPipe,
     MatButtonModule,
     PageHeaderComponent,
     ApiErrorComponent,
