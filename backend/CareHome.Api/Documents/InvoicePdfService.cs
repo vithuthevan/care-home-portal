@@ -20,6 +20,7 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
                 invoice.InvoiceTemplate?.CompanyLogoPath,
                 invoice.InvoiceTemplate?.AuthorityLogoPath,
                 invoice.CareHome?.LogoPath,
+                invoice.Company?.LogoPath,
                 invoice.Tenant?.LogoPath
             ],
             cancellationToken);
@@ -155,7 +156,7 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
                     col.Item().PaddingTop(6);
                     if (!string.IsNullOrWhiteSpace(invoice.SnapshotFooterText))
                     {
-                        col.Item().Text(invoice.SnapshotFooterText).FontSize(8.5f).LineHeight(1.3f);
+                        col.Item().Element(c => RichTextPdf.Compose(c, invoice.SnapshotFooterText, 8.5f));
                     }
 
                     var contact = FormatContactLine(invoice);
@@ -197,17 +198,21 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
                         left.Item().Text(invoice.SnapshotTenantName).FontSize(10).FontColor(Colors.Grey.Darken1);
                     }
 
-                    left.Item().Text(invoice.SnapshotCompanyName).FontSize(15).Bold();
+                    if (!string.IsNullOrWhiteSpace(invoice.SnapshotCompanyName))
+                    {
+                        left.Item().Text(invoice.SnapshotCompanyName).FontSize(15).Bold();
+                    }
+
                     left.Item().PaddingTop(2).Text(invoice.SnapshotCareHomeName).FontSize(11).SemiBold();
 
                     if (!string.IsNullOrWhiteSpace(invoice.SnapshotHeaderText1))
                     {
-                        left.Item().PaddingTop(6).Text(invoice.SnapshotHeaderText1).FontSize(9).LineHeight(1.35f);
+                        left.Item().PaddingTop(6).Element(c => RichTextPdf.Compose(c, invoice.SnapshotHeaderText1, 9));
                     }
 
                     if (!string.IsNullOrWhiteSpace(invoice.SnapshotHeaderText2))
                     {
-                        left.Item().Text(invoice.SnapshotHeaderText2).FontSize(9).LineHeight(1.35f);
+                        left.Item().Element(c => RichTextPdf.Compose(c, invoice.SnapshotHeaderText2, 9));
                     }
                 });
 
@@ -269,8 +274,6 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
                 });
 
                 LabelValueRow(table, "Client", line.SnapshotClientName);
-                LabelValueRow(table, "Reference", NullIfEmpty(line.SnapshotClientReferenceNumber));
-                LabelValueRow(table, "Sage ID", NullIfEmpty(line.SnapshotSageId));
             });
         });
     }
@@ -299,7 +302,7 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
                 }
 
                 LabelValueRow(table, "Care home", invoice.SnapshotCareHomeName);
-                LabelValueRow(table, "Company", invoice.SnapshotCompanyName);
+                LabelValueRow(table, "Company", NullIfEmpty(invoice.SnapshotCompanyName));
             });
         });
     }
@@ -315,33 +318,25 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
             {
                 table.ColumnsDefinition(columns =>
                 {
-                    columns.RelativeColumn(1.7f);
-                    columns.RelativeColumn(1.0f);
-                    columns.RelativeColumn(0.9f);
-                    columns.RelativeColumn(2.6f);
-                    columns.RelativeColumn(0.55f);
-                    columns.RelativeColumn(1.15f);
-                    columns.RelativeColumn(0.85f);
-                    columns.RelativeColumn(0.95f);
+                    columns.RelativeColumn(2.2f);
+                    columns.RelativeColumn(3.4f);
+                    columns.RelativeColumn(0.6f);
+                    columns.RelativeColumn(1.3f);
+                    columns.RelativeColumn(1.1f);
                 });
 
                 table.Header(header =>
                 {
                     header.Cell().Element(TableHeaderCell).Text("Client");
-                    header.Cell().Element(TableHeaderCell).Text("Reference");
-                    header.Cell().Element(TableHeaderCell).Text("Sage ID");
                     header.Cell().Element(TableHeaderCell).Text("Service / description");
                     header.Cell().Element(TableHeaderCell).AlignRight().Text("Days");
                     header.Cell().Element(TableHeaderCell).AlignRight().Text("Rate");
-                    header.Cell().Element(TableHeaderCell).Text("Nominal");
                     header.Cell().Element(TableHeaderCell).AlignRight().Text("Amount");
                 });
 
                 foreach (var line in invoice.Lines)
                 {
                     table.Cell().Element(TableBodyCell).AlignMiddle().Text(line.SnapshotClientName);
-                    table.Cell().Element(TableBodyCell).AlignMiddle().Text(line.SnapshotClientReferenceNumber);
-                    table.Cell().Element(TableBodyCell).AlignMiddle().Text(NullIfEmpty(line.SnapshotSageId));
                     table.Cell().Element(TableBodyCell).Column(cell =>
                     {
                         cell.Item().Text(FormatDateRange(line.ServicePeriodStart, line.ServicePeriodEnd))
@@ -361,7 +356,6 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
                     table.Cell().Element(TableBodyCell).AlignMiddle().AlignRight().Text(line.EligibleDays.ToString());
                     table.Cell().Element(TableBodyCell).AlignMiddle().AlignRight()
                         .Text($"{FormatMoney(line.RateAmount)} {line.RateFrequency}".Trim());
-                    table.Cell().Element(TableBodyCell).AlignMiddle().Text(line.SnapshotNominalCode);
                     table.Cell().Element(TableBodyCell).AlignMiddle().AlignRight().Text(FormatMoney(line.LineAmount));
                 }
             });
@@ -386,9 +380,16 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
         {
             col.Spacing(6);
             col.Item().Text("Bank details").FontSize(10).SemiBold();
-            col.Item().Text($"Account name: {invoice.SnapshotBankAccountName}").FontSize(9.5f);
-            col.Item().Text($"Sort code: {invoice.SnapshotSortCode}").FontSize(9.5f);
-            col.Item().Text($"Account number: {invoice.SnapshotAccountNumber}").FontSize(9.5f);
+            if (!string.IsNullOrWhiteSpace(invoice.SnapshotBankDetails))
+            {
+                col.Item().Text(invoice.SnapshotBankDetails).FontSize(9.5f);
+            }
+            else
+            {
+                col.Item().Text($"Account name: {invoice.SnapshotBankAccountName}").FontSize(9.5f);
+                col.Item().Text($"Sort code: {invoice.SnapshotSortCode}").FontSize(9.5f);
+                col.Item().Text($"Account number: {invoice.SnapshotAccountNumber}").FontSize(9.5f);
+            }
         });
     }
 
@@ -461,7 +462,8 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
     }
 
     private static bool HasBankDetails(Invoice invoice) =>
-        !string.IsNullOrWhiteSpace(invoice.SnapshotBankAccountName)
+        !string.IsNullOrWhiteSpace(invoice.SnapshotBankDetails)
+        || !string.IsNullOrWhiteSpace(invoice.SnapshotBankAccountName)
         || !string.IsNullOrWhiteSpace(invoice.SnapshotSortCode)
         || !string.IsNullOrWhiteSpace(invoice.SnapshotAccountNumber);
 
