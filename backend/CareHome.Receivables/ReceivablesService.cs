@@ -29,7 +29,7 @@ public sealed class ReceivablesService(
 
         public string CareHomeCode { get; init; } = string.Empty;
 
-        public int CompanyId { get; init; }
+        public int? CompanyId { get; init; }
 
         public string CompanyName { get; init; } = string.Empty;
 

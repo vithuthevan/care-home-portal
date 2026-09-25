@@ -16,7 +16,7 @@ public class ReceivableInvoiceDto
 
     public string CareHomeCode { get; set; } = string.Empty;
 
-    public int CompanyId { get; set; }
+    public int? CompanyId { get; set; }
 
     public string CompanyName { get; set; } = string.Empty;
 
