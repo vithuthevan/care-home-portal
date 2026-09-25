@@ -142,6 +142,8 @@ public class ApiIntegrationTests(ApiIntegrationFixture fixture)
         Assert.NotNull(previewBody);
         Assert.True(previewBody!.CanGenerate);
         Assert.True(previewBody.TotalAmount > 0);
+        Assert.True(previewBody.ExpectedInvoiceCount >= 1);
+        Assert.NotEmpty(previewBody.InvoiceGroups);
 
         var generate = await client.PostAsJsonAsync("/api/billing/generate", BuildBillingRequest(scenario));
         Assert.Equal(HttpStatusCode.OK, generate.StatusCode);

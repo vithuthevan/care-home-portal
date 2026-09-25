@@ -38,6 +38,8 @@ public static class IntegrationTestDataBuilder
         });
 
         var tenant = provisioned.Tenant;
+        var settings = await db.TenantSettings.FirstAsync(x => x.TenantId == tenant.Id);
+        settings.FinanceModuleEnabled = true;
         var company = new Company
         {
             TenantId = tenant.Id,
