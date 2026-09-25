@@ -15,6 +15,8 @@ namespace CareHome.Api.Dtos.Billing
         public DateOnly PeriodEnd { get; set; }
 
         public List<int>? ClientIds { get; set; }
+
+        public int? InvoiceTemplateId { get; set; }
     }
 
     public class BillingPreviewResponse

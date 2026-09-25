@@ -24,6 +24,11 @@ public static class BillingPreviewRequestValidator
             return "Select a company, a care home, or homes with no company.";
         }
 
+        if (request.InvoiceTemplateId is > 0 && request.InvoiceCategoryId is not > 0)
+        {
+            return "Select an invoice category when using a template override for this billing run.";
+        }
+
         return null;
     }
 }

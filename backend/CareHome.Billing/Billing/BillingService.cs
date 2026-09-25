@@ -161,12 +161,18 @@ namespace CareHome.Api.Billing
                 }
 
                 var first = group.First();
-                var template = await templateResolver.ResolveAsync(
+                var pinnedTemplateId = await GetContractPinnedTemplateIdAsync(
                     tenantId,
+                    first.ClientFundingContractId,
+                    cancellationToken);
+                var template = await ResolveTemplateForBillingAsync(
+                    tenantId,
+                    request,
                     first.InvoiceCategoryId,
                     first.FundingAuthorityId,
                     first.CareHomeId,
                     first.CompanyId,
+                    pinnedTemplateId,
                     cancellationToken);
 
                 if (template is null)
@@ -318,6 +324,23 @@ namespace CareHome.Api.Billing
             {
                 exceptions.Add(Error("INVALID_PERIOD", "Billing period end cannot be before start."));
                 return (lines, exceptions, coverage);
+            }
+
+            if (request.InvoiceTemplateId is int overrideTemplateId
+                && request.InvoiceCategoryId is int overrideCategoryId)
+            {
+                var overrideTemplate = await templateResolver.LoadPinnedAsync(
+                    tenantId,
+                    overrideTemplateId,
+                    overrideCategoryId,
+                    cancellationToken);
+                if (overrideTemplate is null)
+                {
+                    exceptions.Add(Error(
+                        "INVALID_TEMPLATE",
+                        "The selected invoice template override was not found, is inactive, or does not match the invoice category."));
+                    return (lines, exceptions, coverage);
+                }
             }
 
             if (request.CompanyId > 0)
@@ -496,12 +519,14 @@ namespace CareHome.Api.Billing
                         continue;
                     }
 
-                    var template = await templateResolver.ResolveAsync(
+                    var template = await ResolveTemplateForBillingAsync(
                         tenantId,
+                        request,
                         contract.InvoiceCategoryId,
                         contract.FundingAuthorityId,
                         client.CareHomeId,
                         client.CareHome.CompanyId,
+                        contract.InvoiceTemplateId,
                         cancellationToken);
 
                     if (template is null)
@@ -765,17 +790,13 @@ namespace CareHome.Api.Billing
                     continue;
                 }
 
-                var template = await templateResolver.ResolveAsync(
-                    tenantId,
-                    miscCategory!.Id,
-                    0,
-                    charge.Client.CareHomeId,
-                    charge.Client.CareHome.CompanyId,
-                    cancellationToken);
-
                 // Misc charges need a funding authority on the invoice header. Use the client's first active contract authority if present.
-                var authority = charge.Client.FundingContracts
-                    .FirstOrDefault(c => c.Status == FundingContractStatuses.Active)?.FundingAuthority;
+                var contract = charge.Client.FundingContracts.FirstOrDefault(c => c.Status == FundingContractStatuses.Active)
+                    ?? charge.Client.FundingContracts.FirstOrDefault();
+
+                var authority = contract?.FundingAuthority
+                    ?? charge.Client.FundingContracts
+                        .FirstOrDefault(c => c.Status == FundingContractStatuses.Active)?.FundingAuthority;
 
                 if (authority is null)
                 {
@@ -797,16 +818,15 @@ namespace CareHome.Api.Billing
                     continue;
                 }
 
-                if (template is null)
-                {
-                    template = await templateResolver.ResolveAsync(
-                        tenantId,
-                        miscCategory.Id,
-                        authority.Id,
-                        charge.Client.CareHomeId,
-                        charge.Client.CareHome.CompanyId,
-                        cancellationToken);
-                }
+                var template = await ResolveTemplateForBillingAsync(
+                    tenantId,
+                    request,
+                    miscCategory!.Id,
+                    authority.Id,
+                    charge.Client.CareHomeId,
+                    charge.Client.CareHome.CompanyId,
+                    contract?.InvoiceTemplateId,
+                    cancellationToken);
 
                 if (template is null)
                 {
@@ -815,9 +835,6 @@ namespace CareHome.Api.Billing
                         $"No invoice template found for miscellaneous charges ({charge.Client.CareHome.Name}).",
                         charge.Client));
                 }
-
-                var contract = charge.Client.FundingContracts.FirstOrDefault(c => c.Status == FundingContractStatuses.Active)
-                    ?? charge.Client.FundingContracts.FirstOrDefault();
 
                 if (contract is null && !allowPrivatePayer)
                 {
@@ -1106,6 +1123,44 @@ namespace CareHome.Api.Billing
         {
             return string.Join(" ", new[] { client.FirstName, client.LastName }
                 .Where(x => !string.IsNullOrWhiteSpace(x)));
+        }
+
+        private async Task<InvoiceTemplate?> ResolveTemplateForBillingAsync(
+            int tenantId,
+            BillingPreviewRequest request,
+            int invoiceCategoryId,
+            int fundingAuthorityId,
+            int careHomeId,
+            int? companyId,
+            int? pinnedTemplateId,
+            CancellationToken cancellationToken)
+        {
+            return await templateResolver.ResolveForBillingAsync(
+                tenantId,
+                invoiceCategoryId,
+                fundingAuthorityId,
+                careHomeId,
+                companyId,
+                pinnedTemplateId,
+                request.InvoiceTemplateId,
+                cancellationToken);
+        }
+
+        private async Task<int?> GetContractPinnedTemplateIdAsync(
+            int tenantId,
+            int? clientFundingContractId,
+            CancellationToken cancellationToken)
+        {
+            if (clientFundingContractId is not int contractId)
+            {
+                return null;
+            }
+
+            return await dbContext.ClientFundingContracts
+                .AsNoTracking()
+                .Where(x => x.Id == contractId && x.TenantId == tenantId)
+                .Select(x => x.InvoiceTemplateId)
+                .FirstOrDefaultAsync(cancellationToken);
         }
     }
 }
