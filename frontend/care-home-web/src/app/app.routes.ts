@@ -81,6 +81,11 @@ export const routes: Routes = [
   { path: 'clients/new', component: ClientForm, canActivate: [authGuard] },
   { path: 'clients/:id/funding/rates/new', component: ClientFundingRateForm, canActivate: [authGuard] },
   { path: 'clients/:id/funding/new', component: ClientFundingContractForm, canActivate: [authGuard] },
+  {
+    path: 'clients/:id/funding/:contractId/edit',
+    component: ClientFundingContractForm,
+    canActivate: [authGuard],
+  },
   { path: 'clients/:id/edit', component: ClientForm, canActivate: [authGuard] },
   { path: 'clients/:id', component: ClientProfilePage, canActivate: [authGuard] },
   { path: 'funding-authorities', component: FundingAuthorityList, canActivate: [authGuard] },

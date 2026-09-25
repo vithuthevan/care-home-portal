@@ -81,6 +81,10 @@
           <dd>{{ selectedInvoiceCategoryName() }}</dd>
         </div>
         <div>
+          <dt>Invoice template</dt>
+          <dd>{{ selectedInvoiceTemplateOverrideName() }}</dd>
+        </div>
+        <div>
           <dt>Billing period</dt>
           <dd>{{ periodSummary() || '—' }}</dd>
         </div>
@@ -108,12 +112,25 @@
         </mat-form-field>
         <mat-form-field appearance="outline" class="w-full">
           <mat-label>Invoice category</mat-label>
-          <mat-select [(ngModel)]="invoiceCategoryId">
+          <mat-select [(ngModel)]="invoiceCategoryId" (ngModelChange)="onInvoiceCategoryChange()">
             <mat-option [value]="0">All categories</mat-option>
             @for (category of categories(); track category.id) {
               <mat-option [value]="category.id">{{ category.name }}</mat-option>
             }
           </mat-select>
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="w-full md:col-span-2">
+          <mat-label>Invoice template override</mat-label>
+          <mat-select [(ngModel)]="invoiceTemplateId" [disabled]="!invoiceCategoryId">
+            <mat-option [value]="0">Automatic (contract pin or rules)</mat-option>
+            @for (template of templatesForSelectedCategory(); track template.id) {
+              <mat-option [value]="template.id">{{ template.name }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint
+            >Optional. Applies to this run only and overrides contract pins. Select a category
+            first.</mat-hint
+          >
         </mat-form-field>
         <app-date-field label="Period start" [(ngModel)]="periodStart" />
         <app-date-field label="Period end" [(ngModel)]="periodEnd" />

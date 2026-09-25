@@ -36,6 +36,7 @@ import { InvoiceCategory } from '../../../invoice-categories/models/invoice-cate
 import { InvoiceCategoryService } from '../../../invoice-categories/services/invoice-category.service';
 import { ClientService } from '../../../clients/services/client.service';
 import { Client } from '../../../clients/models/client.model';
+import { InvoiceTemplate } from '../../../invoice-templates/models/invoice-template.model';
 
 interface BillingExceptionView {
   severity?: string;
@@ -138,6 +139,7 @@ export class BillingWorkspacePage implements OnInit {
   readonly companies = signal<Company[]>([]);
   readonly careHomes = signal<CareHomeLocation[]>([]);
   readonly categories = signal<InvoiceCategory[]>([]);
+  readonly invoiceTemplates = signal<InvoiceTemplate[]>([]);
   readonly clients = signal<Client[]>([]);
   readonly preview = signal<BillingPreviewView | null>(null);
   readonly generateResult = signal<BillingGenerateResult | null>(null);
@@ -181,6 +183,7 @@ export class BillingWorkspacePage implements OnInit {
   companyId = 0;
   careHomeId = 0;
   invoiceCategoryId = 0;
+  invoiceTemplateId = 0;
   periodStart = '';
   periodEnd = '';
   readonly funderCycle = signal(false);
@@ -198,6 +201,10 @@ export class BillingWorkspacePage implements OnInit {
     this.categoriesApi
       .getInvoiceCategories()
       .subscribe((x) => this.categories.set(x.filter((c) => c.isActive)));
+    this.http.get<InvoiceTemplate[]>('/api/invoice-templates').subscribe({
+      next: (x) => this.invoiceTemplates.set(x.filter((t) => t.isActive)),
+      error: () => this.invoiceTemplates.set([]),
+    });
     this.clientsApi.getClients(undefined, undefined, false, 1, 200).subscribe((page) => {
       this.clients.set(page.items);
       this.applyQueryContext();
@@ -582,6 +589,32 @@ export class BillingWorkspacePage implements OnInit {
     return this.categories().find((c) => c.id === this.invoiceCategoryId)?.name ?? '—';
   }
 
+  templatesForSelectedCategory(): InvoiceTemplate[] {
+    if (!this.invoiceCategoryId) {
+      return [];
+    }
+    return this.invoiceTemplates().filter((t) => t.invoiceCategoryId === this.invoiceCategoryId);
+  }
+
+  onInvoiceCategoryChange(): void {
+    if (
+      this.invoiceTemplateId &&
+      !this.templatesForSelectedCategory().some((t) => t.id === this.invoiceTemplateId)
+    ) {
+      this.invoiceTemplateId = 0;
+    }
+  }
+
+  selectedInvoiceTemplateOverrideName(): string {
+    if (!this.invoiceTemplateId) {
+      return 'Automatic (contract pin or rules)';
+    }
+    return (
+      this.invoiceTemplates().find((t) => t.id === this.invoiceTemplateId)?.name ??
+      'Selected template'
+    );
+  }
+
   selectedScopeLabel(): string {
     const home = this.selectedCareHomeName();
     if (home) {
@@ -782,6 +815,9 @@ export class BillingWorkspacePage implements OnInit {
       companyId: this.companyId,
       careHomeId: this.careHomeId || null,
       invoiceCategoryId: this.invoiceCategoryId || null,
+      invoiceTemplateId: this.invoiceCategoryId && this.invoiceTemplateId
+        ? this.invoiceTemplateId
+        : null,
       periodStart: this.periodStart,
       periodEnd: this.periodEnd,
       clientIds: this.selectedClientIds.length ? this.selectedClientIds : null,

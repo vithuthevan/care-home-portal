@@ -260,6 +260,16 @@
                   <dd>{{ contract.nominalCode }}</dd>
                 </div>
                 <div>
+                  <dt>Invoice template</dt>
+                  <dd>
+                    @if (contract.invoiceTemplateName) {
+                      {{ contract.invoiceTemplateName }}
+                    } @else {
+                      <span class="text-sm text-[var(--app-text-muted)]">Automatic</span>
+                    }
+                  </dd>
+                </div>
+                <div>
                   <dt>Current rate</dt>
                   <dd>
                     @if (currentRateForContract(contract); as rate) {
@@ -313,6 +323,12 @@
 
               @if (auth.canWrite()) {
                 <div class="actions-bar mt-3">
+                  <a
+                    mat-stroked-button
+                    [routerLink]="fundingContractEditLink(client, contract.id)"
+                  >
+                    Edit contract
+                  </a>
                   <a
                     mat-stroked-button
                     [routerLink]="fundingRateLink(client)"

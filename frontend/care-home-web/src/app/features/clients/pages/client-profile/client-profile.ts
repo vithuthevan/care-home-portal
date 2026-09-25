@@ -33,6 +33,8 @@ interface FundingContractView {
   fundingAuthorityName: string;
   invoiceCategoryName: string;
   nominalCode: string;
+  invoiceTemplateId?: number | null;
+  invoiceTemplateName?: string | null;
   contractStartDate: string;
   contractEndDate: string | null;
   status: string;
@@ -292,6 +294,10 @@ export class ClientProfilePage implements OnInit {
 
   fundingContractLink(client: Client): (string | number)[] {
     return ['/clients', entityRouteKey(client), 'funding', 'new'];
+  }
+
+  fundingContractEditLink(client: Client, contractId: number): (string | number)[] {
+    return ['/clients', entityRouteKey(client), 'funding', contractId, 'edit'];
   }
 
   fundingRateLink(client: Client, contractId?: number): (string | number)[] {
