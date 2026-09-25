@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -15,6 +15,7 @@ import { ApiErrorComponent } from '../../shared/ui/api-error';
   selector: 'app-login',
   imports: [
     ReactiveFormsModule,
+    RouterLink,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,

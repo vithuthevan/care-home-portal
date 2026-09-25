@@ -55,6 +55,14 @@ export class AuthService {
     return this.hasRole('TenantAdmin', 'Administrator');
   }
 
+  showGuardian(): boolean {
+    return !!this.currentUser()?.showGuardian;
+  }
+
+  financeModuleEnabled(): boolean {
+    return !!this.currentUser()?.financeModuleEnabled;
+  }
+
   homePath(): string[] {
     if (this.mustChangePassword()) {
       return ['/change-password'];
@@ -102,6 +110,35 @@ export class AuthService {
           from(Promise.all(values.map((value) => encryptLoginPassword(key, value)))),
         ),
       );
+  }
+
+  refreshProfile() {
+    return this.http.get<AuthUser>('/api/auth/me').pipe(
+      tap((profile) => {
+        const current = this.currentUser();
+        if (!current?.token) {
+          return;
+        }
+
+        this.storeUser({ ...current, ...profile, token: current.token });
+      }),
+    );
+  }
+
+  forgotPassword(email: string) {
+    return this.http.post<{ message: string }>('/api/auth/forgot-password', { email });
+  }
+
+  resetPassword(email: string, token: string, newPassword: string) {
+    return this.encryptSecret(newPassword).pipe(
+      switchMap((newPasswordCipher) =>
+        this.http.post<{ message: string }>('/api/auth/reset-password', {
+          email,
+          token,
+          newPasswordCipher,
+        }),
+      ),
+    );
   }
 
   logout(): void {

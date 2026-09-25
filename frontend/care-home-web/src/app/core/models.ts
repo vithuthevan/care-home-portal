@@ -14,4 +14,6 @@ export interface AuthUser {
   tenantName?: string | null;
   tenantPublicId?: string | null;
   mustChangePassword?: boolean;
+  showGuardian?: boolean;
+  financeModuleEnabled?: boolean;
 }

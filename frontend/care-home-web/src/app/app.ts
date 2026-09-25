@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
@@ -12,7 +13,6 @@ import { AuthService } from './core/auth.service';
 import { BreadcrumbService } from './shared/ui/breadcrumb.service';
 import { ThemeService } from './shared/ui/theme.service';
 import { CareHomePortalThemeService } from './core/care-home-portal-theme.service';
-import { COMMERCIAL_REVENUE_ENABLED } from './core/commercial-revenue.feature';
 
 @Component({
   selector: 'app-root',
@@ -33,6 +33,7 @@ import { COMMERCIAL_REVENUE_ENABLED } from './core/commercial-revenue.feature';
 export class App {
   readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly location = inject(Location);
   readonly isMobile = signal(false);
   readonly menuOpen = signal(false);
   readonly breadcrumbs = inject(BreadcrumbService);
@@ -41,7 +42,6 @@ export class App {
   readonly operationsOpen = signal(true);
   readonly billingSetupOpen = signal(true);
   readonly billingOpen = signal(true);
-  readonly showCommercialRevenueNav = COMMERCIAL_REVENUE_ENABLED;
   readonly revenueOpen = signal(true);
   readonly assuranceOpen = signal(true);
   readonly reportingOpen = signal(true);
@@ -50,6 +50,9 @@ export class App {
   readonly sidebarCollapsed = signal(false);
 
   constructor() {
+    if (this.auth.isLoggedIn()) {
+      this.auth.refreshProfile().subscribe({ error: () => undefined });
+    }
     this.themeService.init();
     this.careHomePortalTheme.init();
     if (typeof window !== 'undefined') {
@@ -73,6 +76,10 @@ export class App {
       this.breadcrumbs.setFromUrl(this.router.url);
     });
     this.breadcrumbs.setFromUrl(this.router.url);
+  }
+
+  goBack(): void {
+    this.location.back();
   }
 
   toggleMenu(): void {

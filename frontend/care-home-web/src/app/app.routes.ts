@@ -11,6 +11,8 @@ import {
 import { commercialRevenueGuard } from './core/commercial-revenue.guard';
 import { LoginPage } from './features/login/login';
 import { ChangePasswordPage } from './features/login/change-password';
+import { ForgotPasswordPage } from './features/login/forgot-password';
+import { ResetPasswordPage } from './features/login/reset-password';
 import { ForbiddenPage } from './features/forbidden/forbidden';
 import { NotFoundPage } from './features/not-found/not-found';
 import { DashboardPage } from './features/dashboard/dashboard';
@@ -59,6 +61,8 @@ import { RenewalsWorkspacePage } from './features/renewals/pages/renewals-worksp
 
 export const routes: Routes = [
   { path: 'login', component: LoginPage, canActivate: [guestGuard] },
+  { path: 'forgot-password', component: ForgotPasswordPage, canActivate: [guestGuard] },
+  { path: 'reset-password', component: ResetPasswordPage, canActivate: [guestGuard] },
   { path: 'change-password', component: ChangePasswordPage, canActivate: [passwordChangeGuard] },
   { path: 'forbidden', component: ForbiddenPage, canActivate: [authGuard] },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
