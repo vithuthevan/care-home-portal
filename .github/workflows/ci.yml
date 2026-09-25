@@ -33,16 +33,10 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: Restore API
-        run: dotnet restore backend/CareHome.Api/CareHome.Api.csproj
-
-      - name: Restore tests
+      - name: Restore
         run: dotnet restore CareHome.Api.Tests/CareHome.Api.Tests.csproj
 
-      - name: Build API
-        run: dotnet build backend/CareHome.Api/CareHome.Api.csproj --configuration Release --no-restore
-
-      - name: Build tests
+      - name: Build
         run: dotnet build CareHome.Api.Tests/CareHome.Api.Tests.csproj --configuration Release --no-restore
 
       - name: EF migrations model check
@@ -56,7 +50,7 @@ jobs:
         run: dotnet test CareHome.Api.Tests/CareHome.Api.Tests.csproj --configuration Release --no-build --verbosity normal
 
       - name: Publish API artifact
-        run: dotnet publish backend/CareHome.Api/CareHome.Api.csproj -c Release -o artifacts/api --no-restore
+        run: dotnet publish backend/CareHome.Api/CareHome.Api.csproj -c Release -o artifacts/api --no-build
 
       - uses: actions/upload-artifact@v4
         with:

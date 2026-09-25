@@ -48,14 +48,13 @@ jobs:
       # -------------------------
 
       - name: Restore .NET dependencies
-        run: dotnet restore backend/CareHome.Api/CareHome.Api.csproj
+        run: dotnet restore CareHome.Api.Tests/CareHome.Api.Tests.csproj
+
+      - name: Build API
+        run: dotnet build backend/CareHome.Api/CareHome.Api.csproj -c Release --no-restore
 
       - name: Publish API
-        run: |
-          dotnet publish backend/CareHome.Api/CareHome.Api.csproj \
-            -c Release \
-            -o publish/api \
-            --no-restore
+        run: dotnet publish backend/CareHome.Api/CareHome.Api.csproj -c Release -o publish/api --no-build
 
       # -------------------------
       # Put Angular inside API
