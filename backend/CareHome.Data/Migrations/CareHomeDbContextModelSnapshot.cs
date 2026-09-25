@@ -3054,8 +3054,6 @@ namespace CareHome.Api.Migrations
 
                     b.Navigation("CareHome");
 
-                    b.Navigation("Guardian");
-
                     b.Navigation("Tenant");
                 });
 
