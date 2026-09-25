@@ -16,9 +16,12 @@ public static class BillingPreviewRequestValidator
             return "Billing period end cannot be before start.";
         }
 
-        if (request.CompanyId <= 0)
+        var hasCareHome = request.CareHomeId is > 0;
+        var hasCompany = request.CompanyId > 0;
+        var unassignedCompany = request.CompanyId < 0;
+        if (!hasCareHome && !hasCompany && !unassignedCompany)
         {
-            return "Company is required.";
+            return "Select a company, a care home, or homes with no company.";
         }
 
         return null;

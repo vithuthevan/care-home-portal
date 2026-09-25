@@ -11,7 +11,7 @@ namespace CareHome.Api.Billing
             int invoiceCategoryId,
             int fundingAuthorityId,
             int careHomeId,
-            int companyId,
+            int? companyId,
             CancellationToken cancellationToken = default)
         {
             var templates = await dbContext.InvoiceTemplates
