@@ -117,7 +117,7 @@ public class BulkBillingIntegrationTests(ApiIntegrationFixture fixture)
             var rentCategory = await db.InvoiceCategories
                 .FirstAsync(x => x.TenantId == scenario.Tenant.Id && x.Code == "RENT");
             rentCategory.GroupingMode = InvoiceGroupingModes.PerResident;
-            db.InvoiceTemplates.Add(new InvoiceTemplate
+            var rentTemplate = new InvoiceTemplate
             {
                 TenantId = scenario.Tenant.Id,
                 Name = "Rent integration template",
@@ -128,7 +128,8 @@ public class BulkBillingIntegrationTests(ApiIntegrationFixture fixture)
                 EmailSubjectTemplate = "Invoice {{InvoiceNumber}}",
                 EmailBodyTemplate = "Attached",
                 IsActive = true
-            });
+            };
+            db.InvoiceTemplates.Add(rentTemplate);
             await db.SaveChangesAsync();
 
             var clientB = new Client
@@ -155,7 +156,7 @@ public class BulkBillingIntegrationTests(ApiIntegrationFixture fixture)
                     FundingAuthorityId = scenario.FundingAuthority.Id,
                     InvoiceCategoryId = rentCategory.Id,
                     NominalCodeId = scenario.Nominal.Id,
-                    InvoiceTemplateId = scenario.Template.Id,
+                    InvoiceTemplateId = rentTemplate.Id,
                     ContractStartDate = new DateOnly(2026, 1, 1),
                     Status = "Active",
                     CreatedAt = DateTimeOffset.UtcNow,
