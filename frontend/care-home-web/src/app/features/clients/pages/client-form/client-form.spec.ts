@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
-import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { of } from 'rxjs';
@@ -18,12 +19,14 @@ describe('ClientForm', () => {
         provideRouter([]),
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideNativeDateAdapter(),
         provideNoopAnimations(),
         {
           provide: ActivatedRoute,
           useValue: {
             paramMap: of(convertToParamMap({})),
-            snapshot: { paramMap: convertToParamMap({}) },
+            queryParamMap: of(convertToParamMap({})),
+            snapshot: { paramMap: convertToParamMap({}), queryParamMap: convertToParamMap({}) },
           },
         },
       ],
@@ -31,6 +34,8 @@ describe('ClientForm', () => {
 
     fixture = TestBed.createComponent(ClientForm);
     component = fixture.componentInstance;
+    fixture.detectChanges();
+    TestBed.inject(HttpTestingController).expectOne('/api/care-homes').flush([]);
     await fixture.whenStable();
   });
 

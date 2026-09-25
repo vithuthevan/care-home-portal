@@ -47,7 +47,14 @@ describe('ClientProfilePage', () => {
         provideNoopAnimations(),
         {
           provide: ActivatedRoute,
-          useValue: { paramMap: of(convertToParamMap({ id: '1' })) },
+          useValue: {
+            paramMap: of(convertToParamMap({ id: '1' })),
+            queryParamMap: of(convertToParamMap({})),
+            snapshot: {
+              paramMap: convertToParamMap({ id: '1' }),
+              queryParamMap: convertToParamMap({}),
+            },
+          },
         },
       ],
     }).compileComponents();
@@ -56,9 +63,6 @@ describe('ClientProfilePage', () => {
     fixture = TestBed.createComponent(ClientProfilePage);
     fixture.detectChanges();
 
-    http.expectOne('/api/funding-authorities?activeOnly=true').flush([]);
-    http.expectOne('/api/invoice-categories?activeOnly=true').flush([]);
-    http.expectOne('/api/nominal-codes?activeOnly=true').flush([]);
     http.expectOne('/api/clients/1').flush(client);
     http.expectOne('/api/clients/1/funding-contracts').flush([]);
     http.expectOne((req) => req.url === '/api/invoices').flush({ items: [] });
@@ -79,7 +83,14 @@ describe('ClientProfilePage', () => {
         provideNoopAnimations(),
         {
           provide: ActivatedRoute,
-          useValue: { paramMap: of(convertToParamMap({ id: publicId })) },
+          useValue: {
+            paramMap: of(convertToParamMap({ id: publicId })),
+            queryParamMap: of(convertToParamMap({})),
+            snapshot: {
+              paramMap: convertToParamMap({ id: publicId }),
+              queryParamMap: convertToParamMap({}),
+            },
+          },
         },
       ],
     }).compileComponents();
@@ -88,9 +99,6 @@ describe('ClientProfilePage', () => {
     const localFixture = TestBed.createComponent(ClientProfilePage);
     localFixture.detectChanges();
 
-    localHttp.expectOne('/api/funding-authorities?activeOnly=true').flush([]);
-    localHttp.expectOne('/api/invoice-categories?activeOnly=true').flush([]);
-    localHttp.expectOne('/api/nominal-codes?activeOnly=true').flush([]);
     localHttp.expectOne(`/api/clients/${publicId}`).flush({ ...client, publicId });
     localHttp.expectOne(`/api/clients/1/funding-contracts`).flush([]);
     localHttp.expectOne((req) => req.url === '/api/invoices').flush({ items: [] });
@@ -106,8 +114,8 @@ describe('ClientProfilePage', () => {
     expect(el.textContent).toContain('Funding');
     expect(el.textContent).toContain('Billing');
     expect(el.textContent).toContain('Invoices');
-    expect(el.textContent).toContain('Funding summary');
-    expect(el.textContent).toContain('Identity & placement');
+    expect(el.textContent).toContain('Who pays?');
+    expect(el.textContent).toContain('Placement');
     expect(el.textContent).toContain('Green Valley');
   });
 });
