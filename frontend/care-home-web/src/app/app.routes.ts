@@ -46,6 +46,7 @@ import { SageExportPage } from './features/sage/pages/sage-export/sage-export';
 import { UserListPage } from './features/users/pages/user-list/user-list';
 import { UserFormPage } from './features/users/pages/user-form/user-form';
 import { AuditListPage } from './features/audit/pages/audit-list/audit-list';
+import { EmailSendLogListPage } from './features/email/pages/email-send-log-list/email-send-log-list';
 import { PlatformTenantListPage } from './features/platform/pages/platform-tenant-list/platform-tenant-list';
 import { PlatformTenantFormPage } from './features/platform/pages/platform-tenant-form/platform-tenant-form';
 import { OrganisationSettingsPage } from './features/settings/pages/organisation-settings/organisation-settings';
@@ -163,6 +164,7 @@ export const routes: Routes = [
   { path: 'users', component: UserListPage, canActivate: [authGuard, adminGuard] },
   { path: 'users/new', component: UserFormPage, canActivate: [authGuard, adminGuard] },
   { path: 'audit', component: AuditListPage, canActivate: [authGuard, adminGuard] },
+  { path: 'email-delivery', component: EmailSendLogListPage, canActivate: [authGuard] },
   {
     path: 'settings/organisation',
     component: OrganisationSettingsPage,

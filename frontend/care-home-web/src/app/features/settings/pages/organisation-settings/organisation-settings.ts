@@ -1,5 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { finalize } from 'rxjs';
 
@@ -19,6 +19,7 @@ import { ToastService } from '../../../../shared/ui/toast.service';
 @Component({
   selector: 'app-organisation-settings',
   imports: [
+    FormsModule,
     ReactiveFormsModule,
     MatFormFieldModule,
     MatInputModule,
@@ -40,6 +41,8 @@ export class OrganisationSettingsPage implements OnInit {
   readonly savedMessage = signal<string | null>(null);
   readonly isLoading = signal(false);
   readonly isSaving = signal(false);
+  readonly isSendingTest = signal(false);
+  testEmailTo = '';
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(150)]],
@@ -79,6 +82,24 @@ export class OrganisationSettingsPage implements OnInit {
         },
         error: (error) =>
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to load organisation settings.')),
+      });
+  }
+
+  sendTestEmail(): void {
+    const to = optionalEmail(this.testEmailTo);
+    if (!to) {
+      this.errorMessage.set('Enter a recipient for the test email.');
+      return;
+    }
+    this.isSendingTest.set(true);
+    this.errorMessage.set(null);
+    this.http
+      .post<{ message?: string }>('/api/settings/organisation/test-email', { to })
+      .pipe(finalize(() => this.isSendingTest.set(false)))
+      .subscribe({
+        next: (res) => this.toast.success(res.message ?? 'Test email sent.'),
+        error: (error) =>
+          this.errorMessage.set(getApiErrorMessage(error, 'Test email could not be sent.')),
       });
   }
 

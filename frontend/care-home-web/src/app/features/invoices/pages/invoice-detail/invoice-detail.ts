@@ -7,6 +7,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { FormsModule } from '@angular/forms';
+import { optionalEmail } from '../../../../shared/format/optional-email';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
 import { AuthService } from '../../../../core/auth.service';
@@ -30,6 +34,9 @@ import { entityRouteKey } from '../../../../shared/routing/entity-route';
     MatIconModule,
     MatMenuModule,
     MatTooltipModule,
+    MatFormFieldModule,
+    MatInputModule,
+    FormsModule,
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
@@ -57,7 +64,9 @@ export class InvoiceDetailPage implements OnInit {
   readonly isLoading = signal(false);
   readonly isPdfLoading = signal(false);
   readonly isSending = signal(false);
+  readonly isSavingRecipient = signal(false);
   readonly isPaying = signal(false);
+  recipientEmail = '';
 
   /** Manual payment status only — hidden when allocations drive collection status. */
   showPaymentStatusActions(): boolean {
@@ -96,6 +105,7 @@ export class InvoiceDetailPage implements OnInit {
       .subscribe({
         next: (invoice: any) => {
           this.invoice.set(invoice);
+          this.recipientEmail = invoice.recipientEmail ?? '';
           this.breadcrumbs.set([
             { label: 'Billing', routerLink: '/billing' },
             { label: 'Invoices', routerLink: '/invoices' },
@@ -135,6 +145,32 @@ export class InvoiceDetailPage implements OnInit {
       });
   }
 
+  saveRecipientEmail(): void {
+    const current = this.invoice();
+    if (!current || this.isSavingRecipient() || !this.auth.canWrite()) {
+      return;
+    }
+
+    this.isSavingRecipient.set(true);
+    this.errorMessage.set(null);
+    this.http
+      .patch<{ recipientEmail?: string | null }>(`/api/invoices/${current.id}/recipient-email`, {
+        recipientEmail: optionalEmail(this.recipientEmail),
+      })
+      .pipe(finalize(() => this.isSavingRecipient.set(false)))
+      .subscribe({
+        next: (result) => {
+          this.recipientEmail = result.recipientEmail ?? '';
+          this.invoice.update((inv) =>
+            inv ? { ...inv, recipientEmail: result.recipientEmail } : inv,
+          );
+          this.toast.success('Recipient email saved.');
+        },
+        error: (error) =>
+          this.errorMessage.set(getApiErrorMessage(error, 'Unable to save recipient email.')),
+      });
+  }
+
   send(): void {
     const current = this.invoice();
     if (!current || this.isSending()) {
@@ -158,6 +194,7 @@ export class InvoiceDetailPage implements OnInit {
               : null,
           );
           this.toast.success(message);
+          this.loadInvoice(String(current.id));
         },
         error: (error) =>
           this.errorMessage.set(getApiErrorMessage(error, 'Email could not be sent.')),

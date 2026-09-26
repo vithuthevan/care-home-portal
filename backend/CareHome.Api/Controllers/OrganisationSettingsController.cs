@@ -1,6 +1,8 @@
 using CareHome.Api.Audit;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
+using CareHome.Api.Dtos.Email;
+using CareHome.Api.Email;
 using CareHome.Api.Dtos.Tenants;
 using CareHome.Api.Security;
 using CareHome.Api.Security.Authorization;
@@ -19,6 +21,7 @@ public class OrganisationSettingsController(
     CareHomeDbContext dbContext,
     ITenantContext tenantContext,
     AuditService audit,
+    IEmailSender emailSender,
     IOptions<Features.CommercialRevenueFeature> commercialRevenue) : ControllerBase
 {
     [HttpGet]
@@ -114,6 +117,39 @@ public class OrganisationSettingsController(
         await dbContext.SaveChangesAsync();
         await audit.LogAsync("OrganisationSettings", tenantId.ToString(), "Update", null, request, "Updated organisation settings.");
         return Ok(ToDto(tenant, commercialRevenue.Value.CommercialRevenueEnabled));
+    }
+
+    [HttpPost("test-email")]
+    public async Task<IActionResult> SendTestEmail(TestEmailRequest request, CancellationToken cancellationToken)
+    {
+        var to = string.IsNullOrWhiteSpace(request.To) ? null : request.To.Trim();
+        if (string.IsNullOrWhiteSpace(to))
+        {
+            return BadRequest(new { message = "Recipient email is required." });
+        }
+
+        var tenantId = tenantContext.TenantId;
+        var tenantName = await dbContext.Tenants
+            .Where(x => x.Id == tenantId)
+            .Select(x => x.Name)
+            .FirstOrDefaultAsync(cancellationToken) ?? "Organisation";
+
+        var result = await emailSender.SendAsync(
+            to,
+            $"Test email from {tenantName}",
+            "This is a test message from your care home billing system. If you received this, SMTP and organisation email settings are working.",
+            null,
+            null,
+            tenantId,
+            isBodyHtml: false,
+            cancellationToken);
+
+        if (!result.Success)
+        {
+            return BadRequest(new { message = result.ErrorMessage ?? "Test email could not be sent." });
+        }
+
+        return Ok(new { simulated = result.Simulated, message = "Test email sent." });
     }
 
     private static OrganisationSettingsDto ToDto(Models.Tenant tenant, bool financeModuleAvailable)

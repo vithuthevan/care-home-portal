@@ -207,6 +207,7 @@
               <th>Date</th>
               <th>Reason</th>
               <th class="col-status">Status</th>
+              <th>Recipient</th>
               <th class="num">Amount</th>
               <th class="col-actions">Actions</th>
             </tr>
@@ -225,8 +226,32 @@
                 <td>{{ note.creditNoteDate | displayDate }}</td>
                 <td>{{ note.reason || '—' }}</td>
                 <td class="col-status"><app-status-badge [value]="note.status" /></td>
+                <td>
+                  @if (auth.canWrite()) {
+                    <mat-form-field appearance="outline" class="w-full min-w-[200px]">
+                      <mat-label>Email</mat-label>
+                      <input
+                        matInput
+                        type="email"
+                        [(ngModel)]="note.recipientEmail"
+                        [ngModelOptions]="{ standalone: true }"
+                        (blur)="saveRecipient(note)"
+                      />
+                    </mat-form-field>
+                  } @else {
+                    {{ note.recipientEmail || '—' }}
+                  }
+                </td>
                 <td class="num"><app-currency-display [amount]="note.totalAmount" /></td>
                 <td class="actions-cell col-actions">
+                  @if (auth.canWrite()) {
+                    <app-icon-action
+                      icon="mail"
+                      ariaLabel="Send credit note email"
+                      [disabled]="sendingNoteId() === note.id"
+                      (action)="sendNote(note)"
+                    />
+                  }
                   <app-icon-action
                     icon="download"
                     ariaLabel="Download credit note PDF"

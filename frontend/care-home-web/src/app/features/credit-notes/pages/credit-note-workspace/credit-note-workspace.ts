@@ -28,6 +28,7 @@ import { PagedResult } from '../../../../core/models';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import { optionalEmail } from '../../../../shared/format/optional-email';
 
 @Component({
   selector: 'app-credit-note-workspace',
@@ -69,6 +70,8 @@ export class CreditNoteWorkspacePage implements OnInit {
   notesPageSize = 20;
   readonly errorMessage = signal<string | null>(null);
   readonly isWorking = signal(false);
+  readonly sendingNoteId = signal<number | null>(null);
+  readonly savingRecipientId = signal<number | null>(null);
   readonly sourceInvoiceId = signal<number | null>(null);
   readonly sourceInvoiceNumber = signal<string | null>(null);
   readonly sourceResidentName = signal<string | null>(null);
@@ -232,6 +235,50 @@ export class CreditNoteWorkspacePage implements OnInit {
     this.http.get(`/api/credit-notes/${id}/pdf`, { responseType: 'blob' }).subscribe((blob) => {
       window.open(URL.createObjectURL(blob), '_blank');
     });
+  }
+
+  saveRecipient(note: { id: number; recipientEmail?: string | null }): void {
+    if (!this.auth.canWrite() || this.savingRecipientId() !== null) {
+      return;
+    }
+    this.savingRecipientId.set(note.id);
+    this.http
+      .patch<{ recipientEmail?: string | null }>(`/api/credit-notes/${note.id}/recipient-email`, {
+        recipientEmail: optionalEmail(note.recipientEmail ?? ''),
+      })
+      .pipe(finalize(() => this.savingRecipientId.set(null)))
+      .subscribe({
+        next: () => {
+          this.toast.success('Recipient email saved.');
+          this.loadNotes();
+        },
+        error: (error) =>
+          this.errorMessage.set(getApiErrorMessage(error, 'Unable to save recipient email.')),
+      });
+  }
+
+  sendNote(note: { id: number; creditNoteNumber: string }): void {
+    if (!this.auth.canWrite() || this.sendingNoteId() !== null) {
+      return;
+    }
+    this.sendingNoteId.set(note.id);
+    this.errorMessage.set(null);
+    this.http
+      .post<{ simulated?: boolean }>(`/api/credit-notes/${note.id}/send`, {})
+      .pipe(finalize(() => this.sendingNoteId.set(null)))
+      .subscribe({
+        next: (result) => {
+          const simulated = result?.simulated === true;
+          this.toast.success(
+            simulated
+              ? `Credit note ${note.creditNoteNumber} email simulated.`
+              : `Credit note ${note.creditNoteNumber} emailed.`,
+          );
+          this.loadNotes();
+        },
+        error: (error) =>
+          this.errorMessage.set(getApiErrorMessage(error, 'Unable to send credit note email.')),
+      });
   }
 
   private validateCreateForm(): string | null {

@@ -1,0 +1,98 @@
+<div class="page">
+  <app-page-header
+    title="Email delivery log"
+    subtitle="Outbound invoice and credit note emails for this organisation."
+  />
+
+  <app-api-error [message]="errorMessage()" />
+
+  <section class="panel mb-4">
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Document type</mat-label>
+        <mat-select [(ngModel)]="documentType">
+          <mat-option value="">All</mat-option>
+          <mat-option value="Invoice">Invoice</mat-option>
+          <mat-option value="CreditNote">Credit note</mat-option>
+          <mat-option value="CollectionReminder">Collection reminder</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Outcome</mat-label>
+        <mat-select [(ngModel)]="successFilter">
+          <mat-option value="">All</mat-option>
+          <mat-option value="ok">Succeeded</mat-option>
+          <mat-option value="failed">Failed</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <div class="flex items-center">
+        <button mat-stroked-button type="button" (click)="applyFilters()">Apply filters</button>
+      </div>
+    </div>
+  </section>
+
+  @if (isLoading()) {
+    <app-loading-state label="Loading email log..." />
+  } @else if (items().length === 0) {
+    <app-empty-state title="No email attempts" message="No delivery attempts match the current filters." />
+  } @else {
+    <section class="panel">
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>When</th>
+              <th>Type</th>
+              <th>Document</th>
+              <th>Recipient</th>
+              <th>Status</th>
+              <th>Detail</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of items(); track row.id) {
+              <tr>
+                <td>{{ row.attemptedAt | displayDateTime }}</td>
+                <td>{{ row.documentType }}</td>
+                <td>
+                  @if (row.documentType === 'Invoice') {
+                    <a [routerLink]="['/invoices', row.documentId]">{{ row.documentId }}</a>
+                  } @else if (row.documentType === 'CreditNote') {
+                    <a [routerLink]="['/credit-notes']" [queryParams]="{ creditNoteId: row.documentId }">
+                      {{ row.documentId }}
+                    </a>
+                  } @else {
+                    {{ row.documentId }}
+                  }
+                </td>
+                <td>{{ row.recipient || '—' }}</td>
+                <td><app-status-badge [value]="statusLabel(row)" /></td>
+                <td class="text-sm text-[var(--app-text-muted)]">{{ row.errorMessage || '—' }}</td>
+                <td class="col-actions">
+                  @if (canResend(row)) {
+                    <button
+                      mat-stroked-button
+                      type="button"
+                      (click)="resend(row)"
+                      [disabled]="resendingId() === row.id"
+                    >
+                      Resend
+                    </button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <app-table-pagination
+        [page]="page"
+        [pageSize]="pageSize"
+        [totalCount]="totalCount()"
+        (pageChange)="onPageChange($event)"
+        (pageSizeChange)="onPageSizeChange($event)"
+      />
+    </section>
+  }
+</div>

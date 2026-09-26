@@ -159,6 +159,27 @@
             }
           </mat-form-field>
         </div>
+        <p class="mt-2 mb-2 text-sm text-[var(--app-text-muted)]">
+          Overrides the server default From address when set. SMTP credentials remain configured on the host.
+        </p>
+        <div class="flex flex-wrap items-end gap-3">
+          <mat-form-field appearance="outline" class="min-w-[240px] flex-1">
+            <mat-label>Test email recipient</mat-label>
+            <input matInput [(ngModel)]="testEmailTo" [ngModelOptions]="{ standalone: true }" type="email" />
+          </mat-form-field>
+          <button
+            mat-stroked-button
+            type="button"
+            (click)="sendTestEmail()"
+            [disabled]="isSendingTest()"
+          >
+            @if (isSendingTest()) {
+              Sending...
+            } @else {
+              Send test email
+            }
+          </button>
+        </div>
       </section>
 
       <section class="panel">

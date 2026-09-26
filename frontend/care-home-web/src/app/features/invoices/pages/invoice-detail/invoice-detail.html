@@ -65,6 +65,33 @@
       </div>
     </section>
 
+    @if (auth.canWrite() && inv.status !== 'Void') {
+      <section class="panel mb-4" aria-labelledby="invoice-email-heading">
+        <h2 id="invoice-email-heading" class="text-section mt-0">Email delivery</h2>
+        <p class="mt-0 mb-3 text-sm text-[var(--app-text-muted)]">
+          Set the recipient before sending. Organisation “from” settings apply when SMTP is configured.
+        </p>
+        <div class="flex flex-wrap items-end gap-3 max-w-xl">
+          <mat-form-field appearance="outline" class="flex-1 min-w-[240px]">
+            <mat-label>Recipient email</mat-label>
+            <input matInput type="email" [(ngModel)]="recipientEmail" name="recipientEmail" />
+          </mat-form-field>
+          <button
+            mat-stroked-button
+            type="button"
+            (click)="saveRecipientEmail()"
+            [disabled]="isSavingRecipient()"
+          >
+            @if (isSavingRecipient()) {
+              Saving...
+            } @else {
+              Save recipient
+            }
+          </button>
+        </div>
+      </section>
+    }
+
     @if (commercialRevenueEnabled) {
       <section class="panel panel--flat payment-status-panel" aria-labelledby="collection-status-heading">
         <h2 id="collection-status-heading" class="payment-status-panel__heading m-0">Collection status</h2>
