@@ -1,6 +1,7 @@
 using CareHome.Api.Audit;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
+using CareHome.Api.Documents;
 using CareHome.Api.Dtos.Common;
 using CareHome.Api.Dtos.InvoiceTemplates;
 using CareHome.Api.Models;
@@ -17,6 +18,7 @@ namespace CareHome.Api.Controllers;
 public class InvoiceTemplatesController(
     CareHomeDbContext dbContext,
     ITenantContext tenantContext,
+    IDocumentStore documents,
     AuditService audit,
     MasterDataUsageService usage) : ControllerBase
 {
@@ -143,6 +145,124 @@ public class InvoiceTemplatesController(
         return NoContent();
     }
 
+    [HttpGet("{id:int}/logo/{kind}")]
+    public async Task<IActionResult> GetLogo(int id, string kind)
+    {
+        var tenantId = tenantContext.TenantId;
+        var template = await dbContext.InvoiceTemplates.AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId);
+        if (template is null)
+        {
+            return NotFound();
+        }
+
+        var path = LogoPathForKind(template, kind);
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return NotFound();
+        }
+
+        var bytes = await documents.ReadAsync(path);
+        return bytes is null ? NotFound() : File(bytes, LogoStorage.ContentType(path));
+    }
+
+    [HttpPost("{id:int}/logo/{kind}")]
+    [RequestSizeLimit(LogoStorage.MaxBytes)]
+    public async Task<ActionResult<InvoiceTemplateDto>> UploadLogo(int id, string kind, IFormFile file)
+    {
+        if (!IsValidLogoKind(kind))
+        {
+            return BadRequest(new { message = "Logo kind must be 'company' or 'authority'." });
+        }
+
+        var validationError = LogoStorage.Validate(file);
+        if (validationError is not null)
+        {
+            return BadRequest(new { message = validationError });
+        }
+
+        var tenantId = tenantContext.TenantId;
+        var template = await dbContext.InvoiceTemplates.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId);
+        if (template is null)
+        {
+            return NotFound();
+        }
+
+        var extension = LogoStorage.Extension(file)!;
+        await using var stream = file.OpenReadStream();
+        using var buffer = new MemoryStream();
+        await stream.CopyToAsync(buffer);
+        var tenantPublicId = await dbContext.Tenants
+            .Where(x => x.Id == tenantId)
+            .Select(x => x.PublicId)
+            .FirstAsync();
+        var folder = TenantDocumentPaths.Folder(tenantPublicId, "invoice-template-logos");
+        var fileName = $"template-{id}-{kind}{extension}";
+        var savedPath = await documents.SaveAsync(folder, fileName, buffer.ToArray());
+
+        if (string.Equals(kind, "company", StringComparison.OrdinalIgnoreCase))
+        {
+            template.CompanyLogoPath = savedPath;
+        }
+        else
+        {
+            template.AuthorityLogoPath = savedPath;
+        }
+
+        await dbContext.SaveChangesAsync();
+        await audit.LogAsync(
+            "InvoiceTemplate",
+            id.ToString(),
+            "UploadLogo",
+            null,
+            new { kind, savedPath },
+            "Uploaded invoice template logo.");
+
+        var updated = await dbContext.InvoiceTemplates
+            .Include(x => x.InvoiceCategory)
+            .Include(x => x.FundingAuthority)
+            .Include(x => x.CareHome)
+            .Include(x => x.Company)
+            .FirstAsync(x => x.Id == id);
+        var usageDto = await usage.GetInvoiceTemplateUsageAsync(tenantId, id);
+        return Ok(ToDto(updated, usageDto));
+    }
+
+    [HttpDelete("{id:int}/logo/{kind}")]
+    public async Task<ActionResult<InvoiceTemplateDto>> ClearLogo(int id, string kind)
+    {
+        if (!IsValidLogoKind(kind))
+        {
+            return BadRequest(new { message = "Logo kind must be 'company' or 'authority'." });
+        }
+
+        var tenantId = tenantContext.TenantId;
+        var template = await dbContext.InvoiceTemplates.FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId);
+        if (template is null)
+        {
+            return NotFound();
+        }
+
+        if (string.Equals(kind, "company", StringComparison.OrdinalIgnoreCase))
+        {
+            template.CompanyLogoPath = null;
+        }
+        else
+        {
+            template.AuthorityLogoPath = null;
+        }
+
+        await dbContext.SaveChangesAsync();
+        var updated = await dbContext.InvoiceTemplates
+            .Include(x => x.InvoiceCategory)
+            .Include(x => x.FundingAuthority)
+            .Include(x => x.CareHome)
+            .Include(x => x.Company)
+            .FirstAsync(x => x.Id == id);
+        var usageDto = await usage.GetInvoiceTemplateUsageAsync(tenantId, id);
+        return Ok(ToDto(updated, usageDto));
+    }
+
     private async Task<ActionResult?> EnsureRelatedEntities(int tenantId, UpsertInvoiceTemplateRequest request)
     {
         var categoryExists = await dbContext.InvoiceCategories
@@ -199,10 +319,23 @@ public class InvoiceTemplatesController(
             ContactPhone = x.ContactPhone,
             EmailSubjectTemplate = x.EmailSubjectTemplate,
             EmailBodyTemplate = x.EmailBodyTemplate,
+            CompanyLogoPath = x.CompanyLogoPath,
+            AuthorityLogoPath = x.AuthorityLogoPath,
             IsActive = x.IsActive,
             Usage = usageDto
         };
     }
+
+    private static bool IsValidLogoKind(string kind) =>
+        string.Equals(kind, "company", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(kind, "authority", StringComparison.OrdinalIgnoreCase);
+
+    private static string? LogoPathForKind(InvoiceTemplate template, string kind) =>
+        string.Equals(kind, "company", StringComparison.OrdinalIgnoreCase)
+            ? template.CompanyLogoPath
+            : string.Equals(kind, "authority", StringComparison.OrdinalIgnoreCase)
+                ? template.AuthorityLogoPath
+                : null;
 
     private static InvoiceTemplate FromRequest(int tenantId, UpsertInvoiceTemplateRequest request)
     {

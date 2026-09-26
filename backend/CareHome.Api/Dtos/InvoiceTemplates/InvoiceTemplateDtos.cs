@@ -48,6 +48,10 @@ public class InvoiceTemplateDto
 
     public string? EmailBodyTemplate { get; set; }
 
+    public string? CompanyLogoPath { get; set; }
+
+    public string? AuthorityLogoPath { get; set; }
+
     public bool IsActive { get; set; }
 
     public MasterDataUsageDto? Usage { get; set; }

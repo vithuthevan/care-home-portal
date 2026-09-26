@@ -72,7 +72,29 @@
         </div>
       </section>
 
-      @if (isEditMode) {
+      @if (isEditMode && templateId) {
+        <section class="form-section">
+          <h2 class="form-section__title">PDF logos (optional)</h2>
+          <p class="mt-0 text-sm text-[var(--app-text-muted)]">
+            Override care home or company logos on invoices using this template. Max 2 MB, PNG/JPG/WEBP/GIF.
+          </p>
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <p class="m-0 mb-2 text-sm font-medium">Company logo</p>
+              @if (companyLogoUrl(); as url) {
+                <img [src]="url" alt="" class="mb-2 max-h-16 max-w-xs object-contain" />
+              }
+              <input type="file" accept="image/*" (change)="onLogoSelected($event, 'company')" />
+            </div>
+            <div>
+              <p class="m-0 mb-2 text-sm font-medium">Authority logo</p>
+              @if (authorityLogoUrl(); as url) {
+                <img [src]="url" alt="" class="mb-2 max-h-16 max-w-xs object-contain" />
+              }
+              <input type="file" accept="image/*" (change)="onLogoSelected($event, 'authority')" />
+            </div>
+          </div>
+        </section>
         <mat-checkbox formControlName="isActive">Active</mat-checkbox>
       }
 

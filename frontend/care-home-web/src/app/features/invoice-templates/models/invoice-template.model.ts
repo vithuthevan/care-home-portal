@@ -23,6 +23,8 @@ export interface InvoiceTemplate {
   contactPhone?: string | null;
   emailSubjectTemplate?: string | null;
   emailBodyTemplate?: string | null;
+  companyLogoPath?: string | null;
+  authorityLogoPath?: string | null;
   isActive: boolean;
   usage?: MasterDataUsage | null;
 }
