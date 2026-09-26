@@ -17,6 +17,11 @@ namespace CareHome.Api.Dtos.Billing
         public List<int>? ClientIds { get; set; }
 
         public int? InvoiceTemplateId { get; set; }
+
+        /// <summary>
+        /// When true, attempt to email each generated invoice after creation (same rules as bulk send).
+        /// </summary>
+        public bool SendEmailAfterGenerate { get; set; }
     }
 
     public class BillingPreviewResponse
@@ -200,6 +205,17 @@ namespace CareHome.Api.Dtos.Billing
         public decimal TotalAmount { get; set; }
 
         public List<BillingExceptionDto> Exceptions { get; set; } = [];
+
+        public BillingEmailSendSummaryDto? EmailSend { get; set; }
+    }
+
+    public class BillingEmailSendSummaryDto
+    {
+        public int Succeeded { get; set; }
+
+        public int Failed { get; set; }
+
+        public int Skipped { get; set; }
     }
 
     public class BillingSuggestionDto

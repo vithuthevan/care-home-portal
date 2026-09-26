@@ -11,6 +11,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
@@ -92,6 +93,7 @@ interface BillingGenerateResult {
   invoiceCount: number;
   totalAmount: number;
   invoiceIds: number[];
+  emailSend?: { succeeded: number; failed: number; skipped: number };
 }
 
 export interface BillingReviewRow {
@@ -115,6 +117,7 @@ export interface BillingReviewRow {
     MatInputModule,
     MatSelectModule,
     MatButtonModule,
+    MatCheckboxModule,
     DisplayDatePipe,
     PageHeaderComponent,
     ApiErrorComponent,
@@ -149,6 +152,7 @@ export class BillingWorkspacePage implements OnInit {
   readonly isGenerating = signal(false);
   readonly scopeEditing = signal(true);
   readonly contextClientName = signal<string | null>(null);
+  sendEmailAfterGenerate = false;
 
   readonly isWorking = computed(() => this.isPreviewing() || this.isGenerating());
 
@@ -274,9 +278,12 @@ export class BillingWorkspacePage implements OnInit {
         next: (result) => {
           this.generateResult.set(result);
           const count = result.invoiceCount ?? 0;
-          this.toast.success(
-            count === 1 ? '1 invoice generated successfully.' : `${count} invoices generated successfully.`,
-          );
+          let message =
+            count === 1 ? '1 invoice generated successfully.' : `${count} invoices generated successfully.`;
+          if (result.emailSend) {
+            message += ` Email: ${result.emailSend.succeeded} sent, ${result.emailSend.failed} failed, ${result.emailSend.skipped} skipped.`;
+          }
+          this.toast.success(message);
           this.runPreview();
         },
         error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Generation failed.')),
@@ -821,6 +828,7 @@ export class BillingWorkspacePage implements OnInit {
       periodStart: this.periodStart,
       periodEnd: this.periodEnd,
       clientIds: this.selectedClientIds.length ? this.selectedClientIds : null,
+      sendEmailAfterGenerate: this.sendEmailAfterGenerate,
     };
   }
 }

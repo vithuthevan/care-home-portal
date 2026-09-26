@@ -189,6 +189,12 @@
         Generated {{ generated.invoiceCount }} invoice(s). Total £{{
           generated.totalAmount | number: '1.2-2'
         }}.
+        @if (generated.emailSend) {
+          <span>
+            Email: {{ generated.emailSend.succeeded }} sent, {{ generated.emailSend.failed }} failed,
+            {{ generated.emailSend.skipped }} skipped.
+          </span>
+        }
       </p>
       <div class="actions-bar mt-3">
         <a
@@ -541,6 +547,9 @@
       }
 
       @if (auth.canWrite()) {
+        <mat-checkbox [(ngModel)]="sendEmailAfterGenerate" class="block mt-3">
+          Email invoices immediately after generation (requires recipient emails and SMTP)
+        </mat-checkbox>
         <div class="actions-bar mt-4">
           <button
             mat-flat-button
