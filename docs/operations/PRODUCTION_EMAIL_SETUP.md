@@ -188,6 +188,43 @@ Invoice and credit-note status (`Sent`, `SentAt`) is updated **only** when `Succ
 
 ---
 
+## Organisation “From” address (per tenant)
+
+Each tenant can set **Email from name** and **Email from address** under Organisation settings. When present, invoice, credit note, collection reminder, and test emails use these values instead of the global `Email__FromAddress` / `Email__FromName` app settings. SMTP host, user, and password remain **one shared profile** on the App Service (or host).
+
+Use a From address your SMTP provider allows (typically the same mailbox as `Email__Smtp__User` or an alias on that relay).
+
+---
+
+## Test email (operators)
+
+Organisation admins can send a **test email** from Organisation settings. This verifies SMTP credentials and tenant From settings without sending a real invoice.
+
+---
+
+## Scheduled collection reminders (optional)
+
+Collection reminder emails can run automatically when enabled:
+
+| App setting | Default | Purpose |
+|-------------|---------|---------|
+| `Collections__ScheduledRemindersEnabled` | `false` | Run daily reminder job for all active tenants |
+| `Collections__ScheduledRunHourUtc` | `6` | UTC hour for the daily run |
+
+Per tenant, enable reminders and edit templates on **Collections**. Manual **Send due reminders now** is always available to billing users. Apply database migration `20260926120000_AddCollectionReminderEmailAndPolicyTemplates` before using reminders.
+
+---
+
+## Deliverability (SPF / DKIM)
+
+The application sends mail through **your** SMTP relay. You are responsible for:
+
+- SPF and DKIM DNS records for the domain in the From address
+- Using a dedicated billing mailbox with SMTP AUTH or an approved relay connector
+- Monitoring bounces and complaints at the provider (the app does not process bounce webhooks)
+
+---
+
 ## File reference
 
 | File | Purpose |
