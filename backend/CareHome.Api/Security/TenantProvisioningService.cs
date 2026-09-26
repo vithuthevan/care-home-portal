@@ -145,7 +145,8 @@ public class TenantProvisioningService(
                 BuildWelcomeEmail(tenant.Name, displayName, adminEmail, temporaryPassword),
                 null,
                 null,
-                cancellationToken);
+                tenant.Id,
+                cancellationToken: cancellationToken);
 
             if (!email.Success)
             {

@@ -2,9 +2,9 @@ using CareHome.Api.Audit;
 using CareHome.Api.Billing;
 using CareHome.Billing.Billing;
 using CareHome.Api.Common;
-using CareHome.Api.Email;
 using CareHome.Api.Data;
 using CareHome.Api.Documents;
+using CareHome.Api.Dtos.Email;
 using CareHome.Api.Dtos.Invoices;
 using CareHome.Api.Models;
 using CareHome.Api.Security;
@@ -20,7 +20,7 @@ namespace CareHome.Api.Controllers;
 public class InvoicesController(
     CareHomeDbContext dbContext,
     InvoicePdfService pdfs,
-    IEmailSender email,
+    DocumentEmailService documentEmail,
     AuditService audit,
     UserAccessService userAccess,
     ITenantContext tenantContext,
@@ -265,6 +265,35 @@ public class InvoicesController(
         return File(bytes, "application/pdf", $"invoice-{invoice.InvoiceNumber}.pdf");
     }
 
+    [HttpPatch("{id:int}/recipient-email")]
+    public async Task<IActionResult> UpdateRecipientEmail(int id, UpdateRecipientEmailRequest request)
+    {
+        var invoice = await dbContext.Invoices
+            .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
+        if (invoice is null || !await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, invoice.CareHomeId))
+        {
+            return NotFound();
+        }
+
+        if (invoice.Status == "Void")
+        {
+            return BadRequest(new { message = "A void invoice cannot be updated." });
+        }
+
+        invoice.RecipientEmail = string.IsNullOrWhiteSpace(request.RecipientEmail)
+            ? null
+            : request.RecipientEmail.Trim();
+        await dbContext.SaveChangesAsync();
+        await audit.LogAsync(
+            "Invoice",
+            id.ToString(),
+            "UpdateRecipientEmail",
+            null,
+            new { invoice.RecipientEmail },
+            "Updated invoice recipient email.");
+        return Ok(new { invoice.Id, invoice.RecipientEmail });
+    }
+
     [HttpPost("{id:int}/send")]
     public async Task<IActionResult> Send(int id)
     {
@@ -413,98 +442,42 @@ public class InvoicesController(
 
     private async Task<SendInvoiceOutcome> TrySendInvoiceAsync(int id, bool forBulk = false)
     {
-        var invoice = await dbContext.Invoices
-            .Include(x => x.Lines)
-            .Include(x => x.InvoiceTemplate)
-            .Include(x => x.CareHome)
-            .Include(x => x.Company)
-            .Include(x => x.Tenant)
-            .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
+        var result = await documentEmail.SendInvoiceAsync(
+            tenantContext.TenantId,
+            id,
+            HttpContext.RequestAborted);
 
-        if (invoice is null || !await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, invoice.CareHomeId))
+        if (result.BulkOutcome == "Skipped" && result.Reason == "Not found.")
         {
             return SendInvoiceOutcome.NotFound(id, forBulk);
         }
 
-        if (invoice.Status == "Void")
+        if (result.BulkOutcome == "Skipped")
         {
-            return SendInvoiceOutcome.Skipped(id, invoice.InvoiceNumber, "A void invoice cannot be emailed.", forBulk, "Void.");
+            return SendInvoiceOutcome.Skipped(
+                id,
+                result.InvoiceNumber ?? string.Empty,
+                result.Reason ?? "Skipped.",
+                forBulk,
+                result.Reason ?? "Skipped.");
         }
 
-        if (string.IsNullOrWhiteSpace(invoice.RecipientEmail))
+        if (result.BulkOutcome == "Failed")
         {
-            return SendInvoiceOutcome.Skipped(id, invoice.InvoiceNumber, "This invoice has no recipient email.", forBulk, "No recipient email.");
-        }
-
-        var tenantPublicId = await TenantPublicIdAsync();
-        var pdf = await pdfs.GetOrCreateInvoicePdfAsync(invoice, tenantPublicId);
-        var (subject, body) = EmailTemplateRenderer.ForInvoice(invoice.InvoiceTemplate, invoice.InvoiceNumber);
-        var result = await email.SendAsync(
-            invoice.RecipientEmail,
-            subject,
-            body,
-            $"invoice-{invoice.InvoiceNumber}.pdf",
-            pdf);
-
-        var sentAt = DateTimeOffset.UtcNow;
-        var statusUpdated = false;
-        string? statusNote = null;
-
-        if (result.Success)
-        {
-            // Do not resurrect a concurrently voided invoice.
-            var updated = await dbContext.Invoices
-                .Where(x => x.Id == invoice.Id
-                    && x.TenantId == tenantContext.TenantId
-                    && x.Status != "Void")
-                .ExecuteUpdateAsync(setters => setters
-                    .SetProperty(x => x.Status, "Sent")
-                    .SetProperty(x => x.SentAt, sentAt)
-                    .SetProperty(x => x.PdfPath, invoice.PdfPath));
-            statusUpdated = updated > 0;
-            if (!statusUpdated)
-            {
-                statusNote = "Email was sent but invoice status was not updated because the invoice is now void.";
-            }
-        }
-
-        dbContext.EmailSendLogs.Add(new EmailSendLog
-        {
-            TenantId = tenantContext.TenantId,
-            AttemptedAt = DateTimeOffset.UtcNow,
-            DocumentType = "Invoice",
-            DocumentId = invoice.Id,
-            Recipient = invoice.RecipientEmail,
-            Success = result.Success,
-            Simulated = result.Simulated,
-            ErrorMessage = result.ErrorMessage ?? statusNote
-        });
-        await dbContext.SaveChangesAsync();
-
-        await audit.LogAsync(
-            "Invoice",
-            invoice.Id.ToString(),
-            "Send",
-            null,
-            new { invoice.InvoiceNumber, result.Success, result.Simulated, statusUpdated },
-            result.Success
-                ? (statusUpdated
-                    ? $"Sent invoice {invoice.InvoiceNumber}."
-                    : $"Sent invoice {invoice.InvoiceNumber} but status was not updated (voided concurrently).")
-                : $"Failed to send invoice {invoice.InvoiceNumber}.");
-
-        if (!result.Success)
-        {
-            return SendInvoiceOutcome.Failed(id, invoice.InvoiceNumber, result.ErrorMessage ?? "Email failed.", forBulk);
+            return SendInvoiceOutcome.Failed(
+                id,
+                result.InvoiceNumber ?? string.Empty,
+                result.Reason ?? "Email failed.",
+                forBulk);
         }
 
         return SendInvoiceOutcome.Succeeded(
             id,
-            invoice.InvoiceNumber,
+            result.InvoiceNumber ?? string.Empty,
             result.Simulated,
-            statusUpdated ? sentAt : null,
+            result.SentAt,
             forBulk,
-            statusNote);
+            result.Reason);
     }
 
     private async Task<Guid> TenantPublicIdAsync()

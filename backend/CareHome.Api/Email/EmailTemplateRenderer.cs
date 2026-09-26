@@ -4,7 +4,9 @@ namespace CareHome.Api.Email;
 
 public static class EmailTemplateRenderer
 {
-    public static (string Subject, string Body) ForInvoice(InvoiceTemplate? template, string invoiceNumber)
+    public static (string Subject, string Body, bool IsBodyHtml) ForInvoice(
+        InvoiceTemplate? template,
+        string invoiceNumber)
     {
         return Render(
             template?.EmailSubjectTemplate,
@@ -15,7 +17,9 @@ public static class EmailTemplateRenderer
             creditNoteNumber: null);
     }
 
-    public static (string Subject, string Body) ForCreditNote(InvoiceTemplate? template, string creditNoteNumber)
+    public static (string Subject, string Body, bool IsBodyHtml) ForCreditNote(
+        InvoiceTemplate? template,
+        string creditNoteNumber)
     {
         return Render(
             template?.EmailSubjectTemplate,
@@ -26,7 +30,7 @@ public static class EmailTemplateRenderer
             creditNoteNumber);
     }
 
-    private static (string Subject, string Body) Render(
+    private static (string Subject, string Body, bool IsBodyHtml) Render(
         string? subjectTemplate,
         string? bodyTemplate,
         string fallbackSubject,
@@ -40,8 +44,13 @@ public static class EmailTemplateRenderer
         var body = string.IsNullOrWhiteSpace(bodyTemplate)
             ? fallbackBody
             : Apply(bodyTemplate, invoiceNumber, creditNoteNumber);
-        return (subject, body);
+        var isHtml = LooksLikeHtml(body);
+        return (subject, body, isHtml);
     }
+
+    private static bool LooksLikeHtml(string text) =>
+        text.Contains('<', StringComparison.Ordinal)
+        && text.Contains('>', StringComparison.Ordinal);
 
     private static string Apply(string template, string? invoiceNumber, string? creditNoteNumber)
     {

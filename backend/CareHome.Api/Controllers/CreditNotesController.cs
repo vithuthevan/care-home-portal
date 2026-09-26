@@ -3,9 +3,10 @@ using CareHome.Api.Billing;
 using CareHome.Api.Data;
 using CareHome.Api.Documents;
 using CareHome.Api.Dtos.CreditNotes;
-using CareHome.Api.Email;
+using CareHome.Api.Dtos.Email;
 using CareHome.Api.Models;
 using CareHome.Api.Security;
+using CareHome.Api.Services;
 using CareHome.Api.Security.Authorization;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,7 +22,7 @@ public class CreditNotesController(
     CareHomeDbContext dbContext,
     CreditNoteService creditNotes,
     InvoicePdfService pdfs,
-    IEmailSender email,
+    DocumentEmailService documentEmail,
     ITenantContext tenantContext,
     UserAccessService userAccess,
     AuditService audit) : ControllerBase
@@ -46,7 +47,8 @@ public class CreditNotesController(
                 Reason = x.Reason,
                 Status = x.Status,
                 TotalAmount = x.TotalAmount,
-                SentAt = x.SentAt
+                SentAt = x.SentAt,
+                RecipientEmail = x.RecipientEmail
             });
 
         if (!Pagination.IsRequested(page, pageSize))
@@ -131,71 +133,52 @@ public class CreditNotesController(
         return File(bytes, "application/pdf", $"credit-note-{note.CreditNoteNumber}.pdf");
     }
 
+    [HttpPatch("{id:int}/recipient-email")]
+    [Authorize(Policy = CareHomePolicies.CanManageBilling)]
+    public async Task<IActionResult> UpdateRecipientEmail(int id, UpdateRecipientEmailRequest request)
+    {
+        var note = await dbContext.CreditNotes
+            .Include(x => x.Invoice)
+            .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantContext.TenantId);
+        if (note is null || !await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, note.Invoice.CareHomeId))
+        {
+            return NotFound();
+        }
+
+        note.RecipientEmail = string.IsNullOrWhiteSpace(request.RecipientEmail)
+            ? null
+            : request.RecipientEmail.Trim();
+        await dbContext.SaveChangesAsync();
+        await audit.LogAsync(
+            "CreditNote",
+            id.ToString(),
+            "UpdateRecipientEmail",
+            null,
+            new { note.RecipientEmail },
+            "Updated credit note recipient email.");
+        return Ok(new { note.Id, note.RecipientEmail });
+    }
+
     [HttpPost("{id:int}/send")]
     [Authorize(Policy = CareHomePolicies.CanManageBilling)]
     public async Task<IActionResult> Send(int id)
     {
-        var note = await LoadNote(id);
-        if (note is null)
+        var result = await documentEmail.SendCreditNoteAsync(
+            tenantContext.TenantId,
+            id,
+            HttpContext.RequestAborted);
+
+        if (result.IsNotFound)
         {
             return NotFound();
         }
-
-        if (!await userAccess.CanAccessCareHomeAsync(tenantContext.TenantId, note.Invoice.CareHomeId))
-        {
-            return NotFound();
-        }
-
-        if (string.IsNullOrWhiteSpace(note.RecipientEmail))
-        {
-            return BadRequest(new { message = "This credit note has no recipient email." });
-        }
-
-        var pdf = await pdfs.GetOrCreateCreditNotePdfAsync(note, await TenantPublicIdAsync());
-        var (subject, body) = EmailTemplateRenderer.ForCreditNote(
-            note.Invoice.InvoiceTemplate,
-            note.CreditNoteNumber);
-        var result = await email.SendAsync(
-            note.RecipientEmail,
-            subject,
-            body,
-            $"credit-note-{note.CreditNoteNumber}.pdf",
-            pdf);
-
-        dbContext.EmailSendLogs.Add(new EmailSendLog
-        {
-            TenantId = tenantContext.TenantId,
-            AttemptedAt = DateTimeOffset.UtcNow,
-            DocumentType = "CreditNote",
-            DocumentId = note.Id,
-            Recipient = note.RecipientEmail,
-            Success = result.Success,
-            Simulated = result.Simulated,
-            ErrorMessage = result.ErrorMessage
-        });
-
-        if (result.Success)
-        {
-            note.SentAt = DateTimeOffset.UtcNow;
-        }
-
-        await dbContext.SaveChangesAsync();
-        await audit.LogAsync(
-            "CreditNote",
-            note.Id.ToString(),
-            "Send",
-            null,
-            new { note.CreditNoteNumber, result.Success, result.Simulated },
-            result.Success
-                ? $"Sent credit note {note.CreditNoteNumber}."
-                : $"Failed to send credit note {note.CreditNoteNumber}.");
 
         if (!result.Success)
         {
             return BadRequest(new { message = result.ErrorMessage ?? "Email failed." });
         }
 
-        return Ok(new { simulated = result.Simulated, sentAt = note.SentAt });
+        return Ok(new { simulated = result.Simulated });
     }
 
     private async Task<CreditNote?> LoadNote(int id)
@@ -232,7 +215,8 @@ public class CreditNotesController(
             Reason = x.Reason,
             Status = x.Status,
             TotalAmount = x.TotalAmount,
-            SentAt = x.SentAt
+            SentAt = x.SentAt,
+            RecipientEmail = x.RecipientEmail
         };
     }
 

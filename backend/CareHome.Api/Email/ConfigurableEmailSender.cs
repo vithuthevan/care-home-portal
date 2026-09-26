@@ -7,6 +7,7 @@ namespace CareHome.Api.Email;
 
 public class ConfigurableEmailSender(
     IOptions<EmailOptions> emailOptions,
+    EmailFromResolver fromResolver,
     IHostEnvironment environment,
     ILogger<ConfigurableEmailSender> logger) : IEmailSender
 {
@@ -18,6 +19,8 @@ public class ConfigurableEmailSender(
         string body,
         string? attachmentFileName,
         byte[]? attachmentBytes,
+        int? tenantId = null,
+        bool isBodyHtml = false,
         CancellationToken cancellationToken = default)
     {
         if (!_options.IsSmtpMode)
@@ -36,13 +39,14 @@ public class ConfigurableEmailSender(
             };
         }
 
-        if (string.IsNullOrWhiteSpace(_options.FromAddress))
+        var (fromAddress, fromName) = await fromResolver.ResolveAsync(tenantId, cancellationToken);
+        if (string.IsNullOrWhiteSpace(fromAddress))
         {
             return new EmailSendResult
             {
                 Success = false,
                 Simulated = false,
-                ErrorMessage = "From address is not configured. Set Email__FromAddress."
+                ErrorMessage = "From address is not configured. Set Email__FromAddress or organisation email settings."
             };
         }
 
@@ -61,10 +65,10 @@ public class ConfigurableEmailSender(
         {
             using var message = new MailMessage
             {
-                From = new MailAddress(_options.FromAddress, _options.FromName),
+                From = new MailAddress(fromAddress, fromName),
                 Subject = subject,
                 Body = body,
-                IsBodyHtml = false
+                IsBodyHtml = isBodyHtml
             };
             message.To.Add(to);
 
