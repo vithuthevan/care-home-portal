@@ -1,0 +1,85 @@
+<div class="page">
+  <app-page-header title="Collections" subtitle="Overdue receivables, reminder policy, and manual reminder runs" />
+
+  @if (errorMessage()) {
+    <app-api-error
+      title="Unable to load collections"
+      [message]="errorMessage()"
+      [showRetry]="true"
+      (retry)="load()"
+    />
+  } @else if (isLoading()) {
+    <app-loading-state label="Loading collections..." />
+  } @else if (dashboard(); as d) {
+    <section class="panel panel--flat mb-4">
+      <p class="m-0">Overdue: £{{ d.overdue | number: '1.2-2' }}</p>
+      <p class="m-0 mt-2">90+ days: £{{ d.overdue90 | number: '1.2-2' }}</p>
+    </section>
+
+    <section class="panel mb-4">
+      <h2 class="text-section mt-0">Reminder policy</h2>
+      <p class="mt-0 text-sm text-[var(--app-text-muted)]">
+        Placeholders: {{ '{{InvoiceNumber}}' }}, {{ '{{DueDate}}' }}, {{ '{{DaysOverdue}}' }},
+        {{ '{{OutstandingAmount}}' }}. Scheduled daily runs require server configuration
+        (Collections:ScheduledRemindersEnabled).
+      </p>
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Days before due</mat-label>
+          <input matInput type="number" [(ngModel)]="policy.dueReminderDaysBefore" min="0" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Overdue 7+ days</mat-label>
+          <input matInput type="number" [(ngModel)]="policy.overdue7Days" min="1" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Overdue 14+ days</mat-label>
+          <input matInput type="number" [(ngModel)]="policy.overdue14Days" min="1" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="w-full">
+          <mat-label>Overdue 30+ days</mat-label>
+          <input matInput type="number" [(ngModel)]="policy.overdue30Days" min="1" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="w-full md:col-span-2">
+          <mat-label>Reminder subject</mat-label>
+          <input matInput [(ngModel)]="policy.reminderEmailSubjectTemplate" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="w-full md:col-span-4">
+          <mat-label>Reminder body</mat-label>
+          <textarea matInput rows="4" [(ngModel)]="policy.reminderEmailBodyTemplate"></textarea>
+        </mat-form-field>
+      </div>
+      <mat-checkbox [(ngModel)]="policy.remindersEnabled" class="block mb-3">
+        Enable collection reminder emails for this organisation
+      </mat-checkbox>
+      <div class="flex flex-wrap gap-2">
+        @if (auth.canManageOrganisation()) {
+          <button mat-stroked-button type="button" (click)="savePolicy()" [disabled]="isSavingPolicy()">
+            @if (isSavingPolicy()) {
+              Saving...
+            } @else {
+              Save policy
+            }
+          </button>
+        }
+        @if (auth.canWrite()) {
+          <button mat-flat-button color="primary" type="button" (click)="sendReminders()" [disabled]="isSendingReminders()">
+            @if (isSendingReminders()) {
+              Sending...
+            } @else {
+              Send due reminders now
+            }
+          </button>
+        }
+      </div>
+      @if (reminderResult()) {
+        <p class="mt-3 mb-0 text-sm">
+          Last run: {{ reminderResult()!.succeeded }} sent, {{ reminderResult()!.failed }} failed,
+          {{ reminderResult()!.skipped }} skipped (already sent for stage).
+        </p>
+      }
+    </section>
+  } @else {
+    <app-empty-state title="No overdue accounts" message="No collection dashboard data is available yet." />
+  }
+</div>

@@ -56,6 +56,8 @@ namespace CareHome.Api.Data
         public DbSet<FundingContractRenewal> FundingContractRenewals => Set<FundingContractRenewal>();
         public DbSet<CollectionPolicy> CollectionPolicies => Set<CollectionPolicy>();
 
+        public DbSet<CollectionReminderLog> CollectionReminderLogs => Set<CollectionReminderLog>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -1021,6 +1023,14 @@ namespace CareHome.Api.Data
                 entity.HasIndex(x => new { x.TenantId, x.PublicId }).IsUnique();
                 entity.HasIndex(x => new { x.TenantId, x.IsDefault });
                 entity.HasOne(x => x.Tenant).WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<CollectionReminderLog>(entity =>
+            {
+                entity.HasKey(x => x.Id);
+                entity.HasIndex(x => new { x.TenantId, x.InvoiceId, x.ReminderStage });
+                entity.HasOne(x => x.Tenant).WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(x => x.Invoice).WithMany().HasForeignKey(x => x.InvoiceId).OnDelete(DeleteBehavior.Restrict);
             });
         }
     }

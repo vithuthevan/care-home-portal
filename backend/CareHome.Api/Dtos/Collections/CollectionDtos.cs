@@ -19,6 +19,8 @@ public class CollectionPolicyDto
 {
     public Guid PublicId { get; set; }
 
+    public int DueReminderDaysBefore { get; set; }
+
     public int Overdue7Days { get; set; }
 
     public int Overdue14Days { get; set; }
@@ -26,10 +28,18 @@ public class CollectionPolicyDto
     public int Overdue30Days { get; set; }
 
     public int EscalationDays { get; set; }
+
+    public bool RemindersEnabled { get; set; }
+
+    public string? ReminderEmailSubjectTemplate { get; set; }
+
+    public string? ReminderEmailBodyTemplate { get; set; }
 }
 
 public class UpdateCollectionPolicyRequest
 {
+    public int DueReminderDaysBefore { get; set; }
+
     public int Overdue7Days { get; set; }
 
     public int Overdue14Days { get; set; }
@@ -37,4 +47,19 @@ public class UpdateCollectionPolicyRequest
     public int Overdue30Days { get; set; }
 
     public int EscalationDays { get; set; }
+
+    public bool RemindersEnabled { get; set; }
+
+    public string? ReminderEmailSubjectTemplate { get; set; }
+
+    public string? ReminderEmailBodyTemplate { get; set; }
+}
+
+public class CollectionReminderRunResultDto
+{
+    public int Succeeded { get; set; }
+
+    public int Failed { get; set; }
+
+    public int Skipped { get; set; }
 }

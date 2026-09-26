@@ -13,6 +13,7 @@ namespace CareHome.Api.Controllers;
 [Authorize(Policy = CareHomePolicies.CanViewReceivables)]
 public class CollectionsController(
     CollectionsWorkflowService collections,
+    CollectionReminderService collectionReminders,
     ITenantContext tenantContext) : ControllerBase
 {
     [HttpGet("dashboard")]
@@ -28,5 +29,18 @@ public class CollectionsController(
         CancellationToken cancellationToken)
     {
         return Ok(await collections.UpdatePolicyAsync(tenantContext.TenantId, request, cancellationToken));
+    }
+
+    [HttpPost("send-reminders")]
+    [Authorize(Policy = CareHomePolicies.CanManageBilling)]
+    public async Task<ActionResult<CollectionReminderRunResultDto>> SendReminders(CancellationToken cancellationToken)
+    {
+        var result = await collectionReminders.SendDueRemindersAsync(tenantContext.TenantId, cancellationToken);
+        return Ok(new CollectionReminderRunResultDto
+        {
+            Succeeded = result.Succeeded,
+            Failed = result.Failed,
+            Skipped = result.Skipped
+        });
     }
 }

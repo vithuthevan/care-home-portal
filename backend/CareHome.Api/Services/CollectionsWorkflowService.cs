@@ -47,14 +47,7 @@ public sealed class CollectionsWorkflowService(
             Overdue30 = summary.Ageing.Days31To60 + summary.Ageing.Days61To90 + summary.Ageing.Days90Plus,
             Overdue60 = summary.Ageing.Days61To90 + summary.Ageing.Days90Plus,
             Overdue90 = summary.Ageing.Days90Plus,
-            Policy = new CollectionPolicyDto
-            {
-                PublicId = policy.PublicId,
-                Overdue7Days = policy.Overdue7Days,
-                Overdue14Days = policy.Overdue14Days,
-                Overdue30Days = policy.Overdue30Days,
-                EscalationDays = policy.EscalationDays
-            }
+            Policy = MapPolicy(policy)
         };
     }
 
@@ -79,20 +72,34 @@ public sealed class CollectionsWorkflowService(
             dbContext.CollectionPolicies.Add(policy);
         }
 
+        policy.DueReminderDaysBefore = Math.Max(0, request.DueReminderDaysBefore);
         policy.Overdue7Days = request.Overdue7Days;
         policy.Overdue14Days = request.Overdue14Days;
         policy.Overdue30Days = request.Overdue30Days;
         policy.EscalationDays = request.EscalationDays;
+        policy.RemindersEnabled = request.RemindersEnabled;
+        policy.ReminderEmailSubjectTemplate = string.IsNullOrWhiteSpace(request.ReminderEmailSubjectTemplate)
+            ? null
+            : request.ReminderEmailSubjectTemplate.Trim();
+        policy.ReminderEmailBodyTemplate = string.IsNullOrWhiteSpace(request.ReminderEmailBodyTemplate)
+            ? null
+            : request.ReminderEmailBodyTemplate.Trim();
         policy.UpdatedAt = timeProvider.GetUtcNow();
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        return new CollectionPolicyDto
-        {
-            PublicId = policy.PublicId,
-            Overdue7Days = policy.Overdue7Days,
-            Overdue14Days = policy.Overdue14Days,
-            Overdue30Days = policy.Overdue30Days,
-            EscalationDays = policy.EscalationDays
-        };
+        return MapPolicy(policy);
     }
+
+    private static CollectionPolicyDto MapPolicy(CollectionPolicy policy) => new()
+    {
+        PublicId = policy.PublicId,
+        DueReminderDaysBefore = policy.DueReminderDaysBefore,
+        Overdue7Days = policy.Overdue7Days,
+        Overdue14Days = policy.Overdue14Days,
+        Overdue30Days = policy.Overdue30Days,
+        EscalationDays = policy.EscalationDays,
+        RemindersEnabled = policy.RemindersEnabled,
+        ReminderEmailSubjectTemplate = policy.ReminderEmailSubjectTemplate,
+        ReminderEmailBodyTemplate = policy.ReminderEmailBodyTemplate
+    };
 }
