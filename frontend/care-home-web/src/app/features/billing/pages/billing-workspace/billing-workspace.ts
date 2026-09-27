@@ -24,6 +24,7 @@ import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import {
   billingExceptionHeadline,
   billingExceptionLabel,
@@ -125,6 +126,7 @@ export interface BillingReviewRow {
     EmptyStateComponent,
     LoadingStateComponent,
     AppDateFieldComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './billing-workspace.html',
 })

@@ -2,7 +2,9 @@
   <app-page-header
     title="Email delivery log"
     subtitle="Outbound invoice and credit note emails for this organisation."
-  />
+  >
+    <app-import-export-toolbar entity="email-send-logs" [importEnabled]="false" />
+  </app-page-header>
 
   <app-api-error [message]="errorMessage()" />
 

@@ -25,6 +25,7 @@ import {
   EntitySummaryStripComponent,
 } from '../../../../shared/ui/entity-summary-strip';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 interface FundingContractView {
   id: number;
@@ -80,6 +81,7 @@ interface ResidentInvoiceRow {
     LabeledStatusComponent,
     EmptyStateComponent,
     EntitySummaryStripComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './client-profile.html',
   styleUrl: './client-profile.scss',

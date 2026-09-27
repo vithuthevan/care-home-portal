@@ -2,7 +2,9 @@
   <app-page-header
     title="Audit trail"
     subtitle="Who changed what and when. Records are append-only."
-  />
+  >
+    <app-import-export-toolbar entity="audit" [importEnabled]="false" />
+  </app-page-header>
 
   <app-api-error [message]="errorMessage()" />
   @if (isLoading()) {

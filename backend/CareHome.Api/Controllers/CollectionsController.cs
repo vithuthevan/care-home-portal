@@ -28,6 +28,12 @@ public class CollectionsController(
         UpdateCollectionPolicyRequest request,
         CancellationToken cancellationToken)
     {
+        var validationError = CollectionPolicyValidator.Validate(request);
+        if (validationError is not null)
+        {
+            return BadRequest(new { message = validationError });
+        }
+
         return Ok(await collections.UpdatePolicyAsync(tenantContext.TenantId, request, cancellationToken));
     }
 
@@ -40,7 +46,8 @@ public class CollectionsController(
         {
             Succeeded = result.Succeeded,
             Failed = result.Failed,
-            Skipped = result.Skipped
+            Skipped = result.Skipped,
+            RemindersDisabled = result.RemindersDisabled
         });
     }
 }

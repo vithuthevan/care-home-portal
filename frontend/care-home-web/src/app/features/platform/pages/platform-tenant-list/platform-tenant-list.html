@@ -3,6 +3,7 @@
     title="Organisations"
     subtitle="Platform administration for purchasing organisations."
   >
+    <app-import-export-toolbar entity="platform-tenants" [importEnabled]="false" />
     <a mat-flat-button color="primary" routerLink="/platform/tenants/new">Add organisation</a>
   </app-page-header>
   <app-api-error [message]="errorMessage()" />

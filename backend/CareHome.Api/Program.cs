@@ -249,6 +249,7 @@ builder.Services.AddScoped<Sage50ColumnMap>();
 builder.Services.AddScoped<SageExportService>();
 builder.Services.AddScoped<MasterDataUsageService>();
 builder.Services.AddScoped<MiscChargeImportService>();
+builder.Services.AddScoped<DataTransferService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<IdentitySeeder>();
 builder.Services.AddScoped<DevelopmentMasterDataSeeder>();

@@ -2,6 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -10,7 +11,8 @@ import { finalize } from 'rxjs';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
-import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
+import { KpiCardComponent } from '../../../../shared/ui/kpi-card';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import { getApiErrorMessage } from '../../../../core/api-error';
 import { AuthService } from '../../../../core/auth.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
@@ -26,11 +28,27 @@ interface CollectionPolicyForm {
   reminderEmailBodyTemplate: string;
 }
 
+interface CollectionsDashboard {
+  dueThisWeek: number;
+  overdue: number;
+  overdue30: number;
+  overdue60: number;
+  overdue90: number;
+}
+
+interface CollectionReminderRunResult {
+  succeeded: number;
+  failed: number;
+  skipped: number;
+  remindersDisabled: boolean;
+}
+
 @Component({
   selector: 'app-collections-workspace',
   imports: [
     DecimalPipe,
     FormsModule,
+    RouterLink,
     MatButtonModule,
     MatCheckboxModule,
     MatFormFieldModule,
@@ -38,7 +56,8 @@ interface CollectionPolicyForm {
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
-    EmptyStateComponent,
+    KpiCardComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './collections-workspace.html',
 })
@@ -47,13 +66,13 @@ export class CollectionsWorkspacePage implements OnInit {
   private readonly toast = inject(ToastService);
   readonly auth = inject(AuthService);
 
-  dashboard = signal<{ overdue: number; overdue90: number } | null>(null);
+  dashboard = signal<CollectionsDashboard | null>(null);
   policy: CollectionPolicyForm = this.defaultPolicy();
-  errorMessage = signal<string | null>(null);
+  loadErrorMessage = signal<string | null>(null);
   isLoading = signal(false);
   isSavingPolicy = signal(false);
   isSendingReminders = signal(false);
-  reminderResult = signal<{ succeeded: number; failed: number; skipped: number } | null>(null);
+  reminderResult = signal<CollectionReminderRunResult | null>(null);
 
   ngOnInit(): void {
     this.load();
@@ -61,17 +80,19 @@ export class CollectionsWorkspacePage implements OnInit {
 
   load(): void {
     this.isLoading.set(true);
-    this.errorMessage.set(null);
+    this.loadErrorMessage.set(null);
     this.http
-      .get<{
-        overdue: number;
-        overdue90: number;
-        policy: CollectionPolicyForm;
-      }>('/api/collections/dashboard')
+      .get<CollectionsDashboard & { policy: CollectionPolicyForm }>('/api/collections/dashboard')
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
         next: (d) => {
-          this.dashboard.set({ overdue: d.overdue, overdue90: d.overdue90 });
+          this.dashboard.set({
+            dueThisWeek: d.dueThisWeek ?? 0,
+            overdue: d.overdue ?? 0,
+            overdue30: d.overdue30 ?? 0,
+            overdue60: d.overdue60 ?? 0,
+            overdue90: d.overdue90 ?? 0,
+          });
           this.policy = {
             dueReminderDaysBefore: d.policy.dueReminderDaysBefore ?? 0,
             overdue7Days: d.policy.overdue7Days ?? 7,
@@ -88,7 +109,7 @@ export class CollectionsWorkspacePage implements OnInit {
           };
         },
         error: (err) =>
-          this.errorMessage.set(
+          this.loadErrorMessage.set(
             getApiErrorMessage(err, "We couldn't retrieve this information right now. Please try again."),
           ),
       });
@@ -102,25 +123,36 @@ export class CollectionsWorkspacePage implements OnInit {
       .subscribe({
         next: () => this.toast.success('Collection policy saved.'),
         error: (err) =>
-          this.errorMessage.set(getApiErrorMessage(err, 'Unable to save collection policy.')),
+          this.toast.error(getApiErrorMessage(err, 'Unable to save collection policy.')),
       });
   }
 
   sendReminders(): void {
     this.isSendingReminders.set(true);
     this.http
-      .post<{ succeeded: number; failed: number; skipped: number }>('/api/collections/send-reminders', {})
+      .post<CollectionReminderRunResult>('/api/collections/send-reminders', {})
       .pipe(finalize(() => this.isSendingReminders.set(false)))
       .subscribe({
         next: (result) => {
           this.reminderResult.set(result);
+          if (result.remindersDisabled) {
+            this.toast.error(
+              'Collection reminders are disabled for this organisation. Enable them in the policy below and save.',
+            );
+            return;
+          }
+
           this.toast.success(
             `Reminders: ${result.succeeded} sent, ${result.failed} failed, ${result.skipped} skipped.`,
           );
         },
         error: (err) =>
-          this.errorMessage.set(getApiErrorMessage(err, 'Unable to send collection reminders.')),
+          this.toast.error(getApiErrorMessage(err, 'Unable to send collection reminders.')),
       });
+  }
+
+  policyReadOnly(): boolean {
+    return !this.auth.canManageOrganisation();
   }
 
   private defaultPolicy(): CollectionPolicyForm {

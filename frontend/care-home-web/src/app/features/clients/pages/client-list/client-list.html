@@ -5,6 +5,7 @@
       [subtitle]="ctx.name + ' — Residents placed in care homes under this company.'"
     >
       <a mat-stroked-button [routerLink]="['/companies', ctx.routeKey]">Back to company</a>
+      <app-import-export-toolbar entity="clients" (imported)="loadClients()" />
       @if (auth.canWrite()) {
         <a mat-flat-button color="primary" routerLink="/clients/new" [queryParams]="addResidentQueryParams()">Add resident</a>
       }
@@ -14,6 +15,7 @@
       title="Residents"
       subtitle="Residents across your care homes — open a row to see funding and billing."
     >
+      <app-import-export-toolbar entity="clients" (imported)="loadClients()" />
       @if (auth.canWrite()) {
         <a mat-flat-button color="primary" routerLink="/clients/new" [queryParams]="addResidentQueryParams()">Add resident</a>
       }

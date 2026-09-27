@@ -16,6 +16,7 @@ import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 interface BankAccount {
   publicId: string;
@@ -119,6 +120,7 @@ interface MappingTemplate {
     ApiErrorComponent,
     LoadingStateComponent,
     DisplayDatePipe,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './banking-workspace.html',
 })

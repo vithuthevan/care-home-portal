@@ -2,7 +2,7 @@ namespace CareHome.Api.Dtos.Collections;
 
 public class CollectionsDashboardDto
 {
-    public decimal DueToday { get; set; }
+    public decimal DueThisWeek { get; set; }
 
     public decimal Overdue { get; set; }
 
@@ -62,4 +62,6 @@ public class CollectionReminderRunResultDto
     public int Failed { get; set; }
 
     public int Skipped { get; set; }
+
+    public bool RemindersDisabled { get; set; }
 }

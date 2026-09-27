@@ -3,6 +3,7 @@
     title="Funding Authorities"
     subtitle="Manage organisations and people that fund resident care."
   >
+    <app-import-export-toolbar entity="funding-authorities" (imported)="loadFundingAuthorities()" />
     @if (auth.canWrite()) {
       <a mat-flat-button color="primary" routerLink="/funding-authorities/new">Add authority</a>
     }

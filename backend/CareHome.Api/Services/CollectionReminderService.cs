@@ -13,8 +13,11 @@ public sealed class CollectionReminderService(
     InvoicePdfService pdfs,
     IEmailSender email,
     UserAccessService userAccess,
+    InvoiceReceivableReadModel receivableAmounts,
     TimeProvider timeProvider)
 {
+    private const int SaveBatchSize = 25;
+
     public async Task<CollectionReminderRunResult> SendDueRemindersAsync(
         int tenantId,
         CancellationToken cancellationToken = default)
@@ -24,7 +27,7 @@ public sealed class CollectionReminderService(
 
         if (policy is null || !policy.RemindersEnabled)
         {
-            return new CollectionReminderRunResult();
+            return new CollectionReminderRunResult { RemindersDisabled = true };
         }
 
         var settings = await dbContext.TenantSettings
@@ -47,9 +50,19 @@ public sealed class CollectionReminderService(
             .Where(x => x.TenantId == tenantId
                 && homes.Contains(x.CareHomeId)
                 && x.Status != "Void"
-                && x.PaymentStatus != "Paid"
                 && !string.IsNullOrWhiteSpace(x.RecipientEmail))
             .ToListAsync(cancellationToken);
+
+        if (invoices.Count == 0)
+        {
+            return new CollectionReminderRunResult();
+        }
+
+        var invoiceIds = invoices.Select(x => x.Id).ToList();
+        var amountsByInvoice = await receivableAmounts.GetAmountsForInvoicesAsync(
+            tenantId,
+            invoiceIds,
+            cancellationToken);
 
         var sentRows = await dbContext.CollectionReminderLogs
             .AsNoTracking()
@@ -61,16 +74,28 @@ public sealed class CollectionReminderService(
             .ToDictionary(g => g.Key, g => g.Select(x => x.ReminderStage).ToHashSet());
 
         var result = new CollectionReminderRunResult();
+        var pendingSaves = 0;
 
         foreach (var invoice in invoices)
         {
-            var stage = ResolveStage(invoice, today, policy);
+            if (!amountsByInvoice.TryGetValue(invoice.Id, out var amounts)
+                || amounts.OutstandingAmount <= 0m)
+            {
+                continue;
+            }
+
+            sentStages.TryGetValue(invoice.Id, out var existingStages);
+            var stage = CollectionReminderStageResolver.Resolve(
+                invoice.DueDate,
+                today,
+                policy,
+                existingStages);
             if (stage is null)
             {
                 continue;
             }
 
-            if (sentStages.TryGetValue(invoice.Id, out var existing) && existing.Contains(stage.Value))
+            if (existingStages is not null && existingStages.Contains(stage.Value))
             {
                 result.Skipped++;
                 continue;
@@ -83,7 +108,7 @@ public sealed class CollectionReminderService(
                 invoice.InvoiceNumber,
                 invoice.DueDate,
                 daysOverdue,
-                invoice.TotalAmount,
+                amounts.OutstandingAmount,
                 settings.CurrencySymbol);
 
             byte[]? pdf = null;
@@ -128,7 +153,12 @@ public sealed class CollectionReminderService(
                 ErrorMessage = sendResult.ErrorMessage
             });
 
-            await dbContext.SaveChangesAsync(cancellationToken);
+            pendingSaves++;
+            if (pendingSaves >= SaveBatchSize)
+            {
+                await dbContext.SaveChangesAsync(cancellationToken);
+                pendingSaves = 0;
+            }
 
             if (sendResult.Success)
             {
@@ -140,42 +170,12 @@ public sealed class CollectionReminderService(
             }
         }
 
+        if (pendingSaves > 0)
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+        }
+
         return result;
-    }
-
-    private static int? ResolveStage(Invoice invoice, DateOnly today, CollectionPolicy policy)
-    {
-        if (policy.DueReminderDaysBefore > 0)
-        {
-            var daysUntilDue = invoice.DueDate.DayNumber - today.DayNumber;
-            if (daysUntilDue == policy.DueReminderDaysBefore && invoice.PaymentStatus != "Paid")
-            {
-                return 0;
-            }
-        }
-
-        if (today <= invoice.DueDate)
-        {
-            return null;
-        }
-
-        var daysOverdue = today.DayNumber - invoice.DueDate.DayNumber;
-        if (daysOverdue >= policy.Overdue30Days)
-        {
-            return policy.Overdue30Days;
-        }
-
-        if (daysOverdue >= policy.Overdue14Days)
-        {
-            return policy.Overdue14Days;
-        }
-
-        if (daysOverdue >= policy.Overdue7Days)
-        {
-            return policy.Overdue7Days;
-        }
-
-        return null;
     }
 }
 
@@ -186,4 +186,6 @@ public sealed class CollectionReminderRunResult
     public int Failed { get; set; }
 
     public int Skipped { get; set; }
+
+    public bool RemindersDisabled { get; set; }
 }

@@ -17,6 +17,7 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { DisplayDateTimePipe } from '../../../../shared/format/display-date-time.pipe';
 import { PagedResult } from '../../../../core/models';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 
 interface EmailSendLogRow {
@@ -45,6 +46,7 @@ interface EmailSendLogRow {
     DisplayDateTimePipe,
     TablePaginationComponent,
     StatusBadgeComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './email-send-log-list.html',
 })

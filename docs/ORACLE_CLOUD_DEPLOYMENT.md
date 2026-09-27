@@ -160,7 +160,29 @@ Use **systemd** unit + Caddy as above. Same migration and secret rules apply.
 
 ---
 
-## 9. Branch-specific checklist
+## 9. GitHub Actions CI/CD
+
+| Workflow | When it runs | What it does |
+|----------|----------------|--------------|
+| **CI** (`.github/workflows/ci.yml`) | Pull requests and pushes to `main`, `master`, `develop`, `revenue-cycle-v2` | Calls shared quality gates (no deploy). |
+| **Quality gates** (`.github/workflows/quality-gates.yml`) | Reused by CI and deploy | .NET build; EF pending-model check; `CareHome.Api.dll --apply-migrations` against CI SQL Server; full test suite (including SQL integration tests); Angular build and unit tests; `Dockerfile.prod` build smoke test. |
+| **Deploy Oracle** (`.github/workflows/deploy-oracle.yml`) | Push to `revenue-cycle-v2` or **workflow_dispatch** | Runs quality gates → builds production SPA + API tarball → uploads artifact → SSH to VM → `apply-database-migrations-on-host.sh` → restarts `carehome-api` → `/health/live` check. |
+
+**Deploy secrets** (repository **Settings → Secrets and variables → Actions**):
+
+| Secret | Purpose |
+|--------|---------|
+| `OCI_HOST` | VM public IP or hostname |
+| `OCI_USER` | SSH user (e.g. `ubuntu`) |
+| `OCI_SSH_KEY` | Private key for deploy (PEM contents) |
+
+Optional: configure a GitHub **Environment** named `production` on the deploy job for approval gates and deployment history.
+
+Deployments never run if quality gates fail. Database migrations on the server use the same `--apply-migrations` entrypoint as `scripts/apply-database-migrations-on-host.sh` (systemd environment for the live connection string).
+
+---
+
+## 10. Branch-specific checklist
 
 ### `main`
 
@@ -176,7 +198,7 @@ Use **systemd** unit + Caddy as above. Same migration and secret rules apply.
 
 ---
 
-## 10. Operations
+## 11. Operations
 
 | Task | Action |
 |------|--------|
@@ -188,7 +210,7 @@ Use **systemd** unit + Caddy as above. Same migration and secret rules apply.
 
 ---
 
-## 11. What not to do on OCI
+## 12. What not to do on OCI
 
 - Do not expose `docker-compose.yml` dev stack (SQL on `14333`, Development JWT, auto-migrate) to the public internet.
 - Do not share one database between `main` and `revenue-cycle-v2`.

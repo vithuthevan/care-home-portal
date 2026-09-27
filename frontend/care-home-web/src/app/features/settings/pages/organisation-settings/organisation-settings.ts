@@ -15,6 +15,7 @@ import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 @Component({
   selector: 'app-organisation-settings',
@@ -29,6 +30,7 @@ import { ToastService } from '../../../../shared/ui/toast.service';
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './organisation-settings.html',
 })
@@ -70,6 +72,10 @@ export class OrganisationSettingsPage implements OnInit {
   readonly financeModuleAvailable = signal(true);
 
   ngOnInit(): void {
+    this.load();
+  }
+
+  load(): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.http

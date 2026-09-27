@@ -23,6 +23,7 @@ import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.servi
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 @Component({
@@ -44,6 +45,7 @@ import { entityRouteKey } from '../../../../shared/routing/entity-route';
     FilterBarComponent,
     IconActionButtonComponent,
     TablePaginationComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './company-list.html',
 })

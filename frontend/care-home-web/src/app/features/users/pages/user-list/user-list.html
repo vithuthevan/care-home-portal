@@ -3,6 +3,7 @@
     title="Users"
     subtitle="Manage who can access this organisation. Assigned roles control what each person can do, even if a button is visible."
   >
+    <app-import-export-toolbar entity="users" [importEnabled]="false" />
     @if (auth.canWrite()) {
       <a mat-flat-button color="primary" routerLink="/users/new">Add user</a>
     }

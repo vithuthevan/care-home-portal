@@ -12,8 +12,12 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  quality:
+    uses: ./.github/workflows/quality-gates.yml
+
+  build:
     runs-on: ubuntu-latest
+    needs: quality
 
     steps:
       - name: Checkout repository
@@ -31,10 +35,6 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/care-home-web/package-lock.json
 
-      # -------------------------
-      # Build Angular frontend
-      # -------------------------
-
       - name: Install frontend dependencies
         working-directory: frontend/care-home-web
         run: npm ci
@@ -43,12 +43,8 @@ jobs:
         working-directory: frontend/care-home-web
         run: npm run build -- --configuration production
 
-      # -------------------------
-      # Build ASP.NET Core API
-      # -------------------------
-
       - name: Restore .NET dependencies
-        run: dotnet restore CareHome.Api.Tests/CareHome.Api.Tests.csproj
+        run: dotnet restore backend/CareHome.Api/CareHome.Api.csproj
 
       - name: Build API
         run: dotnet build backend/CareHome.Api/CareHome.Api.csproj -c Release --no-restore
@@ -56,12 +52,7 @@ jobs:
       - name: Publish API
         run: dotnet publish backend/CareHome.Api/CareHome.Api.csproj -c Release -o publish/api --no-build
 
-      # -------------------------
-      # Put Angular inside API
-      # wwwroot
-      # -------------------------
-
-      - name: Copy Angular build into API
+      - name: Copy Angular build into API wwwroot
         run: |
           FRONTEND_PATH="frontend/care-home-web/dist/care-home-web/browser"
 
@@ -73,7 +64,6 @@ jobs:
 
           rm -rf publish/api/wwwroot
           mkdir -p publish/api/wwwroot
-
           cp -a "$FRONTEND_PATH"/. publish/api/wwwroot/
 
       - name: Copy ops scripts into publish bundle
@@ -81,9 +71,31 @@ jobs:
           mkdir -p publish/api/scripts
           cp scripts/apply-database-migrations-on-host.sh publish/api/scripts/
 
-      # -------------------------
-      # Prepare SSH
-      # -------------------------
+      - name: Package application
+        run: |
+          tar \
+            --exclude='./App_Data' \
+            -czf carehome-deploy.tar.gz \
+            -C publish/api .
+
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v4
+        with:
+          name: carehome-deploy
+          path: carehome-deploy.tar.gz
+          retention-days: 7
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    # Optional: create a "production" environment in GitHub for approval gates and deployment history.
+    environment: production
+
+    steps:
+      - name: Download deployment package
+        uses: actions/download-artifact@v4
+        with:
+          name: carehome-deploy
 
       - name: Configure deployment SSH key
         env:
@@ -98,24 +110,7 @@ jobs:
 
           ssh-keyscan -H "$OCI_HOST" >> ~/.ssh/known_hosts
 
-      # -------------------------
-      # Package deployment
-      # App_Data is excluded so
-      # uploaded documents survive
-      # -------------------------
-
-      - name: Package application
-        run: |
-          tar \
-            --exclude='./App_Data' \
-            -czf carehome-deploy.tar.gz \
-            -C publish/api .
-
-      # -------------------------
-      # Upload
-      # -------------------------
-
-      - name: Upload deployment package
+      - name: Upload deployment package to host
         env:
           OCI_HOST: ${{ secrets.OCI_HOST }}
           OCI_USER: ${{ secrets.OCI_USER }}
@@ -125,11 +120,7 @@ jobs:
             carehome-deploy.tar.gz \
             "$OCI_USER@$OCI_HOST:/tmp/carehome-deploy.tar.gz"
 
-      # -------------------------
-      # Deploy
-      # -------------------------
-
-      - name: Deploy and restart service
+      - name: Deploy, apply migrations, and verify health
         env:
           OCI_HOST: ${{ secrets.OCI_HOST }}
           OCI_USER: ${{ secrets.OCI_USER }}

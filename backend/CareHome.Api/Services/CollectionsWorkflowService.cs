@@ -42,7 +42,7 @@ public sealed class CollectionsWorkflowService(
 
         return new CollectionsDashboardDto
         {
-            DueToday = summary.DueThisWeek,
+            DueThisWeek = summary.DueThisWeek,
             Overdue = summary.TotalOverdue,
             Overdue30 = summary.Ageing.Days31To60 + summary.Ageing.Days61To90 + summary.Ageing.Days90Plus,
             Overdue60 = summary.Ageing.Days61To90 + summary.Ageing.Days90Plus,
@@ -76,7 +76,7 @@ public sealed class CollectionsWorkflowService(
         policy.Overdue7Days = request.Overdue7Days;
         policy.Overdue14Days = request.Overdue14Days;
         policy.Overdue30Days = request.Overdue30Days;
-        policy.EscalationDays = request.EscalationDays;
+        policy.EscalationDays = Math.Max(0, request.EscalationDays);
         policy.RemindersEnabled = request.RemindersEnabled;
         policy.ReminderEmailSubjectTemplate = string.IsNullOrWhiteSpace(request.ReminderEmailSubjectTemplate)
             ? null

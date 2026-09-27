@@ -12,6 +12,7 @@ import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
@@ -33,6 +34,7 @@ import {
     EmptyStateComponent,
     IconActionButtonComponent,
     TablePaginationComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './funding-authority-list.html',
 })

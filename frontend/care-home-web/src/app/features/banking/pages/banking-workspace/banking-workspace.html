@@ -1,4 +1,7 @@
-<app-page-header title="Banking" subtitle="Import statements and reconcile receipts to invoices" />
+<app-page-header title="Banking" subtitle="Import statements and reconcile receipts to invoices">
+  <app-import-export-toolbar entity="bank-accounts" (imported)="loadAccounts()" />
+  <app-import-export-toolbar entity="bank-transactions" [importEnabled]="false" />
+</app-page-header>
 
 @if (errorMessage()) {
   <app-api-error [message]="errorMessage()!" />

@@ -2,7 +2,9 @@
   <app-page-header
     title="Organisation Settings"
     subtitle="These values apply to this organisation only. SMTP credentials stay in server configuration."
-  />
+  >
+    <app-import-export-toolbar entity="organisation-settings" (imported)="load()" />
+  </app-page-header>
 
   <app-api-error [message]="errorMessage()" />
 

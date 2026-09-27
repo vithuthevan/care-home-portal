@@ -2,6 +2,7 @@ using CareHome.Api.Audit;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.MiscCharges;
+using CareHome.Api.ImportExport;
 using CareHome.Api.Models;
 using CareHome.Api.Security;
 using Microsoft.EntityFrameworkCore;
@@ -19,10 +20,42 @@ public class MiscChargeImportService(
         Stream csvStream,
         CancellationToken cancellationToken = default)
     {
+        if (TabularSpreadsheet.IsXlsx(fileName))
+        {
+            var tableRows = TabularSpreadsheet.ReadRows(csvStream, fileName);
+            var mappedRows = MapMiscChargeRows(tableRows);
+            return await BuildPreviewAsync(tenantId, fileName, mappedRows, cancellationToken);
+        }
+
         using var reader = new StreamReader(csvStream);
         var content = await reader.ReadToEndAsync(cancellationToken);
         var rawRows = Parse(content);
         return await BuildPreviewAsync(tenantId, fileName, rawRows, cancellationToken);
+    }
+
+    internal static List<RawMiscRow> MapMiscChargeRows(List<Dictionary<string, string>> tableRows)
+    {
+        var rows = new List<RawMiscRow>();
+        for (var i = 0; i < tableRows.Count; i++)
+        {
+            var dict = tableRows[i];
+            dict.TryGetValue("ClientReference", out var clientRef);
+            dict.TryGetValue("UsedDate", out var usedDate);
+            dict.TryGetValue("Description", out var description);
+            dict.TryGetValue("Amount", out var amount);
+            dict.TryGetValue("NominalCode", out var nominal);
+            rows.Add(new RawMiscRow
+            {
+                RowNumber = i + 2,
+                ClientReference = clientRef?.Trim() ?? string.Empty,
+                UsedDate = usedDate?.Trim() ?? string.Empty,
+                Description = description?.Trim() ?? string.Empty,
+                Amount = amount?.Trim() ?? string.Empty,
+                NominalCode = string.IsNullOrWhiteSpace(nominal) ? null : nominal.Trim()
+            });
+        }
+
+        return rows;
     }
 
     public async Task<(MiscChargeImportBatch? Batch, string? Error)> CommitAsync(

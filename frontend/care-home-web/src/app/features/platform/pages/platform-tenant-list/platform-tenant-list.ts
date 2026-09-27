@@ -8,6 +8,7 @@ import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 interface TenantRow {
   id: number;
@@ -27,6 +28,7 @@ interface TenantRow {
     ApiErrorComponent,
     StatusBadgeComponent,
     IconActionButtonComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './platform-tenant-list.html',
 })

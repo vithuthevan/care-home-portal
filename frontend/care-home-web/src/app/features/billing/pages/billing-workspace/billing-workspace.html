@@ -2,7 +2,10 @@
   <app-page-header
     title="Billing Workspace"
     subtitle="Select scope, preview charges, review exceptions, then generate invoice records."
-  />
+  >
+    <app-import-export-toolbar entity="invoices" [importEnabled]="false" />
+    <app-import-export-toolbar entity="misc-charges" [importEnabled]="false" />
+  </app-page-header>
 
   <app-api-error [message]="errorMessage()" />
 

@@ -5,6 +5,7 @@
       [subtitle]="ctx.name + ' — Care homes operated by this company.'"
     >
       <a mat-stroked-button [routerLink]="['/companies', ctx.routeKey]">Back to company</a>
+      <app-import-export-toolbar entity="care-homes" (imported)="loadCareHomes()" />
       @if (auth.canWrite()) {
         <a mat-flat-button color="primary" routerLink="/care-homes/new" [queryParams]="newCareHomeQueryParams()">
           <mat-icon>add</mat-icon>
@@ -14,6 +15,7 @@
     </app-page-header>
   } @else {
     <app-page-header title="Care Homes" subtitle="Manage care home locations.">
+      <app-import-export-toolbar entity="care-homes" (imported)="loadCareHomes()" />
       @if (auth.canWrite()) {
         <a mat-flat-button color="primary" routerLink="/care-homes/new" [queryParams]="newCareHomeQueryParams()">Add Care Home</a>
       }

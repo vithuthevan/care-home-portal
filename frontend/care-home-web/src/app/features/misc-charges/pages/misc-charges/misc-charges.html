@@ -1,8 +1,10 @@
 <div class="page">
   <app-page-header
     title="Miscellaneous charges"
-    subtitle="Import ad-hoc charges from CSV before billing. Use the resident reference from the resident profile."
-  />
+    subtitle="Import ad-hoc charges from CSV or Excel before billing. Use the resident reference from the resident profile."
+  >
+    <app-import-export-toolbar entity="misc-charges" [importEnabled]="false" />
+  </app-page-header>
 
   <app-api-error [message]="errorMessage()" />
   @if (info()) {
@@ -28,10 +30,10 @@
               #csvInput
               type="file"
               class="sr-only"
-              accept=".csv,text/csv"
+              accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               (change)="onFile($event)"
             />
-            <button mat-stroked-button type="button" (click)="csvInput.click()">Choose CSV file</button>
+            <button mat-stroked-button type="button" (click)="csvInput.click()">Choose CSV or Excel file</button>
           </label>
         </div>
       </app-filter-bar>

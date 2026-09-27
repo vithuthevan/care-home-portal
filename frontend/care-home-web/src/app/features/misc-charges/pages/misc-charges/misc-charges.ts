@@ -12,6 +12,7 @@ import { PagedResult } from '../../../../core/models';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 @Component({
   selector: 'app-misc-charges',
@@ -24,6 +25,7 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
     TablePaginationComponent,
     FilterBarComponent,
     EmptyStateComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './misc-charges.html',
 })

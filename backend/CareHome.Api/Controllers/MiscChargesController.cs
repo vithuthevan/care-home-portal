@@ -1,6 +1,7 @@
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.MiscCharges;
+using CareHome.Api.ImportExport;
 using CareHome.Api.Security;
 using CareHome.Api.Services;
 using Microsoft.AspNetCore.Mvc;
@@ -54,18 +55,17 @@ public class MiscChargesController(
     {
         if (file is null || file.Length == 0)
         {
-            return BadRequest(new { message = "A CSV file is required." });
+            return BadRequest(new { message = "A .csv or .xlsx file is required." });
         }
 
         if (file.Length > 2 * 1024 * 1024)
         {
-            return BadRequest(new { message = "CSV uploads cannot exceed 2 MB." });
+            return BadRequest(new { message = "Uploads cannot exceed 2 MB." });
         }
 
-        var extension = Path.GetExtension(file.FileName);
-        if (!string.Equals(extension, ".csv", StringComparison.OrdinalIgnoreCase))
+        if (!TabularSpreadsheet.IsSupported(file.FileName))
         {
-            return BadRequest(new { message = "Only .csv files are accepted." });
+            return BadRequest(new { message = "Only .csv and .xlsx files are accepted." });
         }
 
         var safeName = Path.GetFileName(file.FileName);

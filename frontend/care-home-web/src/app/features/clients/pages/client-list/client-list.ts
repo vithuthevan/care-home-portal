@@ -25,6 +25,7 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
@@ -54,6 +55,7 @@ import { entityRouteKey } from '../../../../shared/routing/entity-route';
     TablePaginationComponent,
     IconActionButtonComponent,
     MatTooltipModule,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './client-list.html',
 })

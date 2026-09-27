@@ -29,6 +29,7 @@ import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-but
 import { MatIconModule } from '@angular/material/icon';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 @Component({
   selector: 'app-invoice-list',
@@ -52,6 +53,7 @@ import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
     TablePaginationComponent,
     IconActionButtonComponent,
     MatIconModule,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './invoice-list.html',
 })

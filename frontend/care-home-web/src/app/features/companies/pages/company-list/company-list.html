@@ -3,6 +3,7 @@
     title="Companies"
     subtitle="Manage the organisations that operate your care homes."
   >
+    <app-import-export-toolbar entity="companies" (imported)="loadCompanies()" />
     @if (auth.canWrite()) {
       <a mat-flat-button color="primary" routerLink="/companies/new">
         <mat-icon>add</mat-icon>

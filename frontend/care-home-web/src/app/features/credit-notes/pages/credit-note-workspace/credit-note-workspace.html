@@ -2,7 +2,9 @@
   <app-page-header
     title="Credit notes"
     subtitle="Adjust invoiced amounts. Each credit note links to an original invoice."
-  />
+  >
+    <app-import-export-toolbar entity="credit-notes" [importEnabled]="false" />
+  </app-page-header>
 
   <app-api-error [message]="errorMessage()" />
 

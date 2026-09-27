@@ -2,7 +2,9 @@
   <app-page-header
     title="Invoices"
     subtitle="Generated invoices with snapshot history. Void instead of deleting."
-  />
+  >
+    <app-import-export-toolbar entity="invoices" [importEnabled]="false" />
+  </app-page-header>
 
   <app-api-error [message]="errorMessage()" />
   @if (bulkMessage()) {

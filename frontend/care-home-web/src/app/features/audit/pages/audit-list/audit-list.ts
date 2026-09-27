@@ -17,6 +17,7 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { DisplayDateTimePipe } from '../../../../shared/format/display-date-time.pipe';
 import { PagedResult } from '../../../../core/models';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 @Component({
   selector: 'app-audit-list',
@@ -34,6 +35,7 @@ import { TablePaginationComponent } from '../../../../shared/ui/table-pagination
     EmptyStateComponent,
     DisplayDateTimePipe,
     TablePaginationComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './audit-list.html',
 })

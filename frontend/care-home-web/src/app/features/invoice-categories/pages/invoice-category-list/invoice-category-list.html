@@ -3,6 +3,7 @@
     title="Invoice Categories"
     subtitle="Manage categories used when creating and generating invoices."
   >
+    <app-import-export-toolbar entity="invoice-categories" (imported)="loadInvoiceCategories()" />
     @if (auth.canWrite()) {
       <a mat-flat-button color="primary" routerLink="/invoice-categories/new">Add category</a>
     }

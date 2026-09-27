@@ -55,6 +55,10 @@ export class AuthService {
     return this.hasRole('TenantAdmin', 'Administrator');
   }
 
+  canManageBilling(): boolean {
+    return this.hasRole('TenantAdmin', 'Administrator', 'LocationManager');
+  }
+
   showGuardian(): boolean {
     return !!this.currentUser()?.showGuardian;
   }

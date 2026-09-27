@@ -29,6 +29,7 @@ import { TablePaginationComponent } from '../../../../shared/ui/table-pagination
 import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
 import { optionalEmail } from '../../../../shared/format/optional-email';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 @Component({
   selector: 'app-credit-note-workspace',
@@ -50,6 +51,7 @@ import { optionalEmail } from '../../../../shared/format/optional-email';
     IconActionButtonComponent,
     TablePaginationComponent,
     AppDateFieldComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './credit-note-workspace.html',
 })

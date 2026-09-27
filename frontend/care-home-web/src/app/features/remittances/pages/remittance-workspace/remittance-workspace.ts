@@ -7,6 +7,7 @@ import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { getApiErrorMessage } from '../../../../core/api-error';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 interface RemittanceBatch {
   publicId: string;
@@ -40,9 +41,12 @@ interface RemittanceDetail {
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
+    ImportExportToolbarComponent,
   ],
   template: `
-    <app-page-header title="Remittances" subtitle="Import funder remittance advice and apply payments" />
+    <app-page-header title="Remittances" subtitle="Import funder remittance advice and apply payments">
+      <app-import-export-toolbar entity="remittance-batches" [importEnabled]="false" />
+    </app-page-header>
     @if (errorMessage()) {
       <app-api-error [message]="errorMessage()!" />
     }
