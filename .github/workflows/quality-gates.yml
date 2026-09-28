@@ -49,6 +49,9 @@ jobs:
       - name: Verify production migration entrypoint
         run: dotnet run --project backend/CareHome.Api/CareHome.Api.csproj -c Release --no-build -- --apply-migrations
 
+      - name: Install PDF native dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1 fonts-dejavu-core
+
       - name: Test
         run: dotnet test CareHome.Api.Tests/CareHome.Api.Tests.csproj --configuration Release --no-build --verbosity normal
 
