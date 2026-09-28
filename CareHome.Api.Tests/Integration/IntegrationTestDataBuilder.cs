@@ -81,14 +81,8 @@ public static class IntegrationTestDataBuilder
         };
         db.FundingAuthorities.Add(authority);
 
-        var nominal = new NominalCode
-        {
-            TenantId = tenant.Id,
-            Code = "4000",
-            Name = "Care income",
-            IsActive = true
-        };
-        db.NominalCodes.Add(nominal);
+        var nominal = await db.NominalCodes
+            .FirstAsync(x => x.TenantId == tenant.Id && x.Code == "4000");
         await db.SaveChangesAsync();
 
         var category = await db.InvoiceCategories
