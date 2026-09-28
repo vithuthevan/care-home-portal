@@ -283,15 +283,15 @@ public sealed class ReceivablesService(
             invoices = invoices.Where(x => x.InvoiceNumber.Contains(term));
         }
 
-        var creditTotals = dbContext.CreditNotes.AsNoTracking()
-            .Where(c => c.TenantId == tenantId && c.Status != CreditNoteStatuses.Void)
-            .GroupBy(c => c.InvoiceId)
-            .Select(g => new { InvoiceId = g.Key, Credited = g.Sum(c => -c.TotalAmount) });
-
         var sourceRows = await (
             from i in invoices
-            join c in creditTotals on i.Id equals c.InvoiceId into credits
-            from c in credits.DefaultIfEmpty()
+            let creditedAmount =
+                dbContext.CreditNotes
+                    .Where(c => c.TenantId == tenantId
+                                && c.Status != CreditNoteStatuses.Void
+                                && c.InvoiceId == i.Id)
+                    .Select(c => (decimal?)-c.TotalAmount)
+                    .Sum() ?? 0m
             select new ReceivableSourceRow
             {
                 InvoiceId = i.Id,
@@ -313,7 +313,7 @@ public sealed class ReceivablesService(
                 DueDate = i.DueDate,
                 DocumentStatus = i.Status,
                 GrossAmount = i.TotalAmount,
-                CreditedAmount = c == null ? 0m : c.Credited,
+                CreditedAmount = creditedAmount,
                 StoredPaymentStatus = i.PaymentStatus
             }).ToListAsync(cancellationToken);
 
