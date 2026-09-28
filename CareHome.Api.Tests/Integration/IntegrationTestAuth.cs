@@ -6,6 +6,7 @@ using CareHome.Api.Data;
 using CareHome.Api.Models;
 using CareHome.Api.Security;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
@@ -60,7 +61,8 @@ public static class IntegrationTestAuth
         user = await userManager.FindByEmailAsync(email)
             ?? throw new InvalidOperationException("User not found after create.");
 
-        var token = CreateToken(user, tenant, role, user.SecurityStamp);
+        var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        var token = CreateToken(user, tenant, role, user.SecurityStamp, configuration);
         return (user, token);
     }
 
@@ -92,14 +94,16 @@ public static class IntegrationTestAuth
             await userManager.AddToRoleAsync(existing, AppRoles.PlatformAdmin);
         }
 
-        return CreateToken(existing, tenant: null, AppRoles.PlatformAdmin, existing.SecurityStamp);
+        var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+        return CreateToken(existing, tenant: null, AppRoles.PlatformAdmin, existing.SecurityStamp, configuration);
     }
 
     private static string CreateToken(
         ApplicationUser user,
         Tenant? tenant,
         string role,
-        string? securityStamp)
+        string? securityStamp,
+        IConfiguration configuration)
     {
         var claims = new List<Claim>
         {
@@ -117,14 +121,19 @@ public static class IntegrationTestAuth
             claims.Add(new Claim(TenantClaimTypes.TenantName, tenant.Name));
         }
 
-        const string key = "integration-test-signing-key-32chars-min!";
+        var jwtKey = JwtSigningKey.Resolve(
+            configuration["Jwt:Key"],
+            isDevelopment: true);
+        var issuer = configuration["Jwt:Issuer"] ?? IntegrationTestConfiguration.JwtIssuer;
+        var audience = configuration["Jwt:Audience"] ?? IntegrationTestConfiguration.JwtAudience;
+
         var credentials = new SigningCredentials(
-            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+            new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: "CareHomeApi",
-            audience: "CareHomeWeb",
+            issuer: issuer,
+            audience: audience,
             claims: claims,
             expires: DateTime.UtcNow.AddHours(2),
             signingCredentials: credentials);

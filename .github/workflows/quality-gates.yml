@@ -24,6 +24,9 @@ jobs:
     env:
       CAREHOME_TEST_SQL: Server=localhost,1433;Database=CareHome_CI;User Id=sa;Password=CareHome_CI_Test_Passw0rd!;TrustServerCertificate=True;MultipleActiveResultSets=True
       ConnectionStrings__DefaultConnection: Server=localhost,1433;Database=CareHome_CI;User Id=sa;Password=CareHome_CI_Test_Passw0rd!;TrustServerCertificate=True;MultipleActiveResultSets=True
+      Jwt__Key: integration-test-signing-key-32chars-min!
+      Jwt__Issuer: CareHomeApi
+      Jwt__Audience: CareHomeWeb
 
     steps:
       - uses: actions/checkout@v4
