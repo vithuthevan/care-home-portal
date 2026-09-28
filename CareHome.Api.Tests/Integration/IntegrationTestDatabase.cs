@@ -14,12 +14,34 @@ public static class IntegrationTestDatabase
 
     public static async Task ResetAsync(CancellationToken cancellationToken = default)
     {
+        SqlConnection.ClearAllPools();
+
+        var target = new SqlConnectionStringBuilder(ConnectionString);
+        var databaseName = target.InitialCatalog;
+        if (string.IsNullOrWhiteSpace(databaseName))
+        {
+            throw new InvalidOperationException("Integration test connection string must specify a database name.");
+        }
+
+        var master = new SqlConnectionStringBuilder(ConnectionString) { InitialCatalog = "master" };
+        await using (var connection = new SqlConnection(master.ConnectionString))
+        {
+            await connection.OpenAsync(cancellationToken);
+            await using var command = connection.CreateCommand();
+            command.CommandText = $@"
+IF DB_ID(N'{databaseName.Replace("'", "''")}') IS NOT NULL
+BEGIN
+    ALTER DATABASE [{databaseName.Replace("]", "]]")}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE [{databaseName.Replace("]", "]]")}];
+END";
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+
         var options = new DbContextOptionsBuilder<CareHomeDbContext>()
             .UseSqlServer(ConnectionString)
             .Options;
 
         await using var db = new CareHomeDbContext(options);
-        await db.Database.EnsureDeletedAsync(cancellationToken);
         await db.Database.MigrateAsync(cancellationToken);
     }
 

@@ -237,16 +237,19 @@ public class BillingWiringIntegrationTests(ApiIntegrationFixture fixture)
         preview.EnsureSuccessStatusCode();
         var previewBody = await preview.Content.ReadFromJsonAsync<CreditNotePreviewResponse>(JsonOptions);
         var firstLine = previewBody!.Lines.First();
+        var partialCredit = Money.Round(firstLine.CreditAmount / 2m);
+        Assert.True(partialCredit > 0 && partialCredit < firstLine.CreditAmount);
 
-        await client.PostAsJsonAsync("/api/credit-notes/generate", new CreditNotePreviewRequest
+        var generateCredit = await client.PostAsJsonAsync("/api/credit-notes/generate", new CreditNotePreviewRequest
         {
             InvoiceId = invoiceId,
             PeriodStart = scenario.PeriodStart,
             PeriodEnd = scenario.PeriodEnd,
             CreditNoteDate = scenario.PeriodEnd,
             Reason = "Sage rows",
-            LineAmounts = new Dictionary<int, decimal> { [firstLine.InvoiceLineId] = firstLine.CreditAmount }
+            LineAmounts = new Dictionary<int, decimal> { [firstLine.InvoiceLineId] = partialCredit }
         });
+        generateCredit.EnsureSuccessStatusCode();
 
         var export = await client.PostAsJsonAsync("/api/sage-exports", new SageExportRequest
         {

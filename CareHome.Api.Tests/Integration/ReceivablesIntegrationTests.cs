@@ -47,6 +47,10 @@ public class ReceivablesIntegrationTests(ApiIntegrationFixture fixture)
             fixture.Factory.Services,
             "AR Location");
 
+        await IntegrationTestDataBuilder.SeedBillableClientOnCareHomeAsync(
+            fixture.Factory.Services,
+            scenario,
+            scenario.OtherCareHome);
         await GenerateInvoiceOnHomeAsync(scenario, scenario.OtherCareHome);
 
         var (_, managerToken) = await IntegrationTestAuth.CreateTenantUserAsync(
@@ -113,17 +117,19 @@ public class ReceivablesIntegrationTests(ApiIntegrationFixture fixture)
         Assert.True(previewBody!.CanGenerate);
 
         var firstLine = previewBody.Lines.First();
+        var partialCredit = Money.Round(firstLine.CreditAmount / 2m);
+        Assert.True(partialCredit > 0 && partialCredit < firstLine.CreditAmount);
         var generate = await client.PostAsJsonAsync("/api/credit-notes/generate", new CreditNotePreviewRequest
         {
             PeriodStart = scenario.PeriodStart,
             PeriodEnd = scenario.PeriodEnd,
             CreditNoteDate = scenario.PeriodEnd,
             Reason = "Partial adjustment",
-            LineAmounts = new Dictionary<int, decimal> { [firstLine.InvoiceLineId] = firstLine.CreditAmount }
+            LineAmounts = new Dictionary<int, decimal> { [firstLine.InvoiceLineId] = partialCredit }
         });
         generate.EnsureSuccessStatusCode();
 
-        var invoices = await client.GetAsync("/api/receivables/invoices?pageSize=10");
+        var invoices = await client.GetAsync("/api/receivables/invoices?pageSize=10&openReceivablesOnly=true");
         invoices.EnsureSuccessStatusCode();
         var page = await invoices.Content.ReadFromJsonAsync<PagedReceivables>(JsonOptions);
         Assert.NotNull(page);

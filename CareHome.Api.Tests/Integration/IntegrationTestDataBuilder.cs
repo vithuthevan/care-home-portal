@@ -164,4 +164,56 @@ public static class IntegrationTestDataBuilder
             periodStart,
             periodEnd);
     }
+
+    public static async Task<Client> SeedBillableClientOnCareHomeAsync(
+        IServiceProvider services,
+        BillingScenario scenario,
+        CareHomeLocation careHome)
+    {
+        using var scope = services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<CareHomeDbContext>();
+
+        var client = new Client
+        {
+            TenantId = scenario.Tenant.Id,
+            CareHomeId = careHome.Id,
+            SageId = $"SAGE-{Guid.NewGuid():N}".Substring(0, 12),
+            ReferenceNumber = $"REF-{Guid.NewGuid():N}".Substring(0, 12),
+            FirstName = "Other",
+            LastName = "Home",
+            CareType = "Residential",
+            Status = "Current",
+            AdmissionDate = new DateOnly(2026, 1, 1)
+        };
+        db.Clients.Add(client);
+        await db.SaveChangesAsync();
+
+        var contract = new ClientFundingContract
+        {
+            TenantId = scenario.Tenant.Id,
+            ClientId = client.Id,
+            FundingAuthorityId = scenario.FundingAuthority.Id,
+            InvoiceCategoryId = scenario.Category.Id,
+            NominalCodeId = scenario.Nominal.Id,
+            InvoiceTemplateId = scenario.Template.Id,
+            ContractStartDate = new DateOnly(2026, 1, 1),
+            Status = "Active",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+        db.ClientFundingContracts.Add(contract);
+        await db.SaveChangesAsync();
+
+        db.FundingRates.Add(new FundingRate
+        {
+            ClientFundingContractId = contract.Id,
+            EffectiveFrom = new DateOnly(2026, 1, 1),
+            Frequency = "Weekly",
+            Amount = 700m,
+            CreatedAt = DateTimeOffset.UtcNow
+        });
+        await db.SaveChangesAsync();
+
+        return client;
+    }
 }
