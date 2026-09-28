@@ -37,7 +37,7 @@ public class UsersController(
         var query = userManager.Users
             .Include(x => x.CareHomeAccess)
             .Where(x => x.TenantId == tenantId)
-            .OrderBy(x => x.Email);
+            .OrderByDescending(x => x.Id);
 
         if (!Pagination.IsRequested(page, pageSize))
         {

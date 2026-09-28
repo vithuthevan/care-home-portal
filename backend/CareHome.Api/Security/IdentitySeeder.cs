@@ -122,8 +122,8 @@ public class DevelopmentMasterDataSeeder(
 
         var provisioned = await provisioning.ProvisionAsync(new TenantProvisionRequest
         {
-            Name = "Demo Care Group",
-            TradingName = "Demo Care Group",
+            Name = "Green Meadows Care Ltd",
+            TradingName = "Green Meadows Care Ltd",
             IsActive = true
         });
         var tenant = provisioned.Tenant;
@@ -131,7 +131,7 @@ public class DevelopmentMasterDataSeeder(
         var company = new Company
         {
             TenantId = tenant.Id,
-            Name = "Demo Care Ltd",
+            Name = "Green Meadows Care Ltd",
             IsActive = true
         };
         dbContext.Companies.Add(company);
@@ -141,9 +141,9 @@ public class DevelopmentMasterDataSeeder(
         {
             TenantId = tenant.Id,
             CompanyId = company.Id,
-            Code = "SUNRISE",
-            Name = "Sunrise House",
-            BedCapacity = 20,
+            Code = "GMEADOWS",
+            Name = "Green Meadows Residential Home",
+            BedCapacity = 32,
             IsActive = true
         });
 
@@ -191,8 +191,9 @@ public class DevelopmentMasterDataSeeder(
             TenantId = tenant.Id,
             Name = "Default General Care",
             InvoiceCategoryId = generalCare.Id,
-            HeaderText1 = "Care Home Invoice",
-            FooterText = "Thank you for your payment.",
+            HeaderText1 = "Green Meadows Care — Invoice",
+            HeaderText2 = "Registered office: Green Meadows Care Ltd",
+            FooterText = "Thank you for your payment. Please quote the invoice number on remittance.",
             BankAccountName = "Example Account",
             SortCode = "00-00-00",
             AccountNumber = "00000000",

@@ -122,4 +122,9 @@ export class App {
   setColorMode(mode: 'light' | 'dark'): void {
     this.themeService.setColorMode(mode);
   }
+
+  toggleColorMode(): void {
+    const next = this.themeService.activeColorMode() === 'dark' ? 'light' : 'dark';
+    this.setColorMode(next);
+  }
 }

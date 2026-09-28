@@ -16,6 +16,7 @@ import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import { optionalEmail, optionalEmailValidator } from '../../../../shared/format/optional-email';
 
 @Component({
   selector: 'app-company-form',
@@ -53,7 +54,7 @@ export class CompanyForm implements OnInit {
     name: ['', [Validators.required, Validators.maxLength(150)]],
     address: ['', Validators.maxLength(300)],
     phone: ['', Validators.maxLength(30)],
-    email: ['', [Validators.email, Validators.maxLength(150)]],
+    email: ['', [optionalEmailValidator(), Validators.maxLength(150)]],
     isActive: [true],
   });
 
@@ -126,7 +127,7 @@ export class CompanyForm implements OnInit {
       name: formValue.name,
       address: formValue.address.trim() || null,
       phone: formValue.phone.trim() || null,
-      email: formValue.email.trim() || null,
+      email: optionalEmail(formValue.email),
     };
 
     if (this.isEditMode && this.companyRouteKey !== null) {

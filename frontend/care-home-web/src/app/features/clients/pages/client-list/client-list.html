@@ -59,8 +59,6 @@
     >
       @if (hasActiveFilters()) {
         <button mat-stroked-button type="button" (click)="clearFilters()">Clear filters</button>
-      } @else if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/clients/new" [queryParams]="addResidentQueryParams()">Add resident</a>
       }
       @if (companyContext(); as ctx) {
         <a mat-stroked-button [routerLink]="['/companies', ctx.routeKey]">Back to company</a>
@@ -121,9 +119,6 @@
         <mat-checkbox [(ngModel)]="showArchived" (change)="loadClients()">Show archived</mat-checkbox>
       </div>
       <div filterActions>
-        @if (auth.canWrite()) {
-          <a mat-flat-button color="primary" routerLink="/clients/new" [queryParams]="addResidentQueryParams()">Add resident</a>
-        }
         <button mat-stroked-button type="button" (click)="clearFilters()">Clear</button>
       </div>
     </app-filter-bar>

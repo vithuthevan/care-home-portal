@@ -5,7 +5,7 @@ import { finalize } from 'rxjs';
 
 import { FundingAuthorityService } from '../../services/funding-authority.service';
 import { getApiErrorMessage, logApiFailure } from '../../../../core/api-error';
-import { optionalEmail } from '../../../../shared/format/optional-email';
+import { optionalEmail, optionalEmailValidator } from '../../../../shared/format/optional-email';
 import { AuthService } from '../../../../core/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -54,7 +54,7 @@ export class FundingAuthorityForm implements OnInit {
     type: ['', Validators.required],
     contactName: ['', Validators.maxLength(150)],
     phone: ['', Validators.maxLength(30)],
-    email: ['', [Validators.email, Validators.maxLength(150)]],
+    email: ['', [optionalEmailValidator(), Validators.maxLength(150)]],
     address: ['', Validators.maxLength(300)],
     billingFrequency: ['', Validators.required],
     billingIntervalDays: this.formBuilder.control<number | null>(null),

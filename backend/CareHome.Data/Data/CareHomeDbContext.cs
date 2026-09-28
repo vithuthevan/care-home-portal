@@ -813,7 +813,7 @@ namespace CareHome.Api.Data
                 entity.Property(x => x.RowVersion)
                     .IsRowVersion();
 
-                entity.HasCheckConstraint("CK_Payments_Amount_Positive", "[Amount] > 0");
+                entity.ToTable(t => t.HasCheckConstraint("CK_Payments_Amount_Positive", "[Amount] > 0"));
 
                 entity.HasOne(x => x.Tenant)
                     .WithMany()
@@ -844,7 +844,7 @@ namespace CareHome.Api.Data
                 entity.Property(x => x.AllocatedAmount)
                     .HasPrecision(18, 2);
 
-                entity.HasCheckConstraint("CK_PaymentAllocations_Amount_Positive", "[AllocatedAmount] > 0");
+                entity.ToTable(t => t.HasCheckConstraint("CK_PaymentAllocations_Amount_Positive", "[AllocatedAmount] > 0"));
 
                 entity.HasOne(x => x.Tenant)
                     .WithMany()
@@ -888,7 +888,7 @@ namespace CareHome.Api.Data
                 entity.Property(x => x.TransactionDate).HasColumnType("date");
                 entity.Property(x => x.ValueDate).HasColumnType("date");
                 entity.Property(x => x.RowVersion).IsRowVersion();
-                entity.HasCheckConstraint("CK_BankTransactions_Amount_Positive", "[Amount] > 0");
+                entity.ToTable(t => t.HasCheckConstraint("CK_BankTransactions_Amount_Positive", "[Amount] > 0"));
                 entity.HasOne(x => x.Tenant).WithMany().HasForeignKey(x => x.TenantId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(x => x.BankAccount).WithMany(x => x.Transactions).HasForeignKey(x => x.BankAccountId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(x => x.ImportBatch).WithMany(x => x.Transactions).HasForeignKey(x => x.ImportBatchId).OnDelete(DeleteBehavior.Restrict);

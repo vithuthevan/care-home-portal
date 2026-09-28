@@ -13,7 +13,7 @@ import { CareHomeService } from '../../../care-homes/services/care-home.service'
 import { ClientService } from '../../services/client.service';
 
 import { getApiErrorMessage, logApiFailure } from '../../../../core/api-error';
-import { optionalEmail } from '../../../../shared/format/optional-email';
+import { optionalEmail, optionalEmailValidator } from '../../../../shared/format/optional-email';
 import { AuthService } from '../../../../core/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -104,7 +104,7 @@ export class ClientForm implements OnInit {
 
     dischargeReason: ['', Validators.maxLength(100)],
 
-    email: ['', [Validators.email, Validators.maxLength(150)]],
+    email: ['', [optionalEmailValidator(), Validators.maxLength(150)]],
 
     phone: ['', Validators.maxLength(30)],
 
@@ -112,7 +112,7 @@ export class ClientForm implements OnInit {
 
     guardianName: ['', Validators.maxLength(150)],
     guardianRelationship: ['', Validators.maxLength(80)],
-    guardianEmail: ['', [Validators.email, Validators.maxLength(150)]],
+    guardianEmail: ['', [optionalEmailValidator(), Validators.maxLength(150)]],
     guardianPhone: ['', Validators.maxLength(30)],
     guardianAddress: ['', Validators.maxLength(300)],
 

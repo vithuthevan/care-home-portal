@@ -4,7 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { finalize } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
-import { optionalEmail } from '../../../../shared/format/optional-email';
+import { optionalEmail, optionalEmailValidator } from '../../../../shared/format/optional-email';
 import { AuthService } from '../../../../core/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -52,7 +52,7 @@ export class OrganisationSettingsPage implements OnInit {
     registrationNumber: [''],
     address: [''],
     phone: [''],
-    email: ['', Validators.email],
+    email: ['', optionalEmailValidator()],
     website: [''],
     currencyCode: ['GBP', Validators.required],
     currencySymbol: ['£', Validators.required],
@@ -62,7 +62,7 @@ export class OrganisationSettingsPage implements OnInit {
     numberLength: [4, Validators.required],
     paymentTermsDays: [30, Validators.required],
     emailFromName: [''],
-    emailFromAddress: ['', Validators.email],
+    emailFromAddress: ['', optionalEmailValidator()],
     primaryColour: [''],
     billingPeriodMode: ['Manual', Validators.required],
     allowPrivatePayer: [false],

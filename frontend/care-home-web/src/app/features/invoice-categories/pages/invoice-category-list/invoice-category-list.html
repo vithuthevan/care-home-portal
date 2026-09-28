@@ -32,9 +32,6 @@
       title="No invoice categories"
       message="Add a category before generating invoices or running category reports."
     >
-      @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/invoice-categories/new">Add category</a>
-      }
     </app-empty-state>
   }
 
