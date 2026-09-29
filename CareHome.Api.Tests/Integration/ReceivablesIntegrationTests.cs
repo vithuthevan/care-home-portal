@@ -129,7 +129,9 @@ public class ReceivablesIntegrationTests(ApiIntegrationFixture fixture)
         });
         generate.EnsureSuccessStatusCode();
 
-        var invoices = await client.GetAsync("/api/receivables/invoices?pageSize=10&openReceivablesOnly=true");
+        var asOf = scenario.PeriodEnd.ToString("yyyy-MM-dd");
+        var invoices = await client.GetAsync(
+            $"/api/receivables/invoices?pageSize=10&openReceivablesOnly=true&asOfDate={asOf}");
         invoices.EnsureSuccessStatusCode();
         var page = await invoices.Content.ReadFromJsonAsync<PagedReceivables>(JsonOptions);
         Assert.NotNull(page);
