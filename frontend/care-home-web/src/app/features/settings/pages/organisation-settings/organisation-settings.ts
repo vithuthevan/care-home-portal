@@ -1,29 +1,36 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { finalize } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
-import { optionalEmail } from '../../../../shared/format/optional-email';
+import { optionalEmail, optionalEmailValidator } from '../../../../shared/format/optional-email';
 import { AuthService } from '../../../../core/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
+import { MatSelectModule } from '@angular/material/select';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 @Component({
   selector: 'app-organisation-settings',
   imports: [
+    FormsModule,
     ReactiveFormsModule,
     MatFormFieldModule,
     MatInputModule,
     MatButtonModule,
+    MatSelectModule,
+    MatCheckboxModule,
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './organisation-settings.html',
 })
@@ -36,6 +43,8 @@ export class OrganisationSettingsPage implements OnInit {
   readonly savedMessage = signal<string | null>(null);
   readonly isLoading = signal(false);
   readonly isSaving = signal(false);
+  readonly isSendingTest = signal(false);
+  testEmailTo = '';
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, Validators.maxLength(150)]],
@@ -43,7 +52,7 @@ export class OrganisationSettingsPage implements OnInit {
     registrationNumber: [''],
     address: [''],
     phone: [''],
-    email: ['', Validators.email],
+    email: ['', optionalEmailValidator()],
     website: [''],
     currencyCode: ['GBP', Validators.required],
     currencySymbol: ['£', Validators.required],
@@ -53,20 +62,50 @@ export class OrganisationSettingsPage implements OnInit {
     numberLength: [4, Validators.required],
     paymentTermsDays: [30, Validators.required],
     emailFromName: [''],
-    emailFromAddress: ['', Validators.email],
+    emailFromAddress: ['', optionalEmailValidator()],
     primaryColour: [''],
+    billingPeriodMode: ['Manual', Validators.required],
+    allowPrivatePayer: [false],
+    showGuardian: [false],
+    financeModuleEnabled: [false],
   });
+  readonly financeModuleAvailable = signal(true);
 
   ngOnInit(): void {
+    this.load();
+  }
+
+  load(): void {
     this.isLoading.set(true);
     this.errorMessage.set(null);
     this.http
-      .get<typeof this.form.value>('/api/settings/organisation')
+      .get<typeof this.form.value & { financeModuleAvailable?: boolean }>('/api/settings/organisation')
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: (settings) => this.form.patchValue(settings),
+        next: (settings) => {
+          this.financeModuleAvailable.set(settings.financeModuleAvailable !== false);
+          this.form.patchValue(settings);
+        },
         error: (error) =>
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to load organisation settings.')),
+      });
+  }
+
+  sendTestEmail(): void {
+    const to = optionalEmail(this.testEmailTo);
+    if (!to) {
+      this.errorMessage.set('Enter a recipient for the test email.');
+      return;
+    }
+    this.isSendingTest.set(true);
+    this.errorMessage.set(null);
+    this.http
+      .post<{ message?: string }>('/api/settings/organisation/test-email', { to })
+      .pipe(finalize(() => this.isSendingTest.set(false)))
+      .subscribe({
+        next: (res) => this.toast.success(res.message ?? 'Test email sent.'),
+        error: (error) =>
+          this.errorMessage.set(getApiErrorMessage(error, 'Test email could not be sent.')),
       });
   }
 
@@ -91,6 +130,7 @@ export class OrganisationSettingsPage implements OnInit {
         next: () => {
           this.savedMessage.set('Organisation settings saved.');
           this.toast.success('Organisation updated successfully.');
+          this.auth.refreshProfile().subscribe({ error: () => undefined });
         },
         error: (error) => {
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to save organisation settings.'));

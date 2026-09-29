@@ -17,5 +17,7 @@ public interface IEmailSender
         string body,
         string? attachmentFileName,
         byte[]? attachmentBytes,
+        int? tenantId = null,
+        bool isBodyHtml = false,
         CancellationToken cancellationToken = default);
 }

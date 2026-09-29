@@ -7,6 +7,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { FormsModule } from '@angular/forms';
+import { optionalEmail } from '../../../../shared/format/optional-email';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
 import { AuthService } from '../../../../core/auth.service';
@@ -20,7 +24,6 @@ import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.servi
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
-import { COMMERCIAL_REVENUE_ENABLED } from '../../../../core/commercial-revenue.feature';
 
 @Component({
   selector: 'app-invoice-detail',
@@ -31,6 +34,9 @@ import { COMMERCIAL_REVENUE_ENABLED } from '../../../../core/commercial-revenue.
     MatIconModule,
     MatMenuModule,
     MatTooltipModule,
+    MatFormFieldModule,
+    MatInputModule,
+    FormsModule,
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
@@ -47,7 +53,9 @@ export class InvoiceDetailPage implements OnInit {
   private readonly toast = inject(ToastService);
   private readonly breadcrumbs = inject(BreadcrumbService);
   readonly auth = inject(AuthService);
-  readonly commercialRevenueEnabled = COMMERCIAL_REVENUE_ENABLED;
+  get commercialRevenueEnabled(): boolean {
+    return this.auth.financeModuleEnabled();
+  }
   readonly entityRouteKey = entityRouteKey;
   readonly invoice = signal<any | null>(null);
   readonly errorMessage = signal<string | null>(null);
@@ -56,7 +64,9 @@ export class InvoiceDetailPage implements OnInit {
   readonly isLoading = signal(false);
   readonly isPdfLoading = signal(false);
   readonly isSending = signal(false);
+  readonly isSavingRecipient = signal(false);
   readonly isPaying = signal(false);
+  recipientEmail = '';
 
   /** Manual payment status only — hidden when allocations drive collection status. */
   showPaymentStatusActions(): boolean {
@@ -95,6 +105,7 @@ export class InvoiceDetailPage implements OnInit {
       .subscribe({
         next: (invoice: any) => {
           this.invoice.set(invoice);
+          this.recipientEmail = invoice.recipientEmail ?? '';
           this.breadcrumbs.set([
             { label: 'Billing', routerLink: '/billing' },
             { label: 'Invoices', routerLink: '/invoices' },
@@ -106,7 +117,7 @@ export class InvoiceDetailPage implements OnInit {
       });
   }
 
-  pdf(): void {
+  pdf(mode: 'view' | 'download'): void {
     const current = this.invoice();
     if (!current) {
       return;
@@ -119,10 +130,44 @@ export class InvoiceDetailPage implements OnInit {
       .subscribe({
         next: (blob) => {
           const url = URL.createObjectURL(blob);
-          window.open(url, '_blank');
+          if (mode === 'view') {
+            window.open(url, '_blank');
+            return;
+          }
+          const anchor = document.createElement('a');
+          anchor.href = url;
+          anchor.download = `invoice-${current.invoiceNumber}.pdf`;
+          anchor.click();
+          URL.revokeObjectURL(url);
         },
         error: (error) =>
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to download PDF.')),
+      });
+  }
+
+  saveRecipientEmail(): void {
+    const current = this.invoice();
+    if (!current || this.isSavingRecipient() || !this.auth.canWrite()) {
+      return;
+    }
+
+    this.isSavingRecipient.set(true);
+    this.errorMessage.set(null);
+    this.http
+      .patch<{ recipientEmail?: string | null }>(`/api/invoices/${current.id}/recipient-email`, {
+        recipientEmail: optionalEmail(this.recipientEmail),
+      })
+      .pipe(finalize(() => this.isSavingRecipient.set(false)))
+      .subscribe({
+        next: (result) => {
+          this.recipientEmail = result.recipientEmail ?? '';
+          this.invoice.update((inv) =>
+            inv ? { ...inv, recipientEmail: result.recipientEmail } : inv,
+          );
+          this.toast.success('Recipient email saved.');
+        },
+        error: (error) =>
+          this.errorMessage.set(getApiErrorMessage(error, 'Unable to save recipient email.')),
       });
   }
 
@@ -149,6 +194,7 @@ export class InvoiceDetailPage implements OnInit {
               : null,
           );
           this.toast.success(message);
+          this.loadInvoice(String(current.id));
         },
         error: (error) =>
           this.errorMessage.set(getApiErrorMessage(error, 'Email could not be sent.')),

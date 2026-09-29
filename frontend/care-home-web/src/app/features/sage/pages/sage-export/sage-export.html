@@ -2,7 +2,9 @@
   <app-page-header
     title="Sage Export"
     subtitle="Export invoices as a Sage 50 CSV file for a date range. Validate first, then export."
-  />
+  >
+    <app-import-export-toolbar entity="sage-exports" [importEnabled]="false" />
+  </app-page-header>
   <app-api-error [message]="errorMessage()" />
   @if (infoMessage(); as info) {
     <div class="alert-banner" [class.alert-banner--success]="info.tone === 'success'" [class.alert-banner--warning]="info.tone === 'warning'">

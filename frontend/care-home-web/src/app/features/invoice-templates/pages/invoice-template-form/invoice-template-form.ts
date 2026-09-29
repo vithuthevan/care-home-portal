@@ -12,6 +12,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatButtonModule } from '@angular/material/button';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
+import { RichTextEditorComponent } from '../../../../shared/ui/rich-text-editor';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import {
@@ -30,6 +31,7 @@ import {
     MatCheckboxModule,
     MatButtonModule,
     PageHeaderComponent,
+    RichTextEditorComponent,
     ApiErrorComponent,
     LoadingStateComponent,
   ],
@@ -49,15 +51,14 @@ export class InvoiceTemplateFormPage implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly isLoading = signal(false);
   readonly isSaving = signal(false);
+  readonly companyLogoUrl = signal<string | null>(null);
+  readonly authorityLogoUrl = signal<string | null>(null);
 
   form = this.fb.nonNullable.group({
     name: ['', Validators.required],
     invoiceCategoryId: [0, Validators.min(1)],
     headerText1: [''],
     footerText: [''],
-    bankAccountName: [''],
-    sortCode: [''],
-    accountNumber: [''],
     contactName: [''],
     contactEmail: [''],
     emailSubjectTemplate: ['Invoice {{InvoiceNumber}}'],
@@ -102,9 +103,6 @@ export class InvoiceTemplateFormPage implements OnInit {
             invoiceCategoryId: template.invoiceCategoryId,
             headerText1: template.headerText1 ?? '',
             footerText: template.footerText ?? '',
-            bankAccountName: template.bankAccountName ?? '',
-            sortCode: template.sortCode ?? '',
-            accountNumber: template.accountNumber ?? '',
             contactName: template.contactName ?? '',
             contactEmail: template.contactEmail ?? '',
             emailSubjectTemplate:
@@ -112,12 +110,74 @@ export class InvoiceTemplateFormPage implements OnInit {
             emailBodyTemplate: template.emailBodyTemplate ?? 'Please find the invoice attached.',
             isActive: template.isActive,
           });
+          this.loadLogoPreviews(template);
         },
         error: (error) => {
           logApiFailure(error);
           this.errorMessage.set(getApiErrorMessage(error, 'Unable to load invoice template.'));
         },
       });
+  }
+
+  onLogoSelected(event: Event, kind: 'company' | 'authority'): void {
+    const id = this.templateId;
+    if (!id) {
+      return;
+    }
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) {
+      return;
+    }
+    const body = new FormData();
+    body.append('file', file);
+    this.http.post<InvoiceTemplate>(`/api/invoice-templates/${id}/logo/${kind}`, body).subscribe({
+      next: (template) => {
+        this.loadLogoPreviews(template);
+      },
+      error: (error) =>
+        this.errorMessage.set(getApiErrorMessage(error, 'Unable to upload logo.')),
+    });
+    input.value = '';
+  }
+
+  private loadLogoPreviews(template: InvoiceTemplate): void {
+    const id = this.templateId;
+    if (!id) {
+      return;
+    }
+    this.revokeLogoUrls();
+    if (template.companyLogoPath) {
+      this.http
+        .get(`/api/invoice-templates/${id}/logo/company`, { responseType: 'blob' })
+        .subscribe({
+          next: (blob) => this.companyLogoUrl.set(URL.createObjectURL(blob)),
+          error: () => this.companyLogoUrl.set(null),
+        });
+    } else {
+      this.companyLogoUrl.set(null);
+    }
+    if (template.authorityLogoPath) {
+      this.http
+        .get(`/api/invoice-templates/${id}/logo/authority`, { responseType: 'blob' })
+        .subscribe({
+          next: (blob) => this.authorityLogoUrl.set(URL.createObjectURL(blob)),
+          error: () => this.authorityLogoUrl.set(null),
+        });
+    } else {
+      this.authorityLogoUrl.set(null);
+    }
+  }
+
+  private revokeLogoUrls(): void {
+    const company = this.companyLogoUrl();
+    const authority = this.authorityLogoUrl();
+    if (company) {
+      URL.revokeObjectURL(company);
+    }
+    if (authority) {
+      URL.revokeObjectURL(authority);
+    }
   }
 
   save(): void {
@@ -134,9 +194,6 @@ export class InvoiceTemplateFormPage implements OnInit {
       invoiceCategoryId: raw.invoiceCategoryId,
       headerText1: raw.headerText1 || null,
       footerText: raw.footerText || null,
-      bankAccountName: raw.bankAccountName || null,
-      sortCode: raw.sortCode || null,
-      accountNumber: raw.accountNumber || null,
       contactName: raw.contactName || null,
       contactEmail: raw.contactEmail || null,
       emailSubjectTemplate: raw.emailSubjectTemplate,

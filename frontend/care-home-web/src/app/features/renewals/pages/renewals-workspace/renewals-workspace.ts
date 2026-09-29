@@ -7,6 +7,7 @@ import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { getApiErrorMessage } from '../../../../core/api-error';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 @Component({
   selector: 'app-renewals-workspace',
@@ -16,9 +17,12 @@ import { getApiErrorMessage } from '../../../../core/api-error';
     ApiErrorComponent,
     LoadingStateComponent,
     EmptyStateComponent,
+    ImportExportToolbarComponent,
   ],
   template: `
-    <app-page-header title="Contract renewals" subtitle="Expiring funding contracts and renewal workflow" />
+    <app-page-header title="Contract renewals" subtitle="Expiring funding contracts and renewal workflow">
+      <app-import-export-toolbar entity="contract-renewals" [importEnabled]="false" />
+    </app-page-header>
     @if (errorMessage()) {
       <app-api-error
         title="Unable to load contract renewals"

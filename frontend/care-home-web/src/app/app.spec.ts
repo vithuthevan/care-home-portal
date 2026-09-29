@@ -1,3 +1,4 @@
+import { of } from 'rxjs';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
@@ -21,7 +22,9 @@ const authMock = {
   isPlatformAdmin: () => false,
   canManageUsers: () => false,
   canManageOrganisation: () => false,
+  financeModuleEnabled: () => false,
   logout: () => undefined,
+  refreshProfile: () => of(void 0),
 } as unknown as AuthService;
 
 describe('App', () => {

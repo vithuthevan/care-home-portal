@@ -127,6 +127,34 @@
 
       </section>
 
+      @if (auth.showGuardian()) {
+        <section class="form-section">
+          <h2 class="form-section__title">Guardian</h2>
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Name</mat-label>
+              <input matInput formControlName="guardianName" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Relationship</mat-label>
+              <input matInput formControlName="guardianRelationship" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Email</mat-label>
+              <input matInput type="email" formControlName="guardianEmail" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="w-full">
+              <mat-label>Phone</mat-label>
+              <input matInput formControlName="guardianPhone" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="w-full md:col-span-2">
+              <mat-label>Address</mat-label>
+              <input matInput formControlName="guardianAddress" />
+            </mat-form-field>
+          </div>
+        </section>
+      }
+
       <section class="form-section">
       <h2 class="form-section__title">Placement details</h2>
       <div class="grid grid-cols-1 gap-4 md:grid-cols-2">

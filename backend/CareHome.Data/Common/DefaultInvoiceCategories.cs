@@ -14,4 +14,15 @@ public static class DefaultInvoiceCategories
 
     public static bool IsSystemDefaultCode(string code) =>
         All.Any(x => string.Equals(x.Code, code.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    public static string DefaultGroupingMode(string code)
+    {
+        if (string.Equals(code, "RENT", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(code, MiscellaneousCode, StringComparison.OrdinalIgnoreCase))
+        {
+            return InvoiceGroupingModes.PerResident;
+        }
+
+        return InvoiceGroupingModes.PerFunder;
+    }
 }

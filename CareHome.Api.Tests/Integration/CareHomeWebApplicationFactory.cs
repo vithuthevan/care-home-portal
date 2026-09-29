@@ -10,6 +10,14 @@ public sealed class CareHomeWebApplicationFactory : WebApplicationFactory<Progra
     {
         builder.UseEnvironment("Development");
 
+        foreach (var (key, value) in IntegrationTestConfiguration.JwtSettings)
+        {
+            if (value is not null)
+            {
+                builder.UseSetting(key, value);
+            }
+        }
+
         builder.ConfigureAppConfiguration((_, config) =>
         {
             config.AddInMemoryCollection(new Dictionary<string, string?>
@@ -18,10 +26,10 @@ public sealed class CareHomeWebApplicationFactory : WebApplicationFactory<Progra
                 ["Database:ApplyMigrations"] = "false",
                 ["Seed:AdminEmail"] = "",
                 ["Seed:AdminPassword"] = "",
-                ["Jwt:Key"] = "integration-test-signing-key-32chars-min!",
                 ["Telemetry:EnableConsoleExporter"] = "false",
                 ["Features:CommercialRevenueEnabled"] = "true"
-            });
+            }.Concat(IntegrationTestConfiguration.JwtSettings)
+                .ToDictionary(static pair => pair.Key, static pair => pair.Value));
         });
     }
 }

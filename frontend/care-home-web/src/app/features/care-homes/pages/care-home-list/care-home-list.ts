@@ -22,6 +22,7 @@ import { ToastService } from '../../../../shared/ui/toast.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
@@ -42,6 +43,7 @@ import { entityRouteKey } from '../../../../shared/routing/entity-route';
     IconActionButtonComponent,
     TablePaginationComponent,
     FilterBarComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './care-home-list.html',
 })

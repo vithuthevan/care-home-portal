@@ -3,6 +3,7 @@
     title="Invoice Templates"
     subtitle="Manage invoice templates used by the billing workflow."
   >
+    <app-import-export-toolbar entity="invoice-templates" (imported)="loadTemplates()" />
     @if (auth.canWrite()) {
       <a mat-flat-button color="primary" routerLink="/invoice-templates/new">Add template</a>
     }
@@ -26,9 +27,6 @@
       title="No invoice templates"
       message="Add a template to control layout and payment details on generated invoices."
     >
-      @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/invoice-templates/new">Add template</a>
-      }
     </app-empty-state>
   }
 

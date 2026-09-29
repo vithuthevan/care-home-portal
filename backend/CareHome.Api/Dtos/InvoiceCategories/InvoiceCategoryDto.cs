@@ -1,22 +1,24 @@
+using CareHome.Api.Common;
 using CareHome.Api.Dtos.Common;
 
-namespace CareHome.Api.Dtos.InvoiceCategories
+namespace CareHome.Api.Dtos.InvoiceCategories;
+
+public class InvoiceCategoryDto
 {
-    public class InvoiceCategoryDto
-    {
-        public int Id { get; set; }
+    public int Id { get; set; }
 
-        public string Code { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
 
-        public string Name { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
-        public string? Description { get; set; }
+    public string? Description { get; set; }
 
-        public bool IsActive { get; set; }
+    public string GroupingMode { get; set; } = InvoiceGroupingModes.PerFunder;
 
-        /// <summary>SystemDefault = provisioned with the tenant; Organisation = created by users.</summary>
-        public string ConfigurationSource { get; set; } = "Organisation";
+    public bool IsActive { get; set; }
 
-        public MasterDataUsageDto? Usage { get; set; }
-    }
+    /// <summary>SystemDefault = provisioned with the tenant; Organisation = created by users.</summary>
+    public string ConfigurationSource { get; set; } = "Organisation";
+
+    public MasterDataUsageDto? Usage { get; set; }
 }

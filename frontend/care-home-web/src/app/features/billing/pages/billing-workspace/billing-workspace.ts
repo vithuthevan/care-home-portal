@@ -11,6 +11,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
@@ -21,7 +22,9 @@ import {
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import {
   billingExceptionHeadline,
   billingExceptionLabel,
@@ -35,6 +38,7 @@ import { InvoiceCategory } from '../../../invoice-categories/models/invoice-cate
 import { InvoiceCategoryService } from '../../../invoice-categories/services/invoice-category.service';
 import { ClientService } from '../../../clients/services/client.service';
 import { Client } from '../../../clients/models/client.model';
+import { InvoiceTemplate } from '../../../invoice-templates/models/invoice-template.model';
 
 interface BillingExceptionView {
   severity?: string;
@@ -63,6 +67,17 @@ interface BillingCoverageView {
   skippedAlreadyBilledDays: number;
 }
 
+interface BillingInvoiceGroupView {
+  careHomeName: string;
+  fundingAuthorityName: string;
+  invoiceCategoryName: string;
+  clientName?: string | null;
+  periodStart: string;
+  periodEnd: string;
+  lineCount: number;
+  subtotalAmount: number;
+}
+
 interface BillingPreviewView {
   requestedPeriodStart: string;
   requestedPeriodEnd: string;
@@ -71,6 +86,15 @@ interface BillingPreviewView {
   coverage?: BillingCoverageView[];
   totalAmount: number;
   canGenerate: boolean;
+  expectedInvoiceCount?: number;
+  invoiceGroups?: BillingInvoiceGroupView[];
+}
+
+interface BillingGenerateResult {
+  invoiceCount: number;
+  totalAmount: number;
+  invoiceIds: number[];
+  emailSend?: { succeeded: number; failed: number; skipped: number };
 }
 
 export interface BillingReviewRow {
@@ -94,6 +118,7 @@ export interface BillingReviewRow {
     MatInputModule,
     MatSelectModule,
     MatButtonModule,
+    MatCheckboxModule,
     DisplayDatePipe,
     PageHeaderComponent,
     ApiErrorComponent,
@@ -101,6 +126,7 @@ export interface BillingReviewRow {
     EmptyStateComponent,
     LoadingStateComponent,
     AppDateFieldComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './billing-workspace.html',
 })
@@ -113,18 +139,22 @@ export class BillingWorkspacePage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
+  private readonly confirm = inject(ConfirmDialogService);
 
   readonly companies = signal<Company[]>([]);
   readonly careHomes = signal<CareHomeLocation[]>([]);
   readonly categories = signal<InvoiceCategory[]>([]);
+  readonly invoiceTemplates = signal<InvoiceTemplate[]>([]);
   readonly clients = signal<Client[]>([]);
   readonly preview = signal<BillingPreviewView | null>(null);
-  readonly generateResult = signal<{ invoiceCount: number; totalAmount: number } | null>(null);
+  readonly generateResult = signal<BillingGenerateResult | null>(null);
+  readonly isBulkSending = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly isPreviewing = signal(false);
   readonly isGenerating = signal(false);
   readonly scopeEditing = signal(true);
   readonly contextClientName = signal<string | null>(null);
+  sendEmailAfterGenerate = false;
 
   readonly isWorking = computed(() => this.isPreviewing() || this.isGenerating());
 
@@ -159,8 +189,11 @@ export class BillingWorkspacePage implements OnInit {
   companyId = 0;
   careHomeId = 0;
   invoiceCategoryId = 0;
+  invoiceTemplateId = 0;
   periodStart = '';
   periodEnd = '';
+  readonly funderCycle = signal(false);
+  private suggestedPeriod = false;
   selectedClientIds: number[] = [];
 
   ngOnInit(): void {
@@ -174,11 +207,16 @@ export class BillingWorkspacePage implements OnInit {
     this.categoriesApi
       .getInvoiceCategories()
       .subscribe((x) => this.categories.set(x.filter((c) => c.isActive)));
+    this.http.get<InvoiceTemplate[]>('/api/invoice-templates').subscribe({
+      next: (x) => this.invoiceTemplates.set(x.filter((t) => t.isActive)),
+      error: () => this.invoiceTemplates.set([]),
+    });
     this.clientsApi.getClients(undefined, undefined, false, 1, 200).subscribe((page) => {
       this.clients.set(page.items);
       this.applyQueryContext();
     });
     this.route.queryParamMap.subscribe(() => this.applyQueryContext());
+    this.suggestPeriod();
   }
 
   runPreview(): void {
@@ -198,21 +236,88 @@ export class BillingWorkspacePage implements OnInit {
   }
 
   generate(): void {
+    const previewData = this.preview();
+    if (!previewData?.canGenerate || this.isWorking()) {
+      return;
+    }
+
+    const invoiceCount = previewData.expectedInvoiceCount ?? 1;
+    const eligible = this.previewEligibleResidents(previewData);
+    const needsConfirm = invoiceCount > 1 || eligible > 1;
+    const scope = this.selectedScopeLabel();
+    const total = previewData.totalAmount;
+
+    const run = () => this.executeGenerate();
+
+    if (!needsConfirm) {
+      run();
+      return;
+    }
+
+    this.confirm
+      .confirm({
+        title: 'Generate invoices',
+        message: `Create ${invoiceCount} invoice(s) for ${scope}? Total £${total.toFixed(2)}.`,
+        confirmLabel: 'Generate',
+      })
+      .subscribe((ok) => {
+        if (ok) {
+          run();
+        }
+      });
+  }
+
+  private executeGenerate(): void {
     if (!this.preview()?.canGenerate || this.isWorking()) {
       return;
     }
     this.errorMessage.set(null);
     this.isGenerating.set(true);
     this.http
-      .post<{ invoiceCount: number; totalAmount: number }>('/api/billing/generate', this.body())
+      .post<BillingGenerateResult>('/api/billing/generate', this.body())
       .pipe(finalize(() => this.isGenerating.set(false)))
       .subscribe({
         next: (result) => {
           this.generateResult.set(result);
-          this.toast.success('Invoice generated successfully.');
+          const count = result.invoiceCount ?? 0;
+          let message =
+            count === 1 ? '1 invoice generated successfully.' : `${count} invoices generated successfully.`;
+          if (result.emailSend) {
+            message += ` Email: ${result.emailSend.succeeded} sent, ${result.emailSend.failed} failed, ${result.emailSend.skipped} skipped.`;
+          }
+          this.toast.success(message);
           this.runPreview();
         },
         error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Generation failed.')),
+      });
+  }
+
+  generatedInvoicesQueryParams(): { ids: string } | null {
+    const ids = this.generateResult()?.invoiceIds ?? [];
+    if (!ids.length) {
+      return null;
+    }
+    return { ids: ids.join(',') };
+  }
+
+  bulkEmailGenerated(): void {
+    const ids = this.generateResult()?.invoiceIds ?? [];
+    if (!ids.length || this.isBulkSending()) {
+      return;
+    }
+    this.isBulkSending.set(true);
+    this.http
+      .post<{ succeeded: number; failed: number; skipped: number }>('/api/invoices/bulk-send', {
+        invoiceIds: ids,
+      })
+      .pipe(finalize(() => this.isBulkSending.set(false)))
+      .subscribe({
+        next: (result) => {
+          this.toast.success(
+            `Email: ${result.succeeded} sent, ${result.failed} failed, ${result.skipped} skipped.`,
+          );
+        },
+        error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Bulk send failed.')),
       });
   }
 
@@ -431,12 +536,19 @@ export class BillingWorkspacePage implements OnInit {
     return this.previewAttentionCount(previewData);
   }
 
+  canPreview(): boolean {
+    return this.companyId !== 0 || this.careHomeId > 0;
+  }
+
   careHomesForSelect(): CareHomeLocation[] {
     const homes = this.careHomes();
-    if (!this.companyId) {
-      return homes;
+    if (this.companyId > 0) {
+      return homes.filter((home) => home.companyId === this.companyId);
     }
-    return homes.filter((home) => home.companyId === this.companyId);
+    if (this.companyId < 0) {
+      return homes.filter((home) => !home.companyId);
+    }
+    return homes;
   }
 
   periodSummary(): string | null {
@@ -458,6 +570,9 @@ export class BillingWorkspacePage implements OnInit {
   }
 
   selectedCompanyName(): string {
+    if (this.companyId < 0) {
+      return 'No company';
+    }
     return this.companies().find((c) => c.id === this.companyId)?.name ?? '';
   }
 
@@ -481,6 +596,32 @@ export class BillingWorkspacePage implements OnInit {
       return 'All categories';
     }
     return this.categories().find((c) => c.id === this.invoiceCategoryId)?.name ?? '—';
+  }
+
+  templatesForSelectedCategory(): InvoiceTemplate[] {
+    if (!this.invoiceCategoryId) {
+      return [];
+    }
+    return this.invoiceTemplates().filter((t) => t.invoiceCategoryId === this.invoiceCategoryId);
+  }
+
+  onInvoiceCategoryChange(): void {
+    if (
+      this.invoiceTemplateId &&
+      !this.templatesForSelectedCategory().some((t) => t.id === this.invoiceTemplateId)
+    ) {
+      this.invoiceTemplateId = 0;
+    }
+  }
+
+  selectedInvoiceTemplateOverrideName(): string {
+    if (!this.invoiceTemplateId) {
+      return 'Automatic (contract pin or rules)';
+    }
+    return (
+      this.invoiceTemplates().find((t) => t.id === this.invoiceTemplateId)?.name ??
+      'Selected template'
+    );
   }
 
   selectedScopeLabel(): string {
@@ -574,12 +715,12 @@ export class BillingWorkspacePage implements OnInit {
       const cached = this.careHomes().find((item) => entityRouteKey(item) === careHomeKey);
       if (cached) {
         this.careHomeId = cached.id;
-        this.companyId = cached.companyId;
+        this.companyId = cached.companyId ?? -1;
       } else {
         this.homesApi.getCareHome(careHomeKey).subscribe({
           next: (home) => {
             this.careHomeId = home.id;
-            this.companyId = home.companyId;
+            this.companyId = home.companyId ?? -1;
           },
         });
       }
@@ -587,7 +728,7 @@ export class BillingWorkspacePage implements OnInit {
       this.careHomeId = careHomeId;
       const home = this.careHomes().find((item) => item.id === careHomeId);
       if (home) {
-        this.companyId = home.companyId;
+        this.companyId = home.companyId ?? -1;
       }
     } else if (companyKey) {
       const cached = this.companies().find((item) => entityRouteKey(item) === companyKey);
@@ -641,8 +782,34 @@ export class BillingWorkspacePage implements OnInit {
   private applyClientContext(client: Client): void {
     this.selectedClientIds = [client.id];
     this.careHomeId = client.careHomeId;
-    this.companyId = client.companyId;
+    this.companyId = client.companyId ?? -1;
     this.contextClientName.set(`${client.firstName} ${client.lastName}`.trim());
+  }
+
+  private suggestPeriod(): void {
+    if (this.suggestedPeriod || (this.periodStart && this.periodEnd)) {
+      return;
+    }
+
+    this.suggestedPeriod = true;
+    const params = this.careHomeId > 0 ? { careHomeId: this.careHomeId } : undefined;
+    this.http
+      .get<{ billingPeriodMode: string; periodStart?: string | null; periodEnd?: string | null }>(
+        '/api/billing/suggested-period',
+        { params },
+      )
+      .subscribe({
+        next: (suggestion) => {
+          this.funderCycle.set(suggestion.billingPeriodMode === 'FunderCycle');
+          if (!this.periodStart && suggestion.periodStart) {
+            this.periodStart = suggestion.periodStart.slice(0, 10);
+          }
+          if (!this.periodEnd && suggestion.periodEnd) {
+            this.periodEnd = suggestion.periodEnd.slice(0, 10);
+          }
+        },
+        error: () => undefined,
+      });
   }
 
   private toDateInput(value: string | null): string {
@@ -657,9 +824,13 @@ export class BillingWorkspacePage implements OnInit {
       companyId: this.companyId,
       careHomeId: this.careHomeId || null,
       invoiceCategoryId: this.invoiceCategoryId || null,
+      invoiceTemplateId: this.invoiceCategoryId && this.invoiceTemplateId
+        ? this.invoiceTemplateId
+        : null,
       periodStart: this.periodStart,
       periodEnd: this.periodEnd,
       clientIds: this.selectedClientIds.length ? this.selectedClientIds : null,
+      sendEmailAfterGenerate: this.sendEmailAfterGenerate,
     };
   }
 }

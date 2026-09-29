@@ -5,8 +5,8 @@ export interface Client {
   careHomeId: number;
   careHomePublicId?: string;
   careHomeName: string;
-  companyId: number;
-  companyPublicId?: string;
+  companyId: number | null;
+  companyPublicId?: string | null;
   companyName: string;
 
   sageId: string;
@@ -33,6 +33,13 @@ export interface Client {
   notes: string | null;
 
   isArchived: boolean;
+
+  primaryFundingAuthorityName?: string | null;
+  guardianName?: string | null;
+  guardianRelationship?: string | null;
+  guardianEmail?: string | null;
+  guardianPhone?: string | null;
+  guardianAddress?: string | null;
 }
 
 export interface CreateClientRequest {

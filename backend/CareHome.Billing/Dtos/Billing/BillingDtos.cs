@@ -1,3 +1,5 @@
+using CareHome.Api.Common;
+
 namespace CareHome.Api.Dtos.Billing
 {
     public class BillingPreviewRequest
@@ -13,6 +15,13 @@ namespace CareHome.Api.Dtos.Billing
         public DateOnly PeriodEnd { get; set; }
 
         public List<int>? ClientIds { get; set; }
+
+        public int? InvoiceTemplateId { get; set; }
+
+        /// <summary>
+        /// When true, attempt to email each generated invoice after creation (same rules as bulk send).
+        /// </summary>
+        public bool SendEmailAfterGenerate { get; set; }
     }
 
     public class BillingPreviewResponse
@@ -36,6 +45,41 @@ namespace CareHome.Api.Dtos.Billing
         public decimal TotalAmount { get; set; }
 
         public bool CanGenerate { get; set; }
+
+        public int ExpectedInvoiceCount { get; set; }
+
+        public List<BillingInvoiceGroupPreviewDto> InvoiceGroups { get; set; } = [];
+    }
+
+    public class BillingInvoiceGroupPreviewDto
+    {
+        public int? CompanyId { get; set; }
+
+        public string CompanyName { get; set; } = string.Empty;
+
+        public int CareHomeId { get; set; }
+
+        public string CareHomeName { get; set; } = string.Empty;
+
+        public int FundingAuthorityId { get; set; }
+
+        public string FundingAuthorityName { get; set; } = string.Empty;
+
+        public int InvoiceCategoryId { get; set; }
+
+        public string InvoiceCategoryName { get; set; } = string.Empty;
+
+        public int? ClientId { get; set; }
+
+        public string? ClientName { get; set; }
+
+        public DateOnly PeriodStart { get; set; }
+
+        public DateOnly PeriodEnd { get; set; }
+
+        public int LineCount { get; set; }
+
+        public decimal SubtotalAmount { get; set; }
     }
 
     public class BillingCoverageDto
@@ -80,7 +124,7 @@ namespace CareHome.Api.Dtos.Billing
 
         public string CareHomeName { get; set; } = string.Empty;
 
-        public int CompanyId { get; set; }
+        public int? CompanyId { get; set; }
 
         public string CompanyName { get; set; } = string.Empty;
 
@@ -98,7 +142,11 @@ namespace CareHome.Api.Dtos.Billing
 
         public string? NominalCodeName { get; set; }
 
-        public int ClientFundingContractId { get; set; }
+        public int? ClientFundingContractId { get; set; }
+
+        public DateOnly? CycleStart { get; set; }
+
+        public string GroupingMode { get; set; } = InvoiceGroupingModes.PerFunder;
 
         public int? FundingRateId { get; set; }
 
@@ -157,6 +205,26 @@ namespace CareHome.Api.Dtos.Billing
         public decimal TotalAmount { get; set; }
 
         public List<BillingExceptionDto> Exceptions { get; set; } = [];
+
+        public BillingEmailSendSummaryDto? EmailSend { get; set; }
+    }
+
+    public class BillingEmailSendSummaryDto
+    {
+        public int Succeeded { get; set; }
+
+        public int Failed { get; set; }
+
+        public int Skipped { get; set; }
+    }
+
+    public class BillingSuggestionDto
+    {
+        public string BillingPeriodMode { get; set; } = BillingPeriodModes.Manual;
+
+        public DateOnly? PeriodStart { get; set; }
+
+        public DateOnly? PeriodEnd { get; set; }
     }
 }
 

@@ -2,7 +2,9 @@
   <app-page-header
     title="Payments"
     subtitle="Cash received, allocations, and unapplied balances"
-  />
+  >
+    <app-import-export-toolbar entity="payments" [importEnabled]="false" />
+  </app-page-header>
 
   <section class="panel panel--flat mb-4">
     <h2 class="m-0 mb-1 text-section">Record payment</h2>

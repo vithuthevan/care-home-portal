@@ -1,5 +1,5 @@
 import { HttpClient } from '@angular/common/http';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -18,6 +18,18 @@ import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 import { Client } from '../../models/client.model';
 import { ClientService } from '../../services/client.service';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import { InvoiceTemplate } from '../../../invoice-templates/models/invoice-template.model';
+
+interface FundingContractDetail {
+  id: number;
+  fundingAuthorityId: number;
+  invoiceCategoryId: number;
+  nominalCodeId: number;
+  invoiceTemplateId?: number | null;
+  contractStartDate: string;
+  contractEndDate: string | null;
+  status: string;
+}
 
 @Component({
   selector: 'app-client-funding-contract-form',
@@ -47,24 +59,53 @@ export class ClientFundingContractForm implements OnInit {
   readonly authorities = signal<{ id: number; name: string }[]>([]);
   readonly categories = signal<{ id: number; name: string }[]>([]);
   readonly nominals = signal<{ id: number; code: string; name: string }[]>([]);
+  readonly invoiceTemplates = signal<InvoiceTemplate[]>([]);
   readonly isLoading = signal(true);
   readonly isSaving = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
   clientRouteKey = '';
+  contractId: number | null = null;
+  isEditMode = false;
+
+  readonly templatesForCategory = computed(() => {
+    const categoryId = this.model.invoiceCategoryId;
+    if (!categoryId) {
+      return [];
+    }
+    return this.invoiceTemplates().filter(
+      (t) => t.isActive && t.invoiceCategoryId === categoryId,
+    );
+  });
 
   model = {
     fundingAuthorityId: 0,
     invoiceCategoryId: 0,
     nominalCodeId: 0,
+    invoiceTemplateId: 0,
     contractStartDate: '',
     contractEndDate: '',
+    status: 'Active',
   };
 
   ngOnInit(): void {
     this.clientRouteKey = this.route.snapshot.paramMap.get('id') ?? '';
+    const contractParam = this.route.snapshot.paramMap.get('contractId');
+    if (contractParam) {
+      this.contractId = Number(contractParam);
+      this.isEditMode = true;
+    }
     this.loadLookups();
     this.loadClient();
+  }
+
+  onInvoiceCategoryChange(): void {
+    if (
+      this.model.invoiceTemplateId &&
+      !this.templatesForCategory().some((t) => t.id === this.model.invoiceTemplateId)
+    ) {
+      this.model.invoiceTemplateId = 0;
+    }
   }
 
   private loadLookups(): void {
@@ -83,27 +124,68 @@ export class ClientFundingContractForm implements OnInit {
       error: (error) =>
         this.errorMessage.set(getApiErrorMessage(error, 'Unable to load nominal codes.')),
     });
+    this.http.get<InvoiceTemplate[]>('/api/invoice-templates').subscribe({
+      next: (x) => this.invoiceTemplates.set(x),
+      error: (error) =>
+        this.errorMessage.set(getApiErrorMessage(error, 'Unable to load invoice templates.')),
+    });
   }
 
   private loadClient(): void {
     this.isLoading.set(true);
-    this.clients
-      .getClient(this.clientRouteKey)
+    this.clients.getClient(this.clientRouteKey).subscribe({
+      next: (client) => {
+        this.client.set(client);
+        this.setBreadcrumbs(client);
+        if (this.isEditMode && this.contractId !== null) {
+          this.loadContract();
+        } else {
+          this.isLoading.set(false);
+        }
+      },
+      error: (error) => {
+        this.isLoading.set(false);
+        this.errorMessage.set(getApiErrorMessage(error, 'Unable to load resident.'));
+      },
+    });
+  }
+
+  private setBreadcrumbs(client: Client): void {
+    this.breadcrumbs.set([
+      { label: 'Residents', routerLink: '/clients' },
+      {
+        label: `${client.firstName} ${client.lastName}`.trim(),
+        routerLink: ['/clients', entityRouteKey(client)],
+      },
+      { label: this.isEditMode ? 'Edit funding contract' : 'Add funding contract' },
+    ]);
+  }
+
+  private loadContract(): void {
+    if (this.contractId === null) {
+      return;
+    }
+
+    this.isLoading.set(true);
+    this.http
+      .get<FundingContractDetail>(`/api/funding-contracts/${this.contractId}`)
       .pipe(finalize(() => this.isLoading.set(false)))
       .subscribe({
-        next: (client) => {
-          this.client.set(client);
-          this.breadcrumbs.set([
-            { label: 'Residents', routerLink: '/clients' },
-            {
-              label: `${client.firstName} ${client.lastName}`.trim(),
-              routerLink: ['/clients', entityRouteKey(client)],
-            },
-            { label: 'Add funding contract' },
-          ]);
+        next: (contract) => {
+          this.model = {
+            fundingAuthorityId: contract.fundingAuthorityId,
+            invoiceCategoryId: contract.invoiceCategoryId,
+            nominalCodeId: contract.nominalCodeId,
+            invoiceTemplateId: contract.invoiceTemplateId ?? 0,
+            contractStartDate: this.toDateInput(contract.contractStartDate),
+            contractEndDate: contract.contractEndDate
+              ? this.toDateInput(contract.contractEndDate)
+              : '',
+            status: contract.status,
+          };
         },
         error: (error) =>
-          this.errorMessage.set(getApiErrorMessage(error, 'Unable to load resident.')),
+          this.errorMessage.set(getApiErrorMessage(error, 'Unable to load funding contract.')),
       });
   }
 
@@ -124,29 +206,40 @@ export class ClientFundingContractForm implements OnInit {
 
     this.isSaving.set(true);
     this.errorMessage.set(null);
-    this.http
-      .post(`/api/clients/${resident.id}/funding-contracts`, {
-        fundingAuthorityId: this.model.fundingAuthorityId,
-        invoiceCategoryId: this.model.invoiceCategoryId,
-        nominalCodeId: this.model.nominalCodeId,
-        contractStartDate: this.model.contractStartDate,
-        contractEndDate: this.model.contractEndDate || null,
-      })
-      .pipe(finalize(() => this.isSaving.set(false)))
-      .subscribe({
-        next: () => {
-          this.toast.success('Funding contract saved.');
-          void this.router.navigate(['/clients', this.clientRouteKey], {
-            queryParams: { tab: 'funding' },
-          });
-        },
-        error: (error) =>
-          this.errorMessage.set(
-            getApiErrorMessage(
-              error,
-              'Unable to save the funding contract. Check dates and try again.',
-            ),
+
+    const payload = {
+      fundingAuthorityId: this.model.fundingAuthorityId,
+      invoiceCategoryId: this.model.invoiceCategoryId,
+      nominalCodeId: this.model.nominalCodeId,
+      invoiceTemplateId: this.model.invoiceTemplateId || null,
+      contractStartDate: this.model.contractStartDate,
+      contractEndDate: this.model.contractEndDate || null,
+      status: this.model.status,
+    };
+
+    const request$ =
+      this.isEditMode && this.contractId !== null
+        ? this.http.put<FundingContractDetail>(`/api/funding-contracts/${this.contractId}`, payload)
+        : this.http.post(`/api/clients/${resident.id}/funding-contracts`, payload);
+
+    request$.pipe(finalize(() => this.isSaving.set(false))).subscribe({
+      next: () => {
+        this.toast.success(this.isEditMode ? 'Funding contract updated.' : 'Funding contract saved.');
+        void this.router.navigate(['/clients', this.clientRouteKey], {
+          queryParams: { tab: 'funding' },
+        });
+      },
+      error: (error) =>
+        this.errorMessage.set(
+          getApiErrorMessage(
+            error,
+            'Unable to save the funding contract. Check dates and try again.',
           ),
-      });
+        ),
+    });
+  }
+
+  private toDateInput(value: string): string {
+    return value.length >= 10 ? value.slice(0, 10) : value;
   }
 }

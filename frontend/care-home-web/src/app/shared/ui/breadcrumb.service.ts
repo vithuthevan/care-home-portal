@@ -84,6 +84,12 @@ export class BreadcrumbService {
     if (path.startsWith('/invoices')) {
       return [{ label: 'Billing', routerLink: '/billing' }, { label: 'Invoices' }];
     }
+    if (path.startsWith('/email-delivery')) {
+      return [
+        { label: 'Billing', routerLink: '/billing' },
+        { label: 'Email delivery log' },
+      ];
+    }
     if (/^\/payments\/[^/]+/.test(path)) {
       return [{ label: 'Payments', routerLink: '/payments' }, { label: 'Payment' }];
     }

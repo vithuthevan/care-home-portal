@@ -14,6 +14,8 @@ import { ClientService } from '../../services/client.service';
 import { CareHomeLocation } from '../../../care-homes/models/care-home.model';
 import { CareHomeService } from '../../../care-homes/services/care-home.service';
 import { CompanyService } from '../../../companies/services/company.service';
+import { FundingAuthorityService } from '../../../funding-authorities/services/funding-authority.service';
+import { FundingAuthority } from '../../../funding-authorities/models/funding-authority.model';
 import { getApiErrorMessage } from '../../../../core/api-error';
 import { AuthService } from '../../../../core/auth.service';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
@@ -23,6 +25,7 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
@@ -52,6 +55,7 @@ import { entityRouteKey } from '../../../../shared/routing/entity-route';
     TablePaginationComponent,
     IconActionButtonComponent,
     MatTooltipModule,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './client-list.html',
 })
@@ -62,6 +66,7 @@ export class ClientList implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly careHomeService = inject(CareHomeService);
   private readonly companyService = inject(CompanyService);
+  private readonly fundingAuthorityService = inject(FundingAuthorityService);
   private readonly breadcrumbs = inject(BreadcrumbService);
   private readonly confirm = inject(ConfirmDialogService);
   private readonly toast = inject(ToastService);
@@ -70,6 +75,7 @@ export class ClientList implements OnInit {
   readonly clients = signal<Client[]>([]);
   readonly totalCount = signal(0);
   readonly careHomes = signal<CareHomeLocation[]>([]);
+  readonly fundingAuthorities = signal<FundingAuthority[]>([]);
   readonly companyContext = signal<{ name: string; routeKey: string } | null>(null);
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
@@ -79,6 +85,9 @@ export class ClientList implements OnInit {
   selectedCompanyId = 0;
   companyFilterKey: string | null = null;
   showArchived = false;
+  selectedFundingAuthorityId = 0;
+  selectedStatus = '';
+  selectedContractStatus = '';
   page = 1;
   pageSize = 20;
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
@@ -89,6 +98,9 @@ export class ClientList implements OnInit {
       this.selectedCareHomeId = careHomeId;
     }
     this.loadCareHomes();
+    this.fundingAuthorityService.getFundingAuthorities().subscribe({
+      next: (items) => this.fundingAuthorities.set(items),
+    });
 
     merge(this.route.queryParamMap).subscribe((params) => {
       const companyKey = params.get('company');
@@ -216,6 +228,9 @@ export class ClientList implements OnInit {
         {
           company: this.companyFilterKey || undefined,
           companyId: this.companyFilterKey ? undefined : this.selectedCompanyId || undefined,
+          status: this.selectedStatus || undefined,
+          fundingAuthorityId: this.selectedFundingAuthorityId || undefined,
+          contractStatus: this.selectedContractStatus || undefined,
         },
       )
       .pipe(finalize(() => this.isLoading.set(false)))
@@ -243,7 +258,10 @@ export class ClientList implements OnInit {
       this.selectedCareHomeId ||
       this.selectedCompanyId ||
       this.companyFilterKey ||
-      this.showArchived
+      this.showArchived ||
+      this.selectedFundingAuthorityId ||
+      this.selectedStatus ||
+      this.selectedContractStatus
     );
   }
 
@@ -258,6 +276,10 @@ export class ClientList implements OnInit {
     this.selectedCompanyId = 0;
     this.companyFilterKey = null;
     this.companyContext.set(null);
+    this.showArchived = false;
+    this.selectedFundingAuthorityId = 0;
+    this.selectedStatus = '';
+    this.selectedContractStatus = '';
     this.page = 1;
     if (this.route.snapshot.queryParamMap.get('company') || this.route.snapshot.queryParamMap.get('companyId')) {
       void this.router.navigate(['/clients']);

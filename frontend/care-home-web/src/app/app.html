@@ -145,6 +145,12 @@
               ><mat-icon>undo</mat-icon
               ><span class="nav-label" matTooltip="Credit Notes" matTooltipShowDelay="400">Credit Notes</span></a
             >
+            <a class="nav-link-nested" routerLink="/email-delivery" routerLinkActive="active-link"
+              ><mat-icon>mail</mat-icon
+              ><span class="nav-label" matTooltip="Email delivery log" matTooltipShowDelay="400"
+                >Email delivery</span
+              ></a
+            >
             <a class="nav-link-nested" routerLink="/misc-charges" routerLinkActive="active-link"
               ><mat-icon>playlist_add</mat-icon
               ><span class="nav-label" matTooltip="Miscellaneous Charges" matTooltipShowDelay="400"
@@ -153,7 +159,7 @@
             >
           }
 
-          @if (showCommercialRevenueNav) {
+          @if (auth.financeModuleEnabled()) {
             @if (!sidebarCollapsed() || isMobile()) {
               <button
                 type="button"
@@ -291,7 +297,22 @@
         >
           <mat-icon>{{ isMobile() ? 'menu' : sidebarCollapsed() ? 'menu_open' : 'menu' }}</mat-icon>
         </button>
+        <button mat-icon-button type="button" (click)="goBack()" aria-label="Back">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
         <span class="toolbar-spacer" aria-hidden="true"></span>
+        <button
+          mat-icon-button
+          type="button"
+          class="theme-toggle"
+          (click)="toggleColorMode()"
+          [attr.aria-label]="
+            themeService.activeColorMode() === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+          "
+          [matTooltip]="themeService.activeColorMode() === 'dark' ? 'Light mode' : 'Dark mode'"
+        >
+          <mat-icon>{{ themeService.activeColorMode() === 'dark' ? 'light_mode' : 'dark_mode' }}</mat-icon>
+        </button>
         <button type="button" class="user-chip" [matMenuTriggerFor]="userMenu">
           <span class="avatar">{{ initials() }}</span>
           <span class="user-meta">
@@ -312,31 +333,6 @@
             <mat-icon>logout</mat-icon>
             <span>Sign out</span>
           </button>
-          <div class="user-menu-theme">
-            <span class="user-menu-theme__label">Appearance</span>
-            <button
-              mat-menu-item
-              type="button"
-              (click)="setColorMode('light')"
-              [attr.aria-current]="themeService.activeColorMode() === 'light' ? 'true' : null"
-            >
-              <mat-icon>{{
-                themeService.activeColorMode() === 'light' ? 'check' : 'light_mode'
-              }}</mat-icon>
-              <span>Light mode</span>
-            </button>
-            <button
-              mat-menu-item
-              type="button"
-              (click)="setColorMode('dark')"
-              [attr.aria-current]="themeService.activeColorMode() === 'dark' ? 'true' : null"
-            >
-              <mat-icon>{{
-                themeService.activeColorMode() === 'dark' ? 'check' : 'dark_mode'
-              }}</mat-icon>
-              <span>Dark mode</span>
-            </button>
-          </div>
         </mat-menu>
       </header>
       <main class="min-w-0">

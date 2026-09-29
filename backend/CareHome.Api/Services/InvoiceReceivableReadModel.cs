@@ -41,6 +41,20 @@ public sealed class InvoiceReceivableReadModel(
         }
     }
 
+    public async Task<Dictionary<int, ReceivableAmounts>> GetAmountsForInvoicesAsync(
+        int tenantId,
+        IReadOnlyList<int> invoiceIds,
+        CancellationToken cancellationToken)
+    {
+        if (invoiceIds.Count == 0)
+        {
+            return new Dictionary<int, ReceivableAmounts>();
+        }
+
+        var snapshots = await LoadSnapshotsAsync(tenantId, invoiceIds.ToList(), cancellationToken);
+        return snapshots.ToDictionary(x => x.Key, x => x.Value.Amounts);
+    }
+
     public async Task EnrichDetailAsync(int tenantId, InvoiceDetailDto item, CancellationToken cancellationToken)
     {
         var snapshots = await LoadSnapshotsAsync(tenantId, [item.Id], cancellationToken);

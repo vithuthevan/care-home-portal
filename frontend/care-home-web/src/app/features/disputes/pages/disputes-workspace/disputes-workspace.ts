@@ -4,6 +4,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { getApiErrorMessage } from '../../../../core/api-error';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 interface DisputeRow {
   publicId: string;
@@ -16,9 +17,11 @@ interface DisputeRow {
 
 @Component({
   selector: 'app-disputes-workspace',
-  imports: [DecimalPipe, PageHeaderComponent, ApiErrorComponent],
+  imports: [DecimalPipe, PageHeaderComponent, ApiErrorComponent, ImportExportToolbarComponent],
   template: `
-    <app-page-header title="Disputes" subtitle="Invoice disputes and funder queries" />
+    <app-page-header title="Disputes" subtitle="Invoice disputes and funder queries">
+      <app-import-export-toolbar entity="disputes" [importEnabled]="false" />
+    </app-page-header>
     @if (errorMessage()) {
       <app-api-error [message]="errorMessage()!" />
     }

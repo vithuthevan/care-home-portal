@@ -636,6 +636,7 @@ public sealed class PaymentService(
         var invoicePublicIds = lines.Select(l => l.InvoicePublicId).Distinct().ToList();
         var invoices = await dbContext.Invoices
             .Where(i => i.TenantId == tenantId && invoicePublicIds.Contains(i.PublicId))
+            .OrderBy(i => i.Id)
             .ToListAsync(cancellationToken);
 
         if (invoices.Count != invoicePublicIds.Count)
@@ -644,13 +645,21 @@ public sealed class PaymentService(
             throw new InvalidOperationException("One or more invoices were not found for this tenant.");
         }
 
+        foreach (var invoiceId in invoices.Select(i => i.Id))
+        {
+            await SqlAppLock.AcquireExclusiveAsync(
+                dbContext.Database,
+                $"invoice-allocate-{tenantId}-{invoiceId}",
+                cancellationToken);
+        }
+
         var invoiceIds = invoices.Select(i => i.Id).ToList();
         var credits = await LoadCreditTotalsAsync(tenantId, invoiceIds, cancellationToken);
         var allocated = await LoadActiveAllocationTotalsAsync(tenantId, invoiceIds, cancellationToken);
 
         var paymentAllocated = await dbContext.PaymentAllocations
             .Where(a => a.PaymentId == payment.Id && !a.IsReversed)
-            .SumAsync(a => a.AllocatedAmount, cancellationToken);
+            .SumAsync(a => (decimal?)a.AllocatedAmount, cancellationToken) ?? 0m;
 
         var paymentRemaining = Money.Round(payment.Amount - paymentAllocated);
         var totalNew = Money.Round(lines.Sum(l => l.Amount));
@@ -762,7 +771,7 @@ public sealed class PaymentService(
     {
         var allocated = await dbContext.PaymentAllocations.AsNoTracking()
             .Where(a => a.PaymentId == payment.Id && !a.IsReversed)
-            .SumAsync(a => a.AllocatedAmount, cancellationToken);
+            .SumAsync(a => (decimal?)a.AllocatedAmount, cancellationToken) ?? 0m;
         return Money.Round(Math.Max(0m, payment.Amount - allocated));
     }
 

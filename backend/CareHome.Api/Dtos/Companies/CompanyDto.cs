@@ -1,19 +1,26 @@
-namespace CareHome.Api.Dtos.Companies
+namespace CareHome.Api.Dtos.Companies;
+
+public class CompanyDto
 {
-    public class CompanyDto
-    {
-        public int Id { get; set; }
+    public int Id { get; set; }
 
-        public Guid PublicId { get; set; }
+    public Guid PublicId { get; set; }
 
-        public string Name { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
-        public bool IsActive { get; set; }
+    public string? Address { get; set; }
 
-        public int CareHomeCount { get; set; }
+    public string? Phone { get; set; }
 
-        public int ActiveCareHomeCount { get; set; }
+    public string? Email { get; set; }
 
-        public int ResidentCount { get; set; }
-    }
+    public string? LogoPath { get; set; }
+
+    public bool IsActive { get; set; }
+
+    public int CareHomeCount { get; set; }
+
+    public int ActiveCareHomeCount { get; set; }
+
+    public int ResidentCount { get; set; }
 }

@@ -197,6 +197,10 @@ public class PaymentsIntegrationTests(ApiIntegrationFixture fixture)
 
         var client = CreateAuthedClient(token);
         var invoice = await GetSingleInvoiceAsync(client);
+        var allocationAmount = Math.Min(800m, invoice.TotalAmount);
+        Assert.True(allocationAmount > 0);
+        Assert.True(allocationAmount <= invoice.TotalAmount);
+        Assert.True(2 * allocationAmount > invoice.TotalAmount);
 
         async Task<PaymentDetailDto> CreatePaymentAsync()
         {
@@ -204,7 +208,7 @@ public class PaymentsIntegrationTests(ApiIntegrationFixture fixture)
             {
                 CareHomeId = scenario.CareHome.Id,
                 ReceivedDate = scenario.PeriodEnd,
-                Amount = 800m
+                Amount = allocationAmount
             });
             response.EnsureSuccessStatusCode();
             return (await response.Content.ReadFromJsonAsync<PaymentDetailDto>(JsonOptions))!;
@@ -219,7 +223,7 @@ public class PaymentsIntegrationTests(ApiIntegrationFixture fixture)
             {
                 Allocations =
                 [
-                    new PaymentAllocationLineRequest { InvoicePublicId = invoice.PublicId, Amount = 800m }
+                    new PaymentAllocationLineRequest { InvoicePublicId = invoice.PublicId, Amount = allocationAmount }
                 ]
             });
 
@@ -229,7 +233,7 @@ public class PaymentsIntegrationTests(ApiIntegrationFixture fixture)
             {
                 Allocations =
                 [
-                    new PaymentAllocationLineRequest { InvoicePublicId = invoice.PublicId, Amount = 800m }
+                    new PaymentAllocationLineRequest { InvoicePublicId = invoice.PublicId, Amount = allocationAmount }
                 ]
             });
 

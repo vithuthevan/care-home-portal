@@ -3,6 +3,7 @@
     title="Nominal Codes"
     subtitle="Manage accounting codes used on invoices and Sage export."
   >
+    <app-import-export-toolbar entity="nominal-codes" (imported)="loadNominalCodes()" />
     @if (auth.canWrite()) {
       <a mat-flat-button color="primary" routerLink="/nominal-codes/new">Add nominal code</a>
     }
@@ -26,9 +27,6 @@
       title="No nominal codes"
       message="Add a nominal code to link funding contracts and Sage export."
     >
-      @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/nominal-codes/new">Add nominal code</a>
-      }
     </app-empty-state>
   }
 

@@ -25,6 +25,7 @@ import {
   EntitySummaryStripComponent,
 } from '../../../../shared/ui/entity-summary-strip';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 interface FundingContractView {
   id: number;
@@ -33,6 +34,8 @@ interface FundingContractView {
   fundingAuthorityName: string;
   invoiceCategoryName: string;
   nominalCode: string;
+  invoiceTemplateId?: number | null;
+  invoiceTemplateName?: string | null;
   contractStartDate: string;
   contractEndDate: string | null;
   status: string;
@@ -78,6 +81,7 @@ interface ResidentInvoiceRow {
     LabeledStatusComponent,
     EmptyStateComponent,
     EntitySummaryStripComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './client-profile.html',
   styleUrl: './client-profile.scss',
@@ -86,7 +90,7 @@ export class ClientProfilePage implements OnInit {
   readonly entityRouteKey = entityRouteKey;
 
   companyRouteKey(client: Client): string {
-    return entityRouteKey({ id: client.companyId, publicId: client.companyPublicId });
+    return entityRouteKey({ id: client.companyId ?? 0, publicId: client.companyPublicId });
   }
 
   careHomeRouteKey(client: Client): string {
@@ -269,14 +273,20 @@ export class ClientProfilePage implements OnInit {
 
   billingQueryParams(client: Client): Record<string, string | number> {
     const period = this.suggestedBillingPeriod();
-    return {
-      company: entityRouteKey({ id: client.companyId, publicId: client.companyPublicId }),
+    const params: Record<string, string | number> = {
       careHome: entityRouteKey({ id: client.careHomeId, publicId: client.careHomePublicId }),
       client: entityRouteKey(client),
       clientName: `${client.firstName} ${client.lastName}`.trim(),
       periodStart: period.start,
       periodEnd: period.end,
     };
+    if (client.companyId) {
+      params['company'] = entityRouteKey({
+        id: client.companyId,
+        publicId: client.companyPublicId,
+      });
+    }
+    return params;
   }
 
   billingPeriodLabel(): string {
@@ -286,6 +296,10 @@ export class ClientProfilePage implements OnInit {
 
   fundingContractLink(client: Client): (string | number)[] {
     return ['/clients', entityRouteKey(client), 'funding', 'new'];
+  }
+
+  fundingContractEditLink(client: Client, contractId: number): (string | number)[] {
+    return ['/clients', entityRouteKey(client), 'funding', contractId, 'edit'];
   }
 
   fundingRateLink(client: Client, contractId?: number): (string | number)[] {

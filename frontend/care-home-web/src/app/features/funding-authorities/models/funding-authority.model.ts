@@ -14,6 +14,7 @@ export interface FundingAuthority {
 
   billingFrequency: string;
   billingIntervalDays: number | null;
+  cycleAnchorDate?: string | null;
 
   isActive: boolean;
   configurationSource?: string;
@@ -32,6 +33,7 @@ export interface CreateFundingAuthorityRequest {
 
   billingFrequency: string;
   billingIntervalDays?: number | null;
+  cycleAnchorDate?: string | null;
 }
 
 export interface UpdateFundingAuthorityRequest extends CreateFundingAuthorityRequest {

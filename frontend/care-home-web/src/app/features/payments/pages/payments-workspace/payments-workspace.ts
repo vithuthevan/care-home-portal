@@ -21,6 +21,7 @@ import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 interface PaymentRow {
   publicId: string;
@@ -68,6 +69,7 @@ interface PaymentAllocationRow {
     StatusBadgeComponent,
     TablePaginationComponent,
     AppDateFieldComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './payments-workspace.html',
 })

@@ -5,6 +5,7 @@ using System.Text.Json;
 using CareHome.Api.Common;
 using CareHome.Api.Data;
 using CareHome.Api.Dtos.Billing;
+using CareHome.Api.Models;
 using CareHome.Api.Dtos.CreditNotes;
 using CareHome.Api.Dtos.Dashboard;
 using CareHome.Api.Dtos.Invoices;
@@ -21,6 +22,62 @@ namespace CareHome.Api.Tests.Integration;
 public class BillingWiringIntegrationTests(ApiIntegrationFixture fixture)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+
+    [SqlIntegrationFact]
+    public async Task Pinned_contract_template_is_used_when_resolver_would_pick_another()
+    {
+        var scenario = await IntegrationTestDataBuilder.SeedBillingTenantAsync(
+            fixture.Factory.Services,
+            "Template Pin");
+
+        int pinnedTemplateId;
+        using (var scope = fixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CareHomeDbContext>();
+            var scopedWinner = new InvoiceTemplate
+            {
+                TenantId = scenario.Tenant.Id,
+                Name = "Scoped resolver winner",
+                InvoiceCategoryId = scenario.Category.Id,
+                FundingAuthorityId = scenario.FundingAuthority.Id,
+                CareHomeId = scenario.CareHome.Id,
+                HeaderText1 = "Scoped",
+                ContactEmail = "finance@test.local",
+                EmailSubjectTemplate = "Invoice {{InvoiceNumber}}",
+                EmailBodyTemplate = "Attached",
+                IsActive = true
+            };
+            var pinned = new InvoiceTemplate
+            {
+                TenantId = scenario.Tenant.Id,
+                Name = "Explicitly pinned",
+                InvoiceCategoryId = scenario.Category.Id,
+                HeaderText1 = "Pinned",
+                ContactEmail = "finance@test.local",
+                EmailSubjectTemplate = "Invoice {{InvoiceNumber}}",
+                EmailBodyTemplate = "Attached",
+                IsActive = true
+            };
+            db.InvoiceTemplates.AddRange(scopedWinner, pinned);
+            await db.SaveChangesAsync();
+            pinnedTemplateId = pinned.Id;
+
+            var contract = await db.ClientFundingContracts
+                .FirstAsync(x => x.ClientId == scenario.Client.Id);
+            contract.InvoiceTemplateId = pinnedTemplateId;
+            await db.SaveChangesAsync();
+        }
+
+        var invoiceId = await GenerateInvoiceAsync(scenario);
+
+        using (var scope = fixture.Factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<CareHomeDbContext>();
+            var invoice = await db.Invoices.AsNoTracking().FirstAsync(x => x.Id == invoiceId);
+            Assert.Equal(pinnedTemplateId, invoice.InvoiceTemplateId);
+            Assert.Equal("Explicitly pinned", invoice.SnapshotTemplateName);
+        }
+    }
 
     [SqlIntegrationFact]
     public async Task Credit_note_preview_with_invoiceId_only_includes_that_invoice()
@@ -180,16 +237,19 @@ public class BillingWiringIntegrationTests(ApiIntegrationFixture fixture)
         preview.EnsureSuccessStatusCode();
         var previewBody = await preview.Content.ReadFromJsonAsync<CreditNotePreviewResponse>(JsonOptions);
         var firstLine = previewBody!.Lines.First();
+        var partialCredit = Money.Round(firstLine.CreditAmount / 2m);
+        Assert.True(partialCredit > 0 && partialCredit < firstLine.CreditAmount);
 
-        await client.PostAsJsonAsync("/api/credit-notes/generate", new CreditNotePreviewRequest
+        var generateCredit = await client.PostAsJsonAsync("/api/credit-notes/generate", new CreditNotePreviewRequest
         {
             InvoiceId = invoiceId,
             PeriodStart = scenario.PeriodStart,
             PeriodEnd = scenario.PeriodEnd,
             CreditNoteDate = scenario.PeriodEnd,
             Reason = "Sage rows",
-            LineAmounts = new Dictionary<int, decimal> { [firstLine.InvoiceLineId] = firstLine.CreditAmount }
+            LineAmounts = new Dictionary<int, decimal> { [firstLine.InvoiceLineId] = partialCredit }
         });
+        generateCredit.EnsureSuccessStatusCode();
 
         var export = await client.PostAsJsonAsync("/api/sage-exports", new SageExportRequest
         {

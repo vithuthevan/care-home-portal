@@ -16,6 +16,7 @@ import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-but
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import { PagedResult } from '../../../../core/models';
 
 @Component({
@@ -30,6 +31,7 @@ import { PagedResult } from '../../../../core/models';
     TablePaginationComponent,
     FilterBarComponent,
     EmptyStateComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './user-list.html',
 })

@@ -46,6 +46,7 @@ export class CompanyDetail implements OnInit {
   readonly careHomes = signal<CareHomeLocation[]>([]);
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly logoPreviewUrl = signal<string | null>(null);
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
@@ -63,6 +64,12 @@ export class CompanyDetail implements OnInit {
       .subscribe({
         next: (company) => {
           this.company.set(company);
+          this.logoPreviewUrl.set(null);
+          if (company.logoPath) {
+            this.companyService.getLogo(key).subscribe({
+              next: (blob) => this.logoPreviewUrl.set(URL.createObjectURL(blob)),
+            });
+          }
           this.breadcrumbs.set([
             { label: 'Companies', routerLink: '/companies' },
             { label: company.name },

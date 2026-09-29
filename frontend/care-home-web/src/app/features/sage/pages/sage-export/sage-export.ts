@@ -19,6 +19,7 @@ import { ToastService } from '../../../../shared/ui/toast.service';
 import { CareHomeService } from '../../../care-homes/services/care-home.service';
 import { CareHomeLocation } from '../../../care-homes/models/care-home.model';
 import { MatSelectModule } from '@angular/material/select';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 interface SageExportBatch {
   id: number;
@@ -42,6 +43,7 @@ interface SageExportBatch {
     IconActionButtonComponent,
     TablePaginationComponent,
     AppDateFieldComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './sage-export.html',
 })

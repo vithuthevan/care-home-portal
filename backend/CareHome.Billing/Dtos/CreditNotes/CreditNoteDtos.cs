@@ -82,6 +82,8 @@ namespace CareHome.Api.Dtos.CreditNotes
 
         public DateTimeOffset? SentAt { get; set; }
 
+        public string? RecipientEmail { get; set; }
+
         public List<CreditNoteLineDto> Lines { get; set; } = [];
     }
 

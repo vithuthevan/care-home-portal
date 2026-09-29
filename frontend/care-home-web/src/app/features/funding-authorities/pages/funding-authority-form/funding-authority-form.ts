@@ -5,7 +5,7 @@ import { finalize } from 'rxjs';
 
 import { FundingAuthorityService } from '../../services/funding-authority.service';
 import { getApiErrorMessage, logApiFailure } from '../../../../core/api-error';
-import { optionalEmail } from '../../../../shared/format/optional-email';
+import { optionalEmail, optionalEmailValidator } from '../../../../shared/format/optional-email';
 import { AuthService } from '../../../../core/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -15,6 +15,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
+import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 
 @Component({
   selector: 'app-funding-authority-form',
@@ -29,6 +30,7 @@ import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
+    AppDateFieldComponent,
   ],
   templateUrl: './funding-authority-form.html',
 })
@@ -52,10 +54,11 @@ export class FundingAuthorityForm implements OnInit {
     type: ['', Validators.required],
     contactName: ['', Validators.maxLength(150)],
     phone: ['', Validators.maxLength(30)],
-    email: ['', [Validators.email, Validators.maxLength(150)]],
+    email: ['', [optionalEmailValidator(), Validators.maxLength(150)]],
     address: ['', Validators.maxLength(300)],
     billingFrequency: ['', Validators.required],
     billingIntervalDays: this.formBuilder.control<number | null>(null),
+    cycleAnchorDate: [''],
     isActive: [true],
   });
 
@@ -118,6 +121,7 @@ export class FundingAuthorityForm implements OnInit {
               address: authority.address ?? '',
               billingFrequency: authority.billingFrequency,
               billingIntervalDays: authority.billingIntervalDays,
+              cycleAnchorDate: authority.cycleAnchorDate ?? '',
               isActive: authority.isActive,
             },
             { emitEvent: false },
@@ -156,6 +160,7 @@ export class FundingAuthorityForm implements OnInit {
       billingFrequency: value.billingFrequency,
       billingIntervalDays:
         value.billingFrequency === 'CustomDays' ? value.billingIntervalDays : null,
+      cycleAnchorDate: value.cycleAnchorDate || null,
     };
 
     if (this.isEditMode && this.fundingAuthorityRouteKey !== null) {

@@ -10,7 +10,7 @@ namespace CareHome.Api.Models
 
         public int ClientId { get; set; }
 
-        public int ClientFundingContractId { get; set; }
+        public int? ClientFundingContractId { get; set; }
 
         public int? FundingRateId { get; set; }
 
@@ -76,7 +76,7 @@ namespace CareHome.Api.Models
 
         public Client Client { get; set; } = null!;
 
-        public ClientFundingContract ClientFundingContract { get; set; } = null!;
+        public ClientFundingContract? ClientFundingContract { get; set; }
 
         public FundingRate? FundingRate { get; set; }
 

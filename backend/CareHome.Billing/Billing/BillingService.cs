@@ -29,6 +29,10 @@ namespace CareHome.Api.Billing
 
             var critical = exceptions.Any(x => x.Severity == "Error");
             var total = Money.Round(lines.Sum(x => x.Amount));
+            var invoiceGroups = BillingInvoiceGrouper.BuildGroupPreviews(
+                lines,
+                request.PeriodStart,
+                request.PeriodEnd);
 
             return new BillingPreviewResponse
             {
@@ -41,7 +45,9 @@ namespace CareHome.Api.Billing
                 Lines = lines,
                 Exceptions = exceptions,
                 TotalAmount = total,
-                CanGenerate = !critical && lines.Count > 0
+                CanGenerate = !critical && lines.Count > 0,
+                ExpectedInvoiceCount = invoiceGroups.Count,
+                InvoiceGroups = invoiceGroups
             };
         }
 
@@ -126,26 +132,26 @@ namespace CareHome.Api.Billing
             var dueDate = invoiceDate.AddDays(settings.PaymentTermsDays);
             var createdIds = new List<int>();
 
-            var groups = lines.GroupBy(x => new
-            {
-                x.CompanyId,
-                x.CareHomeId,
-                x.FundingAuthorityId,
-                x.InvoiceCategoryId
-            });
-
-            foreach (var group in groups)
+            foreach (var group in BillingInvoiceGrouper.GroupLines(lines))
             {
                 foreach (var line in group)
                 {
-                    var overlap = await HasFinalizedOverlapAsync(
-                        tenantId,
-                        line.ClientId,
-                        line.ClientFundingContractId,
-                        line.InvoiceCategoryId,
-                        line.ServiceFrom,
-                        line.ServiceTo,
-                        cancellationToken);
+                    var overlap = line.ClientFundingContractId is int contractId
+                        ? await HasFinalizedOverlapAsync(
+                            tenantId,
+                            line.ClientId,
+                            contractId,
+                            line.InvoiceCategoryId,
+                            line.ServiceFrom,
+                            line.ServiceTo,
+                            cancellationToken)
+                        : await HasClientCategoryOverlapWithoutContractAsync(
+                            tenantId,
+                            line.ClientId,
+                            line.InvoiceCategoryId,
+                            line.ServiceFrom,
+                            line.ServiceTo,
+                            cancellationToken);
 
                     if (overlap)
                     {
@@ -155,12 +161,18 @@ namespace CareHome.Api.Billing
                 }
 
                 var first = group.First();
-                var template = await templateResolver.ResolveAsync(
+                var pinnedTemplateId = await GetContractPinnedTemplateIdAsync(
                     tenantId,
+                    first.ClientFundingContractId,
+                    cancellationToken);
+                var template = await ResolveTemplateForBillingAsync(
+                    tenantId,
+                    request,
                     first.InvoiceCategoryId,
                     first.FundingAuthorityId,
                     first.CareHomeId,
                     first.CompanyId,
+                    pinnedTemplateId,
                     cancellationToken);
 
                 if (template is null)
@@ -170,6 +182,12 @@ namespace CareHome.Api.Billing
                 }
 
                 var invoiceNumber = await sequences.NextAsync(tenantId, DocumentTypes.Invoice, cancellationToken);
+                var splitInvoice = first.CycleStart.HasValue
+                    || InvoiceGroupingModes.IsPerResident(first.GroupingMode);
+                var periodStart = splitInvoice ? group.Min(x => x.ServiceFrom) : request.PeriodStart;
+                var periodEnd = splitInvoice ? group.Max(x => x.ServiceTo) : request.PeriodEnd;
+                var groupInvoiceDate = splitInvoice ? periodEnd : invoiceDate;
+                var groupDueDate = splitInvoice ? groupInvoiceDate.AddDays(settings.PaymentTermsDays) : dueDate;
 
                 var invoice = new Invoice
                 {
@@ -180,10 +198,10 @@ namespace CareHome.Api.Billing
                     FundingAuthorityId = first.FundingAuthorityId,
                     InvoiceCategoryId = first.InvoiceCategoryId,
                     InvoiceTemplateId = template.Id,
-                    InvoiceDate = invoiceDate,
-                    DueDate = dueDate,
-                    PeriodStart = request.PeriodStart,
-                    PeriodEnd = request.PeriodEnd,
+                    InvoiceDate = groupInvoiceDate,
+                    DueDate = groupDueDate,
+                    PeriodStart = periodStart,
+                    PeriodEnd = periodEnd,
                     Status = InvoiceStatuses.Generated,
                     PaymentStatus = "NotPaid",
                     CreatedAt = now,
@@ -201,9 +219,6 @@ namespace CareHome.Api.Billing
                     SnapshotHeaderText1 = template.HeaderText1,
                     SnapshotHeaderText2 = template.HeaderText2,
                     SnapshotFooterText = template.FooterText,
-                    SnapshotBankAccountName = template.BankAccountName,
-                    SnapshotSortCode = template.SortCode,
-                    SnapshotAccountNumber = template.AccountNumber,
                     SnapshotContactName = template.ContactName,
                     SnapshotContactJobTitle = template.ContactJobTitle,
                     SnapshotContactEmail = template.ContactEmail,
@@ -220,6 +235,7 @@ namespace CareHome.Api.Billing
                 invoice.SnapshotFundingAuthorityCode = authority.Code;
                 invoice.SnapshotInvoiceCategoryCode = category.Code;
                 invoice.SnapshotCareHomeCode = careHome.Code;
+                invoice.SnapshotBankDetails = careHome.BankDetails;
                 invoice.RecipientEmail ??= authority.Email;
 
                 foreach (var line in group)
@@ -310,12 +326,32 @@ namespace CareHome.Api.Billing
                 return (lines, exceptions, coverage);
             }
 
-            var company = await dbContext.Companies.AsNoTracking()
-                .FirstOrDefaultAsync(x => x.Id == request.CompanyId && x.TenantId == tenantId, cancellationToken);
-            if (company is null)
+            if (request.InvoiceTemplateId is int overrideTemplateId
+                && request.InvoiceCategoryId is int overrideCategoryId)
             {
-                exceptions.Add(Error("INVALID_COMPANY", "Selected company was not found in this organisation."));
-                return (lines, exceptions, coverage);
+                var overrideTemplate = await templateResolver.LoadPinnedAsync(
+                    tenantId,
+                    overrideTemplateId,
+                    overrideCategoryId,
+                    cancellationToken);
+                if (overrideTemplate is null)
+                {
+                    exceptions.Add(Error(
+                        "INVALID_TEMPLATE",
+                        "The selected invoice template override was not found, is inactive, or does not match the invoice category."));
+                    return (lines, exceptions, coverage);
+                }
+            }
+
+            if (request.CompanyId > 0)
+            {
+                var company = await dbContext.Companies.AsNoTracking()
+                    .FirstOrDefaultAsync(x => x.Id == request.CompanyId && x.TenantId == tenantId, cancellationToken);
+                if (company is null)
+                {
+                    exceptions.Add(Error("INVALID_COMPANY", "Selected company was not found in this organisation."));
+                    return (lines, exceptions, coverage);
+                }
             }
 
             var settings = await dbContext.TenantSettings.AsNoTracking()
@@ -337,13 +373,9 @@ namespace CareHome.Api.Billing
                 .Include(x => x.FundingContracts)
                     .ThenInclude(x => x.NominalCode)
                 .Where(x => x.TenantId == tenantId)
-                .Where(x => !x.IsArchived)
-                .Where(x => x.CareHome.CompanyId == request.CompanyId);
+                .Where(x => !x.IsArchived);
 
-            if (request.CareHomeId.HasValue)
-            {
-                clientsQuery = clientsQuery.Where(x => x.CareHomeId == request.CareHomeId.Value);
-            }
+            clientsQuery = ApplyBillingScope(clientsQuery, request);
 
             if (allowedHomes is not null)
             {
@@ -359,11 +391,16 @@ namespace CareHome.Api.Billing
 
             foreach (var client in clients)
             {
+                var funderCycle = BillingPeriodModes.IsFunderCycle(settings.BillingPeriodMode);
+                var occupancyEnd = funderCycle && client.DischargeDate is DateOnly discharged && discharged < request.PeriodEnd
+                    ? discharged
+                    : request.PeriodEnd;
+                var occupancyStart = funderCycle ? client.AdmissionDate : request.PeriodStart;
                 var occupancy = DateRanges.Intersect(
                     client.AdmissionDate,
                     client.DischargeDate,
-                    request.PeriodStart,
-                    request.PeriodEnd);
+                    occupancyStart,
+                    occupancyEnd);
 
                 if (occupancy is null)
                 {
@@ -482,12 +519,14 @@ namespace CareHome.Api.Billing
                         continue;
                     }
 
-                    var template = await templateResolver.ResolveAsync(
+                    var template = await ResolveTemplateForBillingAsync(
                         tenantId,
+                        request,
                         contract.InvoiceCategoryId,
                         contract.FundingAuthorityId,
                         client.CareHomeId,
                         client.CareHome.CompanyId,
+                        contract.InvoiceTemplateId,
                         cancellationToken);
 
                     if (template is null)
@@ -506,10 +545,22 @@ namespace CareHome.Api.Billing
                         contract.InvoiceCategoryId,
                         cancellationToken);
 
-                    var remaining = DateRanges.Subtract(
+                    var slices = BillingPeriodSlices.For(
+                        funderCycle,
+                        contract.FundingAuthority.BillingFrequency,
+                        contract.FundingAuthority.BillingIntervalDays,
+                        contract.FundingAuthority.CycleAnchorDate,
+                        contract.ContractStartDate,
                         contractSlice.Value.Start,
-                        contractSlice.Value.End,
-                        billed);
+                        contractSlice.Value.End);
+                    var remaining = new List<(DateOnly Start, DateOnly End, DateOnly? CycleStart)>();
+                    foreach (var slice in slices)
+                    {
+                        foreach (var fragment in DateRanges.Subtract(slice.Start, slice.End, billed))
+                        {
+                            remaining.Add((fragment.Start, fragment.End, slice.CycleStart));
+                        }
+                    }
 
                     var alreadyBilledPeriods = billed
                         .Select(b => DateRanges.Intersect(
@@ -606,7 +657,7 @@ namespace CareHome.Api.Billing
                                 CareHomeId = client.CareHomeId,
                                 CareHomeName = client.CareHome.Name,
                                 CompanyId = client.CareHome.CompanyId,
-                                CompanyName = client.CareHome.Company.Name,
+                                CompanyName = client.CareHome.Company?.Name ?? string.Empty,
                                 FundingAuthorityId = contract.FundingAuthorityId,
                                 FundingAuthorityName = contract.FundingAuthority.Name,
                                 InvoiceCategoryId = contract.InvoiceCategoryId,
@@ -623,7 +674,9 @@ namespace CareHome.Api.Billing
                                 Rate = rate.Amount,
                                 Amount = amount,
                                 Description = $"{contract.InvoiceCategory.Name} {rateSlice.Value.Start:yyyy-MM-dd} to {rateSlice.Value.End:yyyy-MM-dd}",
-                                InvoiceTemplateId = template?.Id
+                                InvoiceTemplateId = template?.Id,
+                                CycleStart = fragment.CycleStart,
+                                GroupingMode = contract.InvoiceCategory.GroupingMode
                             });
                         }
 
@@ -646,7 +699,14 @@ namespace CareHome.Api.Billing
 
             if (!request.InvoiceCategoryId.HasValue || request.InvoiceCategoryId == miscCategory?.Id)
             {
-                await AddUnbilledMiscChargesAsync(tenantId, request, allowedHomes, lines, exceptions, cancellationToken);
+                await AddUnbilledMiscChargesAsync(
+                    tenantId,
+                    request,
+                    allowedHomes,
+                    settings.AllowPrivatePayer,
+                    lines,
+                    exceptions,
+                    cancellationToken);
             }
 
             if (lines.Count == 0 && coverage.Any(x => x.SkippedAlreadyBilledDays > 0))
@@ -664,6 +724,7 @@ namespace CareHome.Api.Billing
             int tenantId,
             BillingPreviewRequest request,
             List<int>? allowedHomes,
+            bool allowPrivatePayer,
             List<BillingPreviewLineDto> lines,
             List<BillingExceptionDto> exceptions,
             CancellationToken cancellationToken)
@@ -680,12 +741,19 @@ namespace CareHome.Api.Billing
                 .Where(x => x.TenantId == tenantId)
                 .Where(x => !x.IsInvoiced)
                 .Where(x => x.UsedDate >= request.PeriodStart && x.UsedDate <= request.PeriodEnd)
-                .Where(x => x.Client.CareHome.CompanyId == request.CompanyId)
                 .Where(x => !x.Client.IsArchived);
 
-            if (request.CareHomeId.HasValue)
+            if (request.CareHomeId is int careHomeId and > 0)
             {
-                query = query.Where(x => x.Client.CareHomeId == request.CareHomeId.Value);
+                query = query.Where(x => x.Client.CareHomeId == careHomeId);
+            }
+            else if (request.CompanyId > 0)
+            {
+                query = query.Where(x => x.Client.CareHome.CompanyId == request.CompanyId);
+            }
+            else
+            {
+                query = query.Where(x => x.Client.CareHome.CompanyId == null);
             }
 
             if (allowedHomes is not null)
@@ -722,22 +790,23 @@ namespace CareHome.Api.Billing
                     continue;
                 }
 
-                var template = await templateResolver.ResolveAsync(
-                    tenantId,
-                    miscCategory!.Id,
-                    0,
-                    charge.Client.CareHomeId,
-                    charge.Client.CareHome.CompanyId,
-                    cancellationToken);
-
                 // Misc charges need a funding authority on the invoice header. Use the client's first active contract authority if present.
-                var authority = charge.Client.FundingContracts
-                    .FirstOrDefault(c => c.Status == FundingContractStatuses.Active)?.FundingAuthority;
+                var contract = charge.Client.FundingContracts.FirstOrDefault(c => c.Status == FundingContractStatuses.Active)
+                    ?? charge.Client.FundingContracts.FirstOrDefault();
+
+                var authority = contract?.FundingAuthority
+                    ?? charge.Client.FundingContracts
+                        .FirstOrDefault(c => c.Status == FundingContractStatuses.Active)?.FundingAuthority;
 
                 if (authority is null)
                 {
                     authority = await dbContext.FundingAuthorities.AsNoTracking()
                         .FirstOrDefaultAsync(x => x.TenantId == tenantId && x.IsActive, cancellationToken);
+                }
+
+                if (authority is null && allowPrivatePayer)
+                {
+                    authority = await EnsurePrivateAuthorityAsync(tenantId, cancellationToken);
                 }
 
                 if (authority is null)
@@ -749,16 +818,15 @@ namespace CareHome.Api.Billing
                     continue;
                 }
 
-                if (template is null)
-                {
-                    template = await templateResolver.ResolveAsync(
-                        tenantId,
-                        miscCategory.Id,
-                        authority.Id,
-                        charge.Client.CareHomeId,
-                        charge.Client.CareHome.CompanyId,
-                        cancellationToken);
-                }
+                var template = await ResolveTemplateForBillingAsync(
+                    tenantId,
+                    request,
+                    miscCategory!.Id,
+                    authority.Id,
+                    charge.Client.CareHomeId,
+                    charge.Client.CareHome.CompanyId,
+                    contract?.InvoiceTemplateId,
+                    cancellationToken);
 
                 if (template is null)
                 {
@@ -768,16 +836,18 @@ namespace CareHome.Api.Billing
                         charge.Client));
                 }
 
-                var contract = charge.Client.FundingContracts.FirstOrDefault(c => c.Status == FundingContractStatuses.Active)
-                    ?? charge.Client.FundingContracts.FirstOrDefault();
-
-                if (contract is null)
+                if (contract is null && !allowPrivatePayer)
                 {
                     exceptions.Add(Error(
                         "MISSING_CONTRACT",
                         $"Client {charge.Client.FirstName} {charge.Client.LastName} has a miscellaneous charge but no funding contract to hang the invoice line on.",
                         charge.Client));
                     continue;
+                }
+
+                if (contract is null)
+                {
+                    authority = await EnsurePrivateAuthorityAsync(tenantId, cancellationToken);
                 }
 
                 lines.Add(new BillingPreviewLineDto
@@ -789,14 +859,16 @@ namespace CareHome.Api.Billing
                     CareHomeId = charge.Client.CareHomeId,
                     CareHomeName = charge.Client.CareHome.Name,
                     CompanyId = charge.Client.CareHome.CompanyId,
-                    CompanyName = charge.Client.CareHome.Company.Name,
+                    CompanyName = charge.Client.CareHome.Company?.Name ?? string.Empty,
                     FundingAuthorityId = authority.Id,
                     FundingAuthorityName = authority.Name,
                     InvoiceCategoryId = miscCategory.Id,
                     InvoiceCategoryName = miscCategory.Name,
-                    NominalCodeId = charge.NominalCodeId ?? contract.NominalCodeId,
+                    NominalCodeId = charge.NominalCodeId ?? contract?.NominalCodeId ?? 0,
                     NominalCode = nominal,
-                    ClientFundingContractId = contract.Id,
+                    ClientFundingContractId = contract?.Id,
+                    CycleStart = null,
+                    GroupingMode = miscCategory.GroupingMode,
                     MiscChargeId = charge.Id,
                     ServiceFrom = charge.UsedDate,
                     ServiceTo = charge.UsedDate,
@@ -808,6 +880,106 @@ namespace CareHome.Api.Billing
                     InvoiceTemplateId = template?.Id
                 });
             }
+        }
+
+        public async Task<BillingSuggestionDto> SuggestPeriodAsync(
+            int tenantId,
+            int? careHomeId,
+            CancellationToken cancellationToken = default)
+        {
+            var settings = await dbContext.TenantSettings.AsNoTracking()
+                .FirstAsync(x => x.TenantId == tenantId, cancellationToken);
+            var today = TodayInTimeZone(settings.TimeZoneId);
+            if (!BillingPeriodModes.IsFunderCycle(settings.BillingPeriodMode))
+            {
+                return new BillingSuggestionDto { BillingPeriodMode = BillingPeriodModes.Manual };
+            }
+
+            var query = dbContext.ClientFundingContracts.AsNoTracking()
+                .Include(x => x.FundingAuthority)
+                .Include(x => x.Client)
+                .Where(x => x.TenantId == tenantId && x.Status == FundingContractStatuses.Active);
+
+            if (careHomeId is int homeId and > 0)
+            {
+                query = query.Where(x => x.Client.CareHomeId == homeId);
+            }
+
+            var contracts = await query.ToListAsync(cancellationToken);
+            DateOnly? start = null;
+            DateOnly? end = null;
+            foreach (var contract in contracts)
+            {
+                var anchor = contract.FundingAuthority.CycleAnchorDate ?? contract.ContractStartDate;
+                var containing = BillingCycleCalendar.CycleContaining(
+                    anchor,
+                    today,
+                    contract.FundingAuthority.BillingFrequency,
+                    contract.FundingAuthority.BillingIntervalDays);
+                var horizon = containing?.End ?? today;
+                if (end is null || horizon > end)
+                {
+                    end = horizon;
+                }
+
+                var from = contract.ContractStartDate < today ? contract.ContractStartDate : today;
+                if (start is null || from < start)
+                {
+                    start = from;
+                }
+            }
+
+            return new BillingSuggestionDto
+            {
+                BillingPeriodMode = BillingPeriodModes.FunderCycle,
+                PeriodStart = start ?? today,
+                PeriodEnd = end ?? today
+            };
+        }
+
+        private async Task<FundingAuthority> EnsurePrivateAuthorityAsync(
+            int tenantId,
+            CancellationToken cancellationToken)
+        {
+            var existing = await dbContext.FundingAuthorities
+                .FirstOrDefaultAsync(x => x.TenantId == tenantId && x.Code == "PRIVATE", cancellationToken);
+            if (existing is not null)
+            {
+                return existing;
+            }
+
+            var authority = new FundingAuthority
+            {
+                TenantId = tenantId,
+                Code = "PRIVATE",
+                Name = "Private payee",
+                Type = "Private",
+                BillingFrequency = "AdHoc",
+                IsActive = true
+            };
+            dbContext.FundingAuthorities.Add(authority);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return authority;
+        }
+
+        private static DateOnly TodayInTimeZone(string? timeZoneId)
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(timeZoneId))
+                {
+                    var zone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
+                    return DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, zone).DateTime);
+                }
+            }
+            catch (TimeZoneNotFoundException)
+            {
+            }
+            catch (InvalidTimeZoneException)
+            {
+            }
+
+            return DateOnly.FromDateTime(DateTime.UtcNow);
         }
 
         private async Task<List<(DateOnly Start, DateOnly End)>> GetFinalizedPeriodsAsync(
@@ -851,11 +1023,45 @@ namespace CareHome.Api.Billing
                 cancellationToken);
         }
 
+        private async Task<bool> HasClientCategoryOverlapWithoutContractAsync(
+            int tenantId,
+            int clientId,
+            int invoiceCategoryId,
+            DateOnly start,
+            DateOnly end,
+            CancellationToken cancellationToken)
+        {
+            return await dbContext.InvoiceLines.AnyAsync(x =>
+                x.Invoice.TenantId == tenantId &&
+                x.ClientId == clientId &&
+                x.ClientFundingContractId == null &&
+                x.Invoice.InvoiceCategoryId == invoiceCategoryId &&
+                x.Invoice.Status != InvoiceStatuses.Void &&
+                x.ServicePeriodStart <= end &&
+                x.ServicePeriodEnd >= start,
+                cancellationToken);
+        }
+
         private Task AcquireBillingLockAsync(int tenantId, CancellationToken cancellationToken) =>
             SqlAppLock.AcquireExclusiveAsync(
                 dbContext.Database,
                 $"billing-generate-{tenantId}",
                 cancellationToken);
+
+        private static IQueryable<Client> ApplyBillingScope(IQueryable<Client> query, BillingPreviewRequest request)
+        {
+            if (request.CareHomeId is int careHomeId and > 0)
+            {
+                return query.Where(x => x.CareHomeId == careHomeId);
+            }
+
+            if (request.CompanyId > 0)
+            {
+                return query.Where(x => x.CareHome.CompanyId == request.CompanyId);
+            }
+
+            return query.Where(x => x.CareHome.CompanyId == null);
+        }
 
         private static BillingDateRangeDto ToRange(DateOnly start, DateOnly end)
         {
@@ -917,6 +1123,44 @@ namespace CareHome.Api.Billing
         {
             return string.Join(" ", new[] { client.FirstName, client.LastName }
                 .Where(x => !string.IsNullOrWhiteSpace(x)));
+        }
+
+        private async Task<InvoiceTemplate?> ResolveTemplateForBillingAsync(
+            int tenantId,
+            BillingPreviewRequest request,
+            int invoiceCategoryId,
+            int fundingAuthorityId,
+            int careHomeId,
+            int? companyId,
+            int? pinnedTemplateId,
+            CancellationToken cancellationToken)
+        {
+            return await templateResolver.ResolveForBillingAsync(
+                tenantId,
+                invoiceCategoryId,
+                fundingAuthorityId,
+                careHomeId,
+                companyId,
+                pinnedTemplateId,
+                request.InvoiceTemplateId,
+                cancellationToken);
+        }
+
+        private async Task<int?> GetContractPinnedTemplateIdAsync(
+            int tenantId,
+            int? clientFundingContractId,
+            CancellationToken cancellationToken)
+        {
+            if (clientFundingContractId is not int contractId)
+            {
+                return null;
+            }
+
+            return await dbContext.ClientFundingContracts
+                .AsNoTracking()
+                .Where(x => x.Id == contractId && x.TenantId == tenantId)
+                .Select(x => x.InvoiceTemplateId)
+                .FirstOrDefaultAsync(cancellationToken);
         }
     }
 }

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using CareHome.Api.Common;
 using CareHome.Api.Security;
 
 namespace CareHome.Api.Models
@@ -30,6 +31,20 @@ namespace CareHome.Api.Models
         public int NumberLength { get; set; } = 4;
 
         public int PaymentTermsDays { get; set; } = 30;
+
+        /// <summary>Manual = the user types invoice dates. FunderCycle = periods follow each funder's frequency.</summary>
+        [Required]
+        [MaxLength(30)]
+        public string BillingPeriodMode { get; set; } = BillingPeriodModes.Manual;
+
+        /// <summary>Miscellaneous charges may be invoiced without a funding contract, to a Private payee.</summary>
+        public bool AllowPrivatePayer { get; set; }
+
+        /// <summary>Show guardian name and contacts on the resident.</summary>
+        public bool ShowGuardian { get; set; }
+
+        /// <summary>Banking, remittances, collections, and disputes for this organisation.</summary>
+        public bool FinanceModuleEnabled { get; set; }
 
         [MaxLength(150)]
         public string? EmailFromName { get; set; }

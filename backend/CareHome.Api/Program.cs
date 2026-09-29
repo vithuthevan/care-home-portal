@@ -234,21 +234,28 @@ builder.Services.AddCareHomeRevenueAssurance();
 builder.Services.AddScoped<DisputeWorkflowService>();
 builder.Services.AddScoped<ContractRenewalWorkflowService>();
 builder.Services.AddScoped<CollectionsWorkflowService>();
+builder.Services.AddScoped<CollectionReminderService>();
+builder.Services.AddScoped<DocumentEmailService>();
+builder.Services.Configure<CollectionsReminderOptions>(builder.Configuration.GetSection(CollectionsReminderOptions.SectionName));
+builder.Services.AddHostedService<CollectionsReminderHostedService>();
 builder.Services.AddScoped<FinanceAttentionService>();
 builder.Services.AddScoped<InvoiceReceivableReadModel>();
 builder.Services.AddScoped<InvoicePdfService>();
 builder.Services.AddScoped<IDocumentStore, LocalDocumentStore>();
 builder.Services.Configure<EmailOptions>(builder.Configuration.GetSection(EmailOptions.SectionName));
+builder.Services.AddScoped<EmailFromResolver>();
 builder.Services.AddScoped<IEmailSender, ConfigurableEmailSender>();
 builder.Services.AddScoped<Sage50ColumnMap>();
 builder.Services.AddScoped<SageExportService>();
 builder.Services.AddScoped<MasterDataUsageService>();
 builder.Services.AddScoped<MiscChargeImportService>();
+builder.Services.AddScoped<DataTransferService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<IdentitySeeder>();
 builder.Services.AddScoped<DevelopmentMasterDataSeeder>();
 builder.Services.AddScoped<EmptyTenantMasterDataSeeder>();
 builder.Services.AddScoped<TenantNominalCodeSeeder>();
+builder.Services.AddScoped<FinalDemoPresentationSeeder>();
 builder.Services.AddSingleton<LoginPasswordCipher>();
 
 var app = builder.Build();
@@ -349,6 +356,9 @@ using (var scope = app.Services.CreateScope())
 
         var nominalCodeSeeder = scope.ServiceProvider.GetRequiredService<TenantNominalCodeSeeder>();
         await nominalCodeSeeder.BackfillAllTenantsAsync();
+
+        var demoSeeder = scope.ServiceProvider.GetRequiredService<FinalDemoPresentationSeeder>();
+        await demoSeeder.SeedAsync();
     }
     catch (InvalidOperationException ex) when (ex.Message.Contains("Development platform admin", StringComparison.Ordinal))
     {

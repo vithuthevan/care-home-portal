@@ -3,6 +3,7 @@
     title="Invoice Categories"
     subtitle="Manage categories used when creating and generating invoices."
   >
+    <app-import-export-toolbar entity="invoice-categories" (imported)="loadInvoiceCategories()" />
     @if (auth.canWrite()) {
       <a mat-flat-button color="primary" routerLink="/invoice-categories/new">Add category</a>
     }
@@ -31,9 +32,6 @@
       title="No invoice categories"
       message="Add a category before generating invoices or running category reports."
     >
-      @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/invoice-categories/new">Add category</a>
-      }
     </app-empty-state>
   }
 
@@ -44,6 +42,7 @@
           <thead>
             <tr>
               <th>Category</th>
+              <th>Grouping</th>
               <th>Usage</th>
               <th class="col-status">Status</th>
               <th class="col-actions">Actions</th>
@@ -58,6 +57,9 @@
                     <span class="table-cell-stack__secondary">{{ category.code }}</span>
                     <app-configuration-source-badge [source]="category.configurationSource" />
                   </div>
+                </td>
+                <td class="text-sm">
+                  {{ category.groupingMode === 'PerResident' ? 'Per resident' : 'Per funder' }}
                 </td>
                 <td class="text-sm text-[var(--app-text-muted)]">
                   {{ categoryUsageLabel(category.usage) }}

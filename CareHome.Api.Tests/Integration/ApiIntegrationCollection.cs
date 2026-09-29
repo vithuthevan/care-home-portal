@@ -10,16 +10,18 @@ public sealed class ApiIntegrationCollection : ICollectionFixture<ApiIntegration
 
 public sealed class ApiIntegrationFixture : IAsyncLifetime
 {
-    public CareHomeWebApplicationFactory Factory { get; } = new();
+    public CareHomeWebApplicationFactory Factory { get; private set; } = null!;
 
     public async Task InitializeAsync()
     {
         if (!IntegrationTestDatabase.IsAvailable)
         {
+            Factory = new CareHomeWebApplicationFactory();
             return;
         }
 
         await IntegrationTestDatabase.ResetAsync();
+        Factory = new CareHomeWebApplicationFactory();
         _ = Factory.CreateClient();
     }
 

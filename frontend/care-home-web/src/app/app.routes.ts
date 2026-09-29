@@ -11,6 +11,8 @@ import {
 import { commercialRevenueGuard } from './core/commercial-revenue.guard';
 import { LoginPage } from './features/login/login';
 import { ChangePasswordPage } from './features/login/change-password';
+import { ForgotPasswordPage } from './features/login/forgot-password';
+import { ResetPasswordPage } from './features/login/reset-password';
 import { ForbiddenPage } from './features/forbidden/forbidden';
 import { NotFoundPage } from './features/not-found/not-found';
 import { DashboardPage } from './features/dashboard/dashboard';
@@ -44,6 +46,7 @@ import { SageExportPage } from './features/sage/pages/sage-export/sage-export';
 import { UserListPage } from './features/users/pages/user-list/user-list';
 import { UserFormPage } from './features/users/pages/user-form/user-form';
 import { AuditListPage } from './features/audit/pages/audit-list/audit-list';
+import { EmailSendLogListPage } from './features/email/pages/email-send-log-list/email-send-log-list';
 import { PlatformTenantListPage } from './features/platform/pages/platform-tenant-list/platform-tenant-list';
 import { PlatformTenantFormPage } from './features/platform/pages/platform-tenant-form/platform-tenant-form';
 import { OrganisationSettingsPage } from './features/settings/pages/organisation-settings/organisation-settings';
@@ -59,6 +62,8 @@ import { RenewalsWorkspacePage } from './features/renewals/pages/renewals-worksp
 
 export const routes: Routes = [
   { path: 'login', component: LoginPage, canActivate: [guestGuard] },
+  { path: 'forgot-password', component: ForgotPasswordPage, canActivate: [guestGuard] },
+  { path: 'reset-password', component: ResetPasswordPage, canActivate: [guestGuard] },
   { path: 'change-password', component: ChangePasswordPage, canActivate: [passwordChangeGuard] },
   { path: 'forbidden', component: ForbiddenPage, canActivate: [authGuard] },
   { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
@@ -77,6 +82,11 @@ export const routes: Routes = [
   { path: 'clients/new', component: ClientForm, canActivate: [authGuard] },
   { path: 'clients/:id/funding/rates/new', component: ClientFundingRateForm, canActivate: [authGuard] },
   { path: 'clients/:id/funding/new', component: ClientFundingContractForm, canActivate: [authGuard] },
+  {
+    path: 'clients/:id/funding/:contractId/edit',
+    component: ClientFundingContractForm,
+    canActivate: [authGuard],
+  },
   { path: 'clients/:id/edit', component: ClientForm, canActivate: [authGuard] },
   { path: 'clients/:id', component: ClientProfilePage, canActivate: [authGuard] },
   { path: 'funding-authorities', component: FundingAuthorityList, canActivate: [authGuard] },
@@ -154,6 +164,7 @@ export const routes: Routes = [
   { path: 'users', component: UserListPage, canActivate: [authGuard, adminGuard] },
   { path: 'users/new', component: UserFormPage, canActivate: [authGuard, adminGuard] },
   { path: 'audit', component: AuditListPage, canActivate: [authGuard, adminGuard] },
+  { path: 'email-delivery', component: EmailSendLogListPage, canActivate: [authGuard] },
   {
     path: 'settings/organisation',
     component: OrganisationSettingsPage,

@@ -22,8 +22,12 @@ import { LabeledStatusComponent } from '../../../../shared/ui/labeled-status';
 import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 import { CompanyService } from '../../../companies/services/company.service';
 import { CareHomeService } from '../../../care-homes/services/care-home.service';
+import { FundingAuthorityService } from '../../../funding-authorities/services/funding-authority.service';
+import { ClientService } from '../../../clients/services/client.service';
 import { Company } from '../../../companies/models/company.model';
 import { CareHomeLocation } from '../../../care-homes/models/care-home.model';
+import { FundingAuthority } from '../../../funding-authorities/models/funding-authority.model';
+import { Client } from '../../../clients/models/client.model';
 
 const SHARED_COLUMN_LABELS: Record<string, string> = {
   clientName: 'Resident',
@@ -84,13 +88,24 @@ export class ReportsPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly companyService = inject(CompanyService);
   private readonly careHomeService = inject(CareHomeService);
+  private readonly fundingAuthorityService = inject(FundingAuthorityService);
+  private readonly clientService = inject(ClientService);
   report = 'client-census';
   from = '';
   to = '';
   selectedCompanyId = 0;
   selectedCareHomeId = 0;
+  selectedClientStatus = '';
+  selectedFundingAuthorityId = 0;
+  selectedCategoryId = 0;
+  selectedClientId = 0;
+  selectedContractId = 0;
   readonly companies = signal<Company[]>([]);
   readonly careHomes = signal<CareHomeLocation[]>([]);
+  readonly fundingAuthorities = signal<FundingAuthority[]>([]);
+  readonly categories = signal<{ id: number; name: string }[]>([]);
+  readonly clients = signal<Client[]>([]);
+  readonly contracts = signal<{ id: number; label: string }[]>([]);
   readonly rows = signal<any[]>([]);
   readonly errorMessage = signal<string | null>(null);
   readonly hasRun = signal(false);
@@ -117,6 +132,19 @@ export class ReportsPage implements OnInit {
     this.careHomeService.getCareHomes().subscribe({
       next: (items) => this.careHomes.set(items),
     });
+    this.fundingAuthorityService.getFundingAuthorities().subscribe({
+      next: (items) => this.fundingAuthorities.set(items),
+    });
+    this.http.get<{ id: number; name: string }[]>('/api/invoice-categories?activeOnly=true').subscribe({
+      next: (items) => this.categories.set(items),
+    });
+    this.clientService.getClients(undefined, undefined, false, 1, 500).subscribe({
+      next: (page) => this.clients.set(page.items),
+    });
+  }
+
+  showDateFilter(): boolean {
+    return ['invoices-by-client', 'invoices-by-care-home', 'income-by-category'].includes(this.report);
   }
 
   showCompanyFilter(): boolean {
@@ -127,12 +155,53 @@ export class ReportsPage implements OnInit {
     return ['client-census', 'current-rates', 'invoices-by-care-home'].includes(this.report);
   }
 
+  showClientStatusFilter(): boolean {
+    return this.report === 'current-rates';
+  }
+
+  showFundingAuthorityFilter(): boolean {
+    return this.report === 'current-rates';
+  }
+
+  showCategoryFilter(): boolean {
+    return this.report === 'current-rates';
+  }
+
+  showClientFilter(): boolean {
+    return this.report === 'invoices-by-client';
+  }
+
+  showContractFilter(): boolean {
+    return this.report === 'rate-history';
+  }
+
+  onClientChange(): void {
+    this.selectedContractId = 0;
+    this.contracts.set([]);
+    if (!this.selectedClientId) {
+      return;
+    }
+    this.http
+      .get<{ id: number; fundingAuthorityName: string; status: string }[]>(
+        `/api/clients/${this.selectedClientId}/funding-contracts`,
+      )
+      .subscribe({
+        next: (items) =>
+          this.contracts.set(
+            items.map((item) => ({
+              id: item.id,
+              label: `${item.fundingAuthorityName} (${item.status})`,
+            })),
+          ),
+      });
+  }
+
   private reportParams(): HttpParams {
     let params = new HttpParams();
-    if (this.from) {
+    if (this.showDateFilter() && this.from) {
       params = params.set('from', this.from);
     }
-    if (this.to) {
+    if (this.showDateFilter() && this.to) {
       params = params.set('to', this.to);
     }
     if (this.showCompanyFilter() && this.selectedCompanyId > 0) {
@@ -140,6 +209,21 @@ export class ReportsPage implements OnInit {
     }
     if (this.showCareHomeFilter() && this.selectedCareHomeId > 0) {
       params = params.set('careHomeId', this.selectedCareHomeId);
+    }
+    if (this.showClientStatusFilter() && this.selectedClientStatus) {
+      params = params.set('clientStatus', this.selectedClientStatus);
+    }
+    if (this.showFundingAuthorityFilter() && this.selectedFundingAuthorityId > 0) {
+      params = params.set('fundingAuthorityId', this.selectedFundingAuthorityId);
+    }
+    if (this.showCategoryFilter() && this.selectedCategoryId > 0) {
+      params = params.set('categoryId', this.selectedCategoryId);
+    }
+    if (this.showClientFilter() && this.selectedClientId > 0) {
+      params = params.set('clientId', this.selectedClientId);
+    }
+    if (this.showContractFilter() && this.selectedContractId > 0) {
+      params = params.set('contractId', this.selectedContractId);
     }
     return params;
   }
@@ -276,16 +360,36 @@ export class ReportsPage implements OnInit {
   onReportChange(): void {
     this.rows.set([]);
     this.hasRun.set(false);
+    this.errorMessage.set(null);
     if (!this.showCompanyFilter()) {
       this.selectedCompanyId = 0;
     }
     if (!this.showCareHomeFilter()) {
       this.selectedCareHomeId = 0;
     }
+    if (!this.showClientStatusFilter()) {
+      this.selectedClientStatus = '';
+    }
+    if (!this.showFundingAuthorityFilter()) {
+      this.selectedFundingAuthorityId = 0;
+    }
+    if (!this.showCategoryFilter()) {
+      this.selectedCategoryId = 0;
+    }
+    if (!this.showClientFilter()) {
+      this.selectedClientId = 0;
+    }
+    if (!this.showContractFilter()) {
+      this.selectedContractId = 0;
+    }
   }
 
   load(): void {
     this.errorMessage.set(null);
+    if (this.report === 'income-by-category' && (!this.from || !this.to)) {
+      this.errorMessage.set('From and to dates are required.');
+      return;
+    }
     this.isLoading.set(true);
     const params = this.reportParams();
     this.http

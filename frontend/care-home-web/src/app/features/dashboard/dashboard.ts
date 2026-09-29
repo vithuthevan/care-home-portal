@@ -8,7 +8,6 @@ import { MatIconModule } from '@angular/material/icon';
 
 import { getApiErrorMessage } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
-import { COMMERCIAL_REVENUE_ENABLED } from '../../core/commercial-revenue.feature';
 import { PageHeaderComponent } from '../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../shared/ui/loading-state';
@@ -18,6 +17,7 @@ import { KpiCardComponent } from '../../shared/ui/kpi-card';
 import { EmptyStateComponent } from '../../shared/ui/empty-state';
 import { SectionHeaderComponent } from '../../shared/ui/section-header';
 import { entityRouteKey } from '../../shared/routing/entity-route';
+import { DisplayDatePipe } from '../../shared/format/display-date.pipe';
 import {
   billingExceptionHeadline,
   billingExceptionLabel,
@@ -74,6 +74,8 @@ interface DashboardDto {
     careHomeName: string;
     fundingAuthorityName: string;
     billingFrequency: string;
+    nextInvoiceDate?: string | null;
+    billingPeriodMode?: string;
   }[];
   setupHints: string[];
 }
@@ -88,6 +90,7 @@ export interface SetupHintAction {
   imports: [
     RouterLink,
     DecimalPipe,
+    DisplayDatePipe,
     MatButtonModule,
     MatIconModule,
     PageHeaderComponent,
@@ -105,11 +108,18 @@ export interface SetupHintAction {
 export class DashboardPage implements OnInit {
   private readonly http = inject(HttpClient);
   readonly auth = inject(AuthService);
-  readonly commercialRevenueEnabled = COMMERCIAL_REVENUE_ENABLED;
-  readonly outstandingKpiLink = COMMERCIAL_REVENUE_ENABLED ? '/receivables' : '/reports';
-  readonly outstandingKpiQueryParams = COMMERCIAL_REVENUE_ENABLED
-    ? null
-    : { report: 'outstanding' };
+
+  get commercialRevenueEnabled(): boolean {
+    return this.auth.financeModuleEnabled();
+  }
+
+  get outstandingKpiLink(): string {
+    return this.commercialRevenueEnabled ? '/receivables' : '/reports';
+  }
+
+  get outstandingKpiQueryParams(): { report: string } | null {
+    return this.commercialRevenueEnabled ? null : { report: 'outstanding' };
+  }
   private readonly router = inject(Router);
   readonly dashboard = signal<DashboardDto | null>(null);
   readonly financeAttention = signal<FinanceAttentionDto | null>(null);

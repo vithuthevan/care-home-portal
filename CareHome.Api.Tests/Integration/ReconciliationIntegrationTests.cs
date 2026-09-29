@@ -85,7 +85,9 @@ public class ReconciliationIntegrationTests(ApiIntegrationFixture fixture)
             manual.EnsureSuccessStatusCode();
         }
 
-        var receivables = await client.GetFromJsonAsync<PagedReceivables>("/api/receivables/invoices", JsonOptions);
+        var receivables = await client.GetFromJsonAsync<PagedReceivables>(
+            "/api/receivables/invoices?openReceivablesOnly=false&paymentStatus=Paid",
+            JsonOptions);
         var row = receivables!.Items.Single();
         Assert.Equal(0m, row.OutstandingAmount);
         Assert.Equal(ReceivableCollectionStatuses.Paid, row.PaymentStatus);

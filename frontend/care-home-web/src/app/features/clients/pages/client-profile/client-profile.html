@@ -217,7 +217,10 @@
           <app-section-header
             title="Funding"
             subtitle="Who pays for this resident, under which contract, and at what rate."
-          />
+          >
+            <app-import-export-toolbar entity="funding-contracts" (imported)="loadContracts()" />
+            <app-import-export-toolbar entity="funding-rates" (imported)="loadContracts()" />
+          </app-section-header>
 
           @if (contracts().length === 0) {
             <app-empty-state
@@ -258,6 +261,16 @@
                 <div>
                   <dt>Nominal code</dt>
                   <dd>{{ contract.nominalCode }}</dd>
+                </div>
+                <div>
+                  <dt>Invoice template</dt>
+                  <dd>
+                    @if (contract.invoiceTemplateName) {
+                      {{ contract.invoiceTemplateName }}
+                    } @else {
+                      <span class="text-sm text-[var(--app-text-muted)]">Automatic</span>
+                    }
+                  </dd>
                 </div>
                 <div>
                   <dt>Current rate</dt>
@@ -313,6 +326,12 @@
 
               @if (auth.canWrite()) {
                 <div class="actions-bar mt-3">
+                  <a
+                    mat-stroked-button
+                    [routerLink]="fundingContractEditLink(client, contract.id)"
+                  >
+                    Edit contract
+                  </a>
                   <a
                     mat-stroked-button
                     [routerLink]="fundingRateLink(client)"

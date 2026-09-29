@@ -1,162 +1,179 @@
 using System.ComponentModel.DataAnnotations;
 using CareHome.Api.Common;
 
-namespace CareHome.Api.Dtos.Tenants
+namespace CareHome.Api.Dtos.Tenants;
+
+public class TenantDto
 {
-    public class TenantDto
-    {
-        public int Id { get; set; }
+    public int Id { get; set; }
 
-        public Guid PublicId { get; set; }
+    public Guid PublicId { get; set; }
 
-        public string Name { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
-        public string? TradingName { get; set; }
+    public string? TradingName { get; set; }
 
-        public string? RegistrationNumber { get; set; }
+    public string? RegistrationNumber { get; set; }
 
-        public string? Address { get; set; }
+    public string? Address { get; set; }
 
-        public string? Phone { get; set; }
+    public string? Phone { get; set; }
 
-        public string? Email { get; set; }
+    public string? Email { get; set; }
 
-        public string? Website { get; set; }
+    public string? Website { get; set; }
 
-        public bool IsActive { get; set; }
+    public bool IsActive { get; set; }
 
-        public DateTimeOffset CreatedAt { get; set; }
-    }
+    public DateTimeOffset CreatedAt { get; set; }
+}
 
-    public class CreateTenantResponse : TenantDto
-    {
-        public bool CredentialsEmailed { get; set; }
+public class CreateTenantResponse : TenantDto
+{
+    public bool CredentialsEmailed { get; set; }
 
-        public bool CredentialsEmailSimulated { get; set; }
+    public bool CredentialsEmailSimulated { get; set; }
 
-        public string? TemporaryPassword { get; set; }
-    }
+    public string? TemporaryPassword { get; set; }
+}
 
-    public class CreateTenantRequest
-    {
-        public string Name { get; set; } = string.Empty;
+public class CreateTenantRequest
+{
+    public string Name { get; set; } = string.Empty;
 
-        public string? TradingName { get; set; }
+    public string? TradingName { get; set; }
 
-        public string? RegistrationNumber { get; set; }
+    public string? RegistrationNumber { get; set; }
 
-        public string? Address { get; set; }
+    public string? Address { get; set; }
 
-        public string? Phone { get; set; }
+    public string? Phone { get; set; }
 
-        public string? Email { get; set; }
+    public string? Email { get; set; }
 
-        public string? Website { get; set; }
+    public string? Website { get; set; }
 
-        public bool IsActive { get; set; } = true;
+    public bool IsActive { get; set; } = true;
 
-        public string? AdminEmail { get; set; }
+    public string? AdminEmail { get; set; }
 
-        public string? AdminPassword { get; set; }
+    public string? AdminPassword { get; set; }
 
-        public string? AdminDisplayName { get; set; }
-    }
+    public string? AdminDisplayName { get; set; }
+}
 
-    public class UpdateTenantRequest
-    {
-        public string Name { get; set; } = string.Empty;
+public class UpdateTenantRequest
+{
+    public string Name { get; set; } = string.Empty;
 
-        public string? TradingName { get; set; }
+    public string? TradingName { get; set; }
 
-        public string? RegistrationNumber { get; set; }
+    public string? RegistrationNumber { get; set; }
 
-        public string? Address { get; set; }
+    public string? Address { get; set; }
 
-        public string? Phone { get; set; }
+    public string? Phone { get; set; }
 
-        public string? Email { get; set; }
+    public string? Email { get; set; }
 
-        public string? Website { get; set; }
+    public string? Website { get; set; }
 
-        public bool IsActive { get; set; } = true;
-    }
+    public bool IsActive { get; set; } = true;
+}
 
-    public class OrganisationSettingsDto
-    {
-        public int TenantId { get; set; }
+public class OrganisationSettingsDto
+{
+    public int TenantId { get; set; }
 
-        public string Name { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
-        public string? TradingName { get; set; }
+    public string? TradingName { get; set; }
 
-        public string? RegistrationNumber { get; set; }
+    public string? RegistrationNumber { get; set; }
 
-        public string? Address { get; set; }
+    public string? Address { get; set; }
 
-        public string? Phone { get; set; }
+    public string? Phone { get; set; }
 
-        public string? Email { get; set; }
+    public string? Email { get; set; }
 
-        public string? Website { get; set; }
+    public string? Website { get; set; }
 
-        public string CurrencyCode { get; set; } = "GBP";
+    public string CurrencyCode { get; set; } = "GBP";
 
-        public string CurrencySymbol { get; set; } = "£";
+    public string CurrencySymbol { get; set; } = "£";
 
-        public string TimeZoneId { get; set; } = "Europe/London";
+    public string TimeZoneId { get; set; } = "Europe/London";
 
-        public string InvoicePrefix { get; set; } = "INV-";
+    public string InvoicePrefix { get; set; } = "INV-";
 
-        public string CreditNotePrefix { get; set; } = "CN-";
+    public string CreditNotePrefix { get; set; } = "CN-";
 
-        public int NumberLength { get; set; } = 4;
+    public int NumberLength { get; set; } = 4;
 
-        public int PaymentTermsDays { get; set; } = 30;
+    public int PaymentTermsDays { get; set; } = 30;
 
-        public string? EmailFromName { get; set; }
+    public string? EmailFromName { get; set; }
 
-        public string? EmailFromAddress { get; set; }
+    public string? EmailFromAddress { get; set; }
 
-        public string? PrimaryColour { get; set; }
-    }
+    public string? PrimaryColour { get; set; }
 
-    public class UpdateOrganisationSettingsRequest
-    {
-        public string Name { get; set; } = string.Empty;
+    public string BillingPeriodMode { get; set; } = BillingPeriodModes.Manual;
 
-        public string? TradingName { get; set; }
+    public bool AllowPrivatePayer { get; set; }
 
-        public string? RegistrationNumber { get; set; }
+    public bool ShowGuardian { get; set; }
 
-        public string? Address { get; set; }
+    public bool FinanceModuleEnabled { get; set; }
 
-        public string? Phone { get; set; }
+    public bool FinanceModuleAvailable { get; set; }
+}
 
-        [OptionalEmailAddress]
-        public string? Email { get; set; }
+public class UpdateOrganisationSettingsRequest
+{
+    public string Name { get; set; } = string.Empty;
 
-        public string? Website { get; set; }
+    public string? TradingName { get; set; }
 
-        public string CurrencyCode { get; set; } = "GBP";
+    public string? RegistrationNumber { get; set; }
 
-        public string CurrencySymbol { get; set; } = "£";
+    public string? Address { get; set; }
 
-        public string TimeZoneId { get; set; } = "Europe/London";
+    public string? Phone { get; set; }
 
-        public string InvoicePrefix { get; set; } = "INV-";
+    [OptionalEmailAddress]
+    public string? Email { get; set; }
 
-        public string CreditNotePrefix { get; set; } = "CN-";
+    public string? Website { get; set; }
 
-        public int NumberLength { get; set; } = 4;
+    public string CurrencyCode { get; set; } = "GBP";
 
-        public int PaymentTermsDays { get; set; } = 30;
+    public string CurrencySymbol { get; set; } = "£";
 
-        public string? EmailFromName { get; set; }
+    public string TimeZoneId { get; set; } = "Europe/London";
 
-        [OptionalEmailAddress]
-        public string? EmailFromAddress { get; set; }
+    public string InvoicePrefix { get; set; } = "INV-";
 
-        public string? PrimaryColour { get; set; }
-    }
+    public string CreditNotePrefix { get; set; } = "CN-";
+
+    public int NumberLength { get; set; } = 4;
+
+    public int PaymentTermsDays { get; set; } = 30;
+
+    public string? EmailFromName { get; set; }
+
+    [OptionalEmailAddress]
+    public string? EmailFromAddress { get; set; }
+
+    public string? PrimaryColour { get; set; }
+
+    public string BillingPeriodMode { get; set; } = BillingPeriodModes.Manual;
+
+    public bool AllowPrivatePayer { get; set; }
+
+    public bool ShowGuardian { get; set; }
+
+    public bool FinanceModuleEnabled { get; set; }
 }
 

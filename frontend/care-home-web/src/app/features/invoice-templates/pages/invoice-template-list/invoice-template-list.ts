@@ -10,6 +10,7 @@ import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
@@ -30,6 +31,7 @@ import {
     EmptyStateComponent,
     StatusBadgeComponent,
     IconActionButtonComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './invoice-template-list.html',
 })

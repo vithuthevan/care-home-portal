@@ -1,6 +1,6 @@
 <div class="page page--narrow">
   <app-page-header
-    title="Add funding contract"
+    [title]="isEditMode ? 'Edit funding contract' : 'Add funding contract'"
     subtitle="Link this resident to a funding authority, invoice category, and nominal code for billing."
   />
 
@@ -34,7 +34,12 @@
           </mat-form-field>
           <mat-form-field appearance="outline" class="w-full">
             <mat-label>Invoice category *</mat-label>
-            <mat-select [(ngModel)]="model.invoiceCategoryId" name="invoiceCategoryId" required>
+            <mat-select
+              [(ngModel)]="model.invoiceCategoryId"
+              name="invoiceCategoryId"
+              required
+              (ngModelChange)="onInvoiceCategoryChange()"
+            >
               <mat-option [value]="0" disabled>Select category</mat-option>
               @for (item of categories(); track item.id) {
                 <mat-option [value]="item.id">{{ item.name }}</mat-option>
@@ -63,6 +68,19 @@
             name="contractEndDate"
             hint="Leave blank for an open-ended contract."
           />
+          <mat-form-field appearance="outline" class="w-full md:col-span-2">
+            <mat-label>Invoice template</mat-label>
+            <mat-select [(ngModel)]="model.invoiceTemplateId" name="invoiceTemplateId">
+              <mat-option [value]="0">Automatic (match by rules)</mat-option>
+              @for (template of templatesForCategory(); track template.id) {
+                <mat-option [value]="template.id">{{ template.name }}</mat-option>
+              }
+            </mat-select>
+            <mat-hint
+              >Optional. Pins a template for billing on this contract; leave automatic to use scoped
+              templates.</mat-hint
+            >
+          </mat-form-field>
         </div>
       </section>
 

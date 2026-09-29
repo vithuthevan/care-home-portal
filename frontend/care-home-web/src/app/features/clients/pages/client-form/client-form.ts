@@ -13,7 +13,7 @@ import { CareHomeService } from '../../../care-homes/services/care-home.service'
 import { ClientService } from '../../services/client.service';
 
 import { getApiErrorMessage, logApiFailure } from '../../../../core/api-error';
-import { optionalEmail } from '../../../../shared/format/optional-email';
+import { optionalEmail, optionalEmailValidator } from '../../../../shared/format/optional-email';
 import { AuthService } from '../../../../core/auth.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -104,11 +104,17 @@ export class ClientForm implements OnInit {
 
     dischargeReason: ['', Validators.maxLength(100)],
 
-    email: ['', [Validators.email, Validators.maxLength(150)]],
+    email: ['', [optionalEmailValidator(), Validators.maxLength(150)]],
 
     phone: ['', Validators.maxLength(30)],
 
     notes: ['', Validators.maxLength(1000)],
+
+    guardianName: ['', Validators.maxLength(150)],
+    guardianRelationship: ['', Validators.maxLength(80)],
+    guardianEmail: ['', [optionalEmailValidator(), Validators.maxLength(150)]],
+    guardianPhone: ['', Validators.maxLength(30)],
+    guardianAddress: ['', Validators.maxLength(300)],
 
     isArchived: [false],
   });
@@ -260,6 +266,12 @@ export class ClientForm implements OnInit {
 
             notes: client.notes ?? '',
 
+            guardianName: client.guardianName ?? '',
+            guardianRelationship: client.guardianRelationship ?? '',
+            guardianEmail: client.guardianEmail ?? '',
+            guardianPhone: client.guardianPhone ?? '',
+            guardianAddress: client.guardianAddress ?? '',
+
             isArchived: client.isArchived,
           });
         },
@@ -320,6 +332,12 @@ export class ClientForm implements OnInit {
       phone: value.phone,
 
       notes: value.notes,
+
+      guardianName: value.guardianName,
+      guardianRelationship: value.guardianRelationship,
+      guardianEmail: optionalEmail(value.guardianEmail),
+      guardianPhone: value.guardianPhone,
+      guardianAddress: value.guardianAddress,
     };
 
     if (this.isEditMode && this.clientRouteKey !== null) {

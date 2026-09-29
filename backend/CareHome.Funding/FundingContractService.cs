@@ -31,6 +31,7 @@ public class FundingContractService(
             .Include(x => x.FundingAuthority)
             .Include(x => x.InvoiceCategory)
             .Include(x => x.NominalCode)
+            .Include(x => x.InvoiceTemplate)
             .Include(x => x.Rates)
             .Where(x => x.ClientId == clientId && x.TenantId == tenantId)
             .OrderByDescending(x => x.ContractStartDate)
@@ -432,6 +433,7 @@ public class FundingContractService(
             .Include(x => x.FundingAuthority)
             .Include(x => x.InvoiceCategory)
             .Include(x => x.NominalCode)
+            .Include(x => x.InvoiceTemplate)
             .Include(x => x.Rates)
             .FirstOrDefaultAsync(x => x.Id == id && x.TenantId == tenantId, cancellationToken);
 
@@ -467,12 +469,24 @@ public class FundingContractService(
             return new FundingOperationError("Nominal code was not found in this organisation.");
         }
 
-        if (invoiceTemplateId is int templateId
-            && !await dbContext.InvoiceTemplates.AnyAsync(
-                x => x.Id == templateId && x.TenantId == tenantId,
-                cancellationToken))
+        if (invoiceTemplateId is int templateId)
         {
-            return new FundingOperationError("Invoice template was not found in this organisation.");
+            var template = await dbContext.InvoiceTemplates.AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == templateId && x.TenantId == tenantId, cancellationToken);
+            if (template is null)
+            {
+                return new FundingOperationError("Invoice template was not found in this organisation.");
+            }
+
+            if (!template.IsActive)
+            {
+                return new FundingOperationError("Invoice template must be active.");
+            }
+
+            if (template.InvoiceCategoryId != invoiceCategoryId)
+            {
+                return new FundingOperationError("Invoice template must belong to the same invoice category as the contract.");
+            }
         }
 
         return null;
@@ -506,6 +520,7 @@ public class FundingContractService(
             NominalCodeId = x.NominalCodeId,
             NominalCode = x.NominalCode.Code,
             InvoiceTemplateId = x.InvoiceTemplateId,
+            InvoiceTemplateName = x.InvoiceTemplate?.Name,
             ContractStartDate = x.ContractStartDate,
             ContractEndDate = x.ContractEndDate,
             Status = x.Status,

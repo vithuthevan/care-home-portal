@@ -14,6 +14,7 @@ import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { ConfirmDialogService } from '../../../../shared/ui/confirm-dialog.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import {
   configurationSourceLabel,
   deactivateMasterDataMessage,
@@ -31,6 +32,7 @@ import {
     StatusBadgeComponent,
     IconActionButtonComponent,
     EmptyStateComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './nominal-code-list.html',
 })

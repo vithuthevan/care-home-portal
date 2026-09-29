@@ -1,7 +1,7 @@
 export interface CareHomeLocation {
   id: number;
   publicId?: string;
-  companyId: number;
+  companyId: number | null;
   companyName: string;
 
   code: string;
@@ -17,12 +17,15 @@ export interface CareHomeLocation {
   managerPhone: string | null;
   managerEmail: string | null;
 
+  logoPath?: string | null;
+  bankDetails?: string | null;
+
   isActive: boolean;
   portalAccentTheme?: string | null;
 }
 
 export interface CreateCareHomeRequest {
-  companyId: number;
+  companyId?: number | null;
 
   code: string;
   name: string;
@@ -36,6 +39,7 @@ export interface CreateCareHomeRequest {
   managerName?: string;
   managerPhone?: string;
   managerEmail?: string | null;
+  bankDetails?: string | null;
 }
 
 export interface UpdateCareHomeRequest extends CreateCareHomeRequest {

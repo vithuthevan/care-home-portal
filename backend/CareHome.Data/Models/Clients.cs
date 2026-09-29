@@ -68,6 +68,8 @@ namespace CareHome.Api.Models
 
         public ICollection<ClientFundingContract> FundingContracts { get; set; }
             = new List<ClientFundingContract>();
+
+        public ClientGuardian? Guardian { get; set; }
     }
 
 }

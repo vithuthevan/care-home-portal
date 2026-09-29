@@ -27,6 +27,13 @@ public class CollectionPolicy : ITenantOwned
 
     public int EscalationDays { get; set; } = 60;
 
+    public bool RemindersEnabled { get; set; }
+
+    [MaxLength(300)]
+    public string? ReminderEmailSubjectTemplate { get; set; }
+
+    public string? ReminderEmailBodyTemplate { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }

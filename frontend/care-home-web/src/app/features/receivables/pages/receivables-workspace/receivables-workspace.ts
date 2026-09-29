@@ -21,6 +21,7 @@ import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
 import { StatusBadgeComponent } from '../../../../shared/ui/status-badge';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { KpiCardComponent } from '../../../../shared/ui/kpi-card';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
 
 interface ReceivablesSummary {
@@ -91,6 +92,7 @@ interface CareHomeSummary {
     StatusBadgeComponent,
     TablePaginationComponent,
     KpiCardComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './receivables-workspace.html',
 })

@@ -3,6 +3,7 @@
     title="Users"
     subtitle="Manage who can access this organisation. Assigned roles control what each person can do, even if a button is visible."
   >
+    <app-import-export-toolbar entity="users" [importEnabled]="false" />
     @if (auth.canWrite()) {
       <a mat-flat-button color="primary" routerLink="/users/new">Add user</a>
     }
@@ -16,11 +17,6 @@
         <p class="m-0 text-sm text-[var(--app-text-muted)]">
           {{ totalCount() }} user(s) · deactivate to revoke sign-in access
         </p>
-        <div filterActions>
-          @if (auth.canWrite()) {
-            <a mat-flat-button color="primary" routerLink="/users/new">Add user</a>
-          }
-        </div>
       </app-filter-bar>
       <div class="table-container table-container--sticky">
         <table class="data-table data-table--responsive-hide-sm">
@@ -93,9 +89,6 @@
       title="No users yet"
       message="Invite colleagues so they can manage residents, billing, and reports."
     >
-      @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/users/new">Add user</a>
-      }
     </app-empty-state>
   }
 </div>

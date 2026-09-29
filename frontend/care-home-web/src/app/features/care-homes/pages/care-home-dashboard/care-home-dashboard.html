@@ -59,6 +59,11 @@
               <tr>
                 <th>Resident</th>
                 <th class="col-ref">Reference</th>
+                <th>Admitted</th>
+                <th class="col-hide-sm">Funder</th>
+                @if (auth.showGuardian()) {
+                  <th class="col-hide-sm">Guardian</th>
+                }
                 <th class="col-status">Status</th>
               </tr>
             </thead>
@@ -73,6 +78,16 @@
                 >
                   <td class="font-medium">{{ resident.firstName }} {{ resident.lastName }}</td>
                   <td>{{ resident.referenceNumber }}</td>
+                  <td>{{ resident.admissionDate | displayDate }}</td>
+                  <td class="col-hide-sm">{{ resident.primaryFundingAuthorityName || '—' }}</td>
+                  @if (auth.showGuardian()) {
+                    <td class="col-hide-sm">
+                      {{ resident.guardianName || '—' }}
+                      @if (resident.guardianPhone) {
+                        <div class="text-sm text-[var(--app-text-muted)]">{{ resident.guardianPhone }}</div>
+                      }
+                    </td>
+                  }
                   <td><app-status-badge [value]="resident.status" /></td>
                 </tr>
               }

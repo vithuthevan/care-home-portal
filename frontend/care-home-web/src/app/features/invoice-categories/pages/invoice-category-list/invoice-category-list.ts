@@ -19,6 +19,7 @@ import {
   invoiceCategoryUsageLabel,
 } from '../../../../shared/format/master-data-usage';
 import { ConfigurationSourceBadgeComponent } from '../../../../shared/ui/configuration-source-badge';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 @Component({
   selector: 'app-invoice-category-list',
@@ -32,6 +33,7 @@ import { ConfigurationSourceBadgeComponent } from '../../../../shared/ui/configu
     IconActionButtonComponent,
     EmptyStateComponent,
     ConfigurationSourceBadgeComponent,
+    ImportExportToolbarComponent,
   ],
   templateUrl: './invoice-category-list.html',
 })

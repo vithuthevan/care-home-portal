@@ -5,6 +5,7 @@
       [subtitle]="ctx.name + ' — Care homes operated by this company.'"
     >
       <a mat-stroked-button [routerLink]="['/companies', ctx.routeKey]">Back to company</a>
+      <app-import-export-toolbar entity="care-homes" (imported)="loadCareHomes()" />
       @if (auth.canWrite()) {
         <a mat-flat-button color="primary" routerLink="/care-homes/new" [queryParams]="newCareHomeQueryParams()">
           <mat-icon>add</mat-icon>
@@ -14,6 +15,7 @@
     </app-page-header>
   } @else {
     <app-page-header title="Care Homes" subtitle="Manage care home locations.">
+      <app-import-export-toolbar entity="care-homes" (imported)="loadCareHomes()" />
       @if (auth.canWrite()) {
         <a mat-flat-button color="primary" routerLink="/care-homes/new" [queryParams]="newCareHomeQueryParams()">Add Care Home</a>
       }
@@ -42,12 +44,6 @@
       title="No care homes yet"
       message="This company doesn't have any care homes configured."
     >
-      @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/care-homes/new" [queryParams]="newCareHomeQueryParams()">
-          <mat-icon>add</mat-icon>
-          Add care home
-        </a>
-      }
       <a mat-stroked-button [routerLink]="['/companies', ctx.routeKey]">Back to company</a>
     </app-empty-state>
   }
@@ -57,9 +53,6 @@
       title="No care homes yet"
       message="Add a care home under your company before admitting residents."
     >
-      @if (auth.canWrite()) {
-        <a mat-flat-button color="primary" routerLink="/care-homes/new" [queryParams]="newCareHomeQueryParams()">Add Care Home</a>
-      }
     </app-empty-state>
   }
 
@@ -85,11 +78,6 @@
           placeholder="Search by name, code, or company..."
         />
       </mat-form-field>
-      <div filterActions>
-        @if (auth.canWrite()) {
-          <a mat-flat-button color="primary" routerLink="/care-homes/new" [queryParams]="newCareHomeQueryParams()">Add care home</a>
-        }
-      </div>
     </app-filter-bar>
     <div class="table-container">
       <table class="data-table data-table--responsive-hide-sm">

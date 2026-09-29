@@ -57,4 +57,14 @@ export class CareHomeService {
   deactivateCareHome(id: number | string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
   }
+
+  getLogo(id: number | string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/${id}/logo`, { responseType: 'blob' });
+  }
+
+  uploadLogo(id: number | string, file: File): Observable<CareHomeLocation> {
+    const body = new FormData();
+    body.append('file', file);
+    return this.http.post<CareHomeLocation>(`${this.apiUrl}/${id}/logo`, body);
+  }
 }

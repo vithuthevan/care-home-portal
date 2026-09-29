@@ -8,6 +8,7 @@ import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { getApiErrorMessage } from '../../../../core/api-error';
+import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 interface Finding {
   publicId: string;
@@ -27,9 +28,12 @@ interface Finding {
     ApiErrorComponent,
     LoadingStateComponent,
     EmptyStateComponent,
+    ImportExportToolbarComponent,
   ],
   template: `
-    <app-page-header title="Revenue assurance" subtitle="Deterministic leakage and billing integrity findings" />
+    <app-page-header title="Revenue assurance" subtitle="Deterministic leakage and billing integrity findings">
+      <app-import-export-toolbar entity="revenue-assurance-findings" [importEnabled]="false" />
+    </app-page-header>
     @if (errorMessage()) {
       <app-api-error
         title="Unable to load revenue assurance findings"

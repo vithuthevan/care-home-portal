@@ -2,7 +2,10 @@
   <app-page-header
     title="Billing Workspace"
     subtitle="Select scope, preview charges, review exceptions, then generate invoice records."
-  />
+  >
+    <app-import-export-toolbar entity="invoices" [importEnabled]="false" />
+    <app-import-export-toolbar entity="misc-charges" [importEnabled]="false" />
+  </app-page-header>
 
   <app-api-error [message]="errorMessage()" />
 
@@ -81,6 +84,10 @@
           <dd>{{ selectedInvoiceCategoryName() }}</dd>
         </div>
         <div>
+          <dt>Invoice template</dt>
+          <dd>{{ selectedInvoiceTemplateOverrideName() }}</dd>
+        </div>
+        <div>
           <dt>Billing period</dt>
           <dd>{{ periodSummary() || '—' }}</dd>
         </div>
@@ -91,6 +98,7 @@
           <mat-label>Company</mat-label>
           <mat-select [(ngModel)]="companyId">
             <mat-option [value]="0">Select company</mat-option>
+            <mat-option [value]="-1">No company</mat-option>
             @for (company of companies(); track company.id) {
               <mat-option [value]="company.id">{{ company.name }}</mat-option>
             }
@@ -107,15 +115,35 @@
         </mat-form-field>
         <mat-form-field appearance="outline" class="w-full">
           <mat-label>Invoice category</mat-label>
-          <mat-select [(ngModel)]="invoiceCategoryId">
+          <mat-select [(ngModel)]="invoiceCategoryId" (ngModelChange)="onInvoiceCategoryChange()">
             <mat-option [value]="0">All categories</mat-option>
             @for (category of categories(); track category.id) {
               <mat-option [value]="category.id">{{ category.name }}</mat-option>
             }
           </mat-select>
         </mat-form-field>
+        <mat-form-field appearance="outline" class="w-full md:col-span-2">
+          <mat-label>Invoice template override</mat-label>
+          <mat-select [(ngModel)]="invoiceTemplateId" [disabled]="!invoiceCategoryId">
+            <mat-option [value]="0">Automatic (contract pin or rules)</mat-option>
+            @for (template of templatesForSelectedCategory(); track template.id) {
+              <mat-option [value]="template.id">{{ template.name }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint
+            >Optional. Applies to this run only and overrides contract pins. Select a category
+            first.</mat-hint
+          >
+        </mat-form-field>
         <app-date-field label="Period start" [(ngModel)]="periodStart" />
         <app-date-field label="Period end" [(ngModel)]="periodEnd" />
+        @if (funderCycle()) {
+          <p class="md:col-span-2 m-0 text-sm text-[var(--app-text-muted)]">
+            Funder cycle billing is enabled for this organisation. Period dates are suggested from
+            funding authority cycles. Change scope only if you need a manual override. Unbilled cycles
+            up to the end date are created as separate invoices.
+          </p>
+        }
       </div>
       @if (periodSummary(); as summary) {
         <p class="mt-3 mb-0 text-sm text-[var(--app-text-muted)]">
@@ -128,7 +156,7 @@
           color="primary"
           type="button"
           (click)="runPreview()"
-          [disabled]="isWorking() || !companyId"
+          [disabled]="isWorking() || !canPreview()"
         >
           @if (isPreviewing()) {
             Previewing...
@@ -160,9 +188,39 @@
 
   @if (generateResult(); as generated) {
     <div class="alert-banner alert-banner--success">
-      Generated {{ generated.invoiceCount }} invoice(s). Total £{{
-        generated.totalAmount | number: '1.2-2'
-      }}.
+      <p class="m-0">
+        Generated {{ generated.invoiceCount }} invoice(s). Total £{{
+          generated.totalAmount | number: '1.2-2'
+        }}.
+        @if (generated.emailSend) {
+          <span>
+            Email: {{ generated.emailSend.succeeded }} sent, {{ generated.emailSend.failed }} failed,
+            {{ generated.emailSend.skipped }} skipped.
+          </span>
+        }
+      </p>
+      <div class="actions-bar mt-3">
+        <a
+          mat-stroked-button
+          routerLink="/invoices"
+          [queryParams]="generatedInvoicesQueryParams()"
+          >View generated invoices</a
+        >
+        @if (auth.canWrite()) {
+          <button
+            mat-stroked-button
+            type="button"
+            (click)="bulkEmailGenerated()"
+            [disabled]="isBulkSending()"
+          >
+            @if (isBulkSending()) {
+              Sending...
+            } @else {
+              Email generated invoices
+            }
+          </button>
+        }
+      </div>
     </div>
   }
 
@@ -419,6 +477,46 @@
       </div>
     </section>
 
+    @if (previewData.expectedInvoiceCount) {
+      <section class="panel mb-4">
+        <h2 class="mt-0 text-section">Invoices to create</h2>
+        <p class="mt-0 text-sm text-[var(--app-text-muted)]">
+          This run will create <strong>{{ previewData.expectedInvoiceCount }}</strong> invoice(s) from
+          the billable lines below.
+        </p>
+        @if (previewData.invoiceGroups?.length) {
+          <div class="table-container mt-3">
+            <table class="data-table data-table--responsive-hide-sm">
+              <thead>
+                <tr>
+                  <th>Care home</th>
+                  <th>Funder</th>
+                  <th>Category</th>
+                  <th>Resident</th>
+                  <th>Period</th>
+                  <th class="num">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (group of previewData.invoiceGroups; track $index) {
+                  <tr>
+                    <td>{{ group.careHomeName }}</td>
+                    <td>{{ group.fundingAuthorityName }}</td>
+                    <td>{{ group.invoiceCategoryName }}</td>
+                    <td>{{ group.clientName || '—' }}</td>
+                    <td>
+                      {{ group.periodStart | displayDate }} → {{ group.periodEnd | displayDate }}
+                    </td>
+                    <td class="num">£{{ group.subtotalAmount | number: '1.2-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </section>
+    }
+
     <section class="panel">
       <h2 class="mt-0 text-section">Step 4 — Generate</h2>
 
@@ -433,9 +531,11 @@
         <div class="billing-generation-ready">
           <p class="m-0 font-semibold">Ready to generate</p>
           <p class="m-0 mt-1 text-sm text-[var(--app-text-secondary)]">
-            {{ eligibleResidentsLabel(previewData) }} · Billable total £{{
-              previewData.totalAmount | number: '1.2-2'
-            }}
+            {{ eligibleResidentsLabel(previewData) }} ·
+            @if (previewData.expectedInvoiceCount) {
+              {{ previewData.expectedInvoiceCount }} invoice(s) ·
+            }
+            Billable total £{{ previewData.totalAmount | number: '1.2-2' }}
           </p>
         </div>
       }
@@ -450,6 +550,9 @@
       }
 
       @if (auth.canWrite()) {
+        <mat-checkbox [(ngModel)]="sendEmailAfterGenerate" class="block mt-3">
+          Email invoices immediately after generation (requires recipient emails and SMTP)
+        </mat-checkbox>
         <div class="actions-bar mt-4">
           <button
             mat-flat-button

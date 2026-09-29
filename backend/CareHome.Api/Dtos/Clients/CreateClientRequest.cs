@@ -1,46 +1,61 @@
 using System.ComponentModel.DataAnnotations;
 using CareHome.Api.Common;
 
-namespace CareHome.Api.Dtos.Clients
+namespace CareHome.Api.Dtos.Clients;
+
+public class CreateClientRequest
 {
-    public class CreateClientRequest
-    {
-        [Range(1, int.MaxValue)]
-        public int CareHomeId { get; set; }
+    [Range(1, int.MaxValue)]
+    public int CareHomeId { get; set; }
 
-        [MaxLength(20)]
-        public string? SageId { get; set; }
+    [MaxLength(20)]
+    public string? SageId { get; set; }
 
-        [MaxLength(20)]
-        public string? ReferenceNumber { get; set; }
+    [MaxLength(20)]
+    public string? ReferenceNumber { get; set; }
 
-        [MaxLength(10)]
-        public string? Title { get; set; }
+    [MaxLength(10)]
+    public string? Title { get; set; }
 
-        [Required]
-        [MaxLength(100)]
-        public string FirstName { get; set; } = string.Empty;
+    [Required]
+    [MaxLength(100)]
+    public string FirstName { get; set; } = string.Empty;
 
-        [Required]
-        [MaxLength(100)]
-        public string LastName { get; set; } = string.Empty;
+    [Required]
+    [MaxLength(100)]
+    public string LastName { get; set; } = string.Empty;
 
-        public DateOnly? DateOfBirth { get; set; }
+    public DateOnly? DateOfBirth { get; set; }
 
-        [Required]
-        [MaxLength(30)]
-        public string CareType { get; set; } = string.Empty;
+    [Required]
+    [MaxLength(30)]
+    public string CareType { get; set; } = string.Empty;
 
-        public DateOnly AdmissionDate { get; set; }
+    public DateOnly AdmissionDate { get; set; }
 
-        [MaxLength(150)]
-        [OptionalEmailAddress]
-        public string? Email { get; set; }
+    [MaxLength(150)]
+    [OptionalEmailAddress]
+    public string? Email { get; set; }
 
-        [MaxLength(30)]
-        public string? Phone { get; set; }
+    [MaxLength(30)]
+    public string? Phone { get; set; }
 
-        [MaxLength(1000)]
-        public string? Notes { get; set; }
-    }
+    [MaxLength(1000)]
+    public string? Notes { get; set; }
+
+    [MaxLength(150)]
+    public string? GuardianName { get; set; }
+
+    [MaxLength(80)]
+    public string? GuardianRelationship { get; set; }
+
+    [MaxLength(150)]
+    [OptionalEmailAddress]
+    public string? GuardianEmail { get; set; }
+
+    [MaxLength(30)]
+    public string? GuardianPhone { get; set; }
+
+    [MaxLength(300)]
+    public string? GuardianAddress { get; set; }
 }
