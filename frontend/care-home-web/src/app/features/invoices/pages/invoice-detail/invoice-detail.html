@@ -50,15 +50,6 @@
           <app-labeled-status kind="Invoice" [value]="inv.status" />
           <app-labeled-status kind="Payment" [value]="inv.collectionStatus || inv.paymentStatus" />
         </div>
-        @if (inv.lines?.length) {
-          <p class="invoice-hero__resident m-0">
-            @if (clientProfileLink(inv.lines[0]); as clientLink) {
-              <a [routerLink]="clientLink">{{ inv.lines[0].clientName }}</a>
-            } @else {
-              {{ inv.lines[0].clientName }}
-            }
-          </p>
-        }
         <p class="invoice-hero__period m-0 text-sm text-[var(--app-text-muted)]">
           Service period: {{ inv.periodStart | displayDate }} – {{ inv.periodEnd | displayDate }}
         </p>
@@ -213,23 +204,11 @@
 
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
       <section class="panel">
-        <h2 class="mt-0 text-section">Resident</h2>
-        @if (inv.lines?.length) {
-          <dl class="dl-grid dl-grid--entity">
-            <div>
-              <dt>Name</dt>
-              <dd>
-                @if (clientProfileLink(inv.lines[0]); as clientLink) {
-                  <a [routerLink]="clientLink">{{ inv.lines[0].clientName }}</a>
-                } @else {
-                  {{ inv.lines[0].clientName }}
-                }
-              </dd>
-            </div>
-          </dl>
-        } @else {
-          <p class="text-sm text-[var(--app-text-muted)]">No line items on this invoice.</p>
-        }
+        <h2 class="mt-0 text-section">Residents</h2>
+        <p class="m-0">{{ residentSummary(inv) }}</p>
+        <p class="mt-2 mb-0 text-sm text-[var(--app-text-muted)]">
+          Each resident is listed once in the invoice lines.
+        </p>
       </section>
       <section class="panel">
         <h2 class="mt-0 text-section">Funding</h2>
@@ -302,7 +281,7 @@
           <thead>
             <tr>
               <th>Resident</th>
-              <th>Description</th>
+              <th>Service</th>
               <th class="col-hide-sm">Period</th>
               <th class="num">Days</th>
               <th class="num">Rate</th>
@@ -319,12 +298,7 @@
                     {{ line.clientName }}
                   }
                 </td>
-                <td>
-                  <div>{{ line.description }}</div>
-                  @if (lineAmountHint(line); as hint) {
-                    <p class="invoice-line-hint m-0">{{ hint }}</p>
-                  }
-                </td>
+                <td>{{ lineServiceLabel(line) }}</td>
                 <td class="col-hide-sm">
                   {{ line.servicePeriodStart | displayDate }} –
                   {{ line.servicePeriodEnd | displayDate }}

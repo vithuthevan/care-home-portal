@@ -485,8 +485,9 @@
       <section class="panel mb-4">
         <h2 class="mt-0 text-section">Invoices to create</h2>
         <p class="mt-0 text-sm text-[var(--app-text-muted)]">
-          This run will create <strong>{{ previewData.expectedInvoiceCount }}</strong> invoice(s) from
-          the billable lines below.
+          This run will create <strong>{{ previewData.expectedInvoiceCount }}</strong> invoice(s).
+          A row marked <strong>All residents</strong> is one bulk invoice: every resident for that
+          funder and care home is a line on the same invoice. A named resident is a separate invoice.
         </p>
         @if (previewData.invoiceGroups?.length) {
           <div class="table-container mt-3">
@@ -507,7 +508,13 @@
                     <td>{{ group.careHomeName }}</td>
                     <td>{{ group.fundingAuthorityName }}</td>
                     <td>{{ group.invoiceCategoryName }}</td>
-                    <td>{{ group.clientName || '—' }}</td>
+                    <td>
+                      @if (group.clientName) {
+                        {{ group.clientName }}
+                      } @else {
+                        All residents ({{ group.lineCount }})
+                      }
+                    </td>
                     <td>
                       {{ group.periodStart | displayDate }} → {{ group.periodEnd | displayDate }}
                     </td>
