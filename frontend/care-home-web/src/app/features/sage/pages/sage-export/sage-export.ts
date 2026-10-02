@@ -16,6 +16,7 @@ import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-but
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { AppDateFieldComponent } from '../../../../shared/ui/app-date-field';
 import { ToastService } from '../../../../shared/ui/toast.service';
+import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { CareHomeService } from '../../../care-homes/services/care-home.service';
 import { CareHomeLocation } from '../../../care-homes/models/care-home.model';
 import { MatSelectModule } from '@angular/material/select';
@@ -44,6 +45,7 @@ interface SageExportBatch {
     TablePaginationComponent,
     AppDateFieldComponent,
     ImportExportToolbarComponent,
+    LoadingStateComponent,
   ],
   templateUrl: './sage-export.html',
 })
@@ -58,6 +60,7 @@ export class SageExportPage implements OnInit {
   readonly careHomes = signal<CareHomeLocation[]>([]);
   readonly preview = signal<any | null>(null);
   readonly batches = signal<SageExportBatch[]>([]);
+  readonly batchesLoading = signal(true);
   readonly totalCount = signal(0);
   readonly errorMessage = signal<string | null>(null);
   readonly infoMessage = signal<{ text: string; tone: 'success' | 'warning' } | null>(null);
@@ -116,14 +119,18 @@ export class SageExportPage implements OnInit {
   }
 
   loadBatches(): void {
+    this.batchesLoading.set(true);
     const params = new HttpParams().set('page', this.page).set('pageSize', this.pageSize);
-    this.http.get<PagedResult<SageExportBatch>>('/api/sage-exports', { params }).subscribe({
-      next: (x) => {
-        this.batches.set(x.items);
-        this.totalCount.set(x.totalCount);
-      },
-      error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Unable to load exports.')),
-    });
+    this.http
+      .get<PagedResult<SageExportBatch>>('/api/sage-exports', { params })
+      .pipe(finalize(() => this.batchesLoading.set(false)))
+      .subscribe({
+        next: (x) => {
+          this.batches.set(x.items);
+          this.totalCount.set(x.totalCount);
+        },
+        error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Unable to load exports.')),
+      });
   }
 
   onPageChange(page: number): void {

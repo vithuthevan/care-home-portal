@@ -1,6 +1,10 @@
 <app-page-header title="Banking" subtitle="Import statements and reconcile receipts to invoices">
-  <app-import-export-toolbar entity="bank-accounts" (imported)="loadAccounts()" />
-  <app-import-export-toolbar entity="bank-transactions" [importEnabled]="false" />
+  <app-import-export-toolbar
+    entity="bank-accounts"
+    exportLabel="Accounts"
+    [extraExports]="bankExports"
+    (imported)="loadAccounts()"
+  />
 </app-page-header>
 
 @if (errorMessage()) {
@@ -15,12 +19,16 @@
 
 @if (tabIndex === 0) {
   <section class="panel panel--flat mt-4">
-    <button mat-flat-button color="primary" type="button" (click)="createAccount()">Add bank account</button>
-    <ul class="mt-3">
-      @for (acct of accounts(); track acct.publicId) {
-        <li>{{ acct.name }} ({{ acct.currency }})</li>
-      }
-    </ul>
+    @if (accountsLoading()) {
+      <app-loading-state variant="cards" label="Loading bank accounts..." />
+    } @else {
+      <button mat-flat-button color="primary" type="button" (click)="createAccount()">Add bank account</button>
+      <ul class="mt-3">
+        @for (acct of accounts(); track acct.publicId) {
+          <li>{{ acct.name }} ({{ acct.currency }})</li>
+        }
+      </ul>
+    }
   </section>
 }
 
@@ -86,7 +94,7 @@
 
 @if (tabIndex === 2) {
   @if (workspaceLoading()) {
-    <app-loading-state label="Loading reconciliation..." />
+    <app-loading-state variant="table" label="Loading reconciliation..." />
   } @else if (workspace(); as w) {
     <section class="panel panel--flat mt-4">
       <p class="m-0">

@@ -3,8 +3,12 @@
     title="Billing Workspace"
     subtitle="Select scope, preview charges, review exceptions, then generate invoice records."
   >
-    <app-import-export-toolbar entity="invoices" [importEnabled]="false" />
-    <app-import-export-toolbar entity="misc-charges" [importEnabled]="false" />
+    <app-import-export-toolbar
+      entity="invoices"
+      exportLabel="Invoices"
+      [extraExports]="billingExports"
+      [importEnabled]="false"
+    />
   </app-page-header>
 
   <app-api-error [message]="errorMessage()" />
@@ -172,7 +176,7 @@
   </section>
 
   @if (!preview() && isPreviewing()) {
-    <app-loading-state label="Previewing billing..." />
+    <app-loading-state variant="table" label="Previewing billing..." [columns]="5" />
   }
 
   @if (!preview() && !isWorking()) {

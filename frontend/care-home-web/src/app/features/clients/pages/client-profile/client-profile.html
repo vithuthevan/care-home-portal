@@ -2,7 +2,7 @@
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
-    <app-loading-state label="Loading resident..." />
+    <app-loading-state variant="detail" label="Loading resident..." />
   }
 
   @if (client(); as client) {
@@ -218,11 +218,22 @@
             title="Funding"
             subtitle="Who pays for this resident, under which contract, and at what rate."
           >
-            <app-import-export-toolbar entity="funding-contracts" (imported)="loadContracts()" />
-            <app-import-export-toolbar entity="funding-rates" (imported)="loadContracts()" />
+            <app-import-export-toolbar
+              entity="funding-contracts"
+              exportLabel="Contracts"
+              [extraExports]="fundingExports"
+              (imported)="loadContracts()"
+            />
+            <app-import-export-toolbar
+              entity="funding-rates"
+              [showExport]="false"
+              (imported)="loadContracts()"
+            />
           </app-section-header>
 
-          @if (contracts().length === 0) {
+          @if (contractsLoading()) {
+            <app-loading-state variant="cards" label="Loading funding..." />
+          } @else if (contracts().length === 0) {
             <app-empty-state
               title="No funding contracts"
               message="This resident cannot be billed until a funding contract and rate are configured."
@@ -235,7 +246,7 @@
             </app-empty-state>
           }
 
-          @for (contract of contracts(); track contract.id) {
+          @for (contract of contractsLoading() ? [] : contracts(); track contract.id) {
             <article class="contract-card">
               <div class="contract-card__head">
                 <div>
@@ -381,7 +392,9 @@
         <div class="pt-4">
           <section class="panel">
             <app-section-header title="Invoices" subtitle="Invoices generated for this resident." />
-            @if (invoices().length === 0) {
+            @if (invoicesLoading()) {
+              <app-loading-state variant="table" label="Loading invoices..." [columns]="4" />
+            } @else if (invoices().length === 0) {
               <app-empty-state
                 title="No invoices yet"
                 message="Invoices generated for this resident will appear here."

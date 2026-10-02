@@ -107,10 +107,13 @@ export class ClientProfilePage implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly breadcrumbs = inject(BreadcrumbService);
   readonly auth = inject(AuthService);
+  readonly fundingExports = [{ entity: 'funding-rates', label: 'Rates' }];
 
   readonly client = signal<Client | null>(null);
   readonly contracts = signal<FundingContractView[]>([]);
   readonly invoices = signal<ResidentInvoiceRow[]>([]);
+  readonly contractsLoading = signal(false);
+  readonly invoicesLoading = signal(false);
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly selectedTabIndex = signal(0);
@@ -212,6 +215,8 @@ export class ClientProfilePage implements OnInit {
               { label: 'Residents', routerLink: '/clients' },
               { label: `${client.firstName} ${client.lastName}`.trim() },
             ]);
+            this.contractsLoading.set(true);
+            this.invoicesLoading.set(true);
             this.loadContracts();
             this.loadInvoices();
           },
@@ -346,23 +351,37 @@ export class ClientProfilePage implements OnInit {
 
   loadContracts(): void {
     const current = this.client();
-    if (!current) return;
-    this.http.get<FundingContractView[]>(`/api/clients/${current.id}/funding-contracts`).subscribe({
-      next: (x) => this.contracts.set(x),
-      error: (error) =>
-        this.errorMessage.set(getApiErrorMessage(error, 'Unable to load funding contracts.')),
-    });
+    if (!current) {
+      this.contractsLoading.set(false);
+      return;
+    }
+    this.contractsLoading.set(true);
+    this.http
+      .get<FundingContractView[]>(`/api/clients/${current.id}/funding-contracts`)
+      .pipe(finalize(() => this.contractsLoading.set(false)))
+      .subscribe({
+        next: (x) => this.contracts.set(x),
+        error: (error) =>
+          this.errorMessage.set(getApiErrorMessage(error, 'Unable to load funding contracts.')),
+      });
   }
 
   loadInvoices(): void {
     const current = this.client();
-    if (!current) return;
-    this.http.get<{ items?: ResidentInvoiceRow[] }>('/api/invoices', {
-      params: { clientId: current.id },
-    }).subscribe({
-      next: (x) => this.invoices.set(x.items ?? []),
-      error: (error) =>
-        this.errorMessage.set(getApiErrorMessage(error, 'Unable to load invoices.')),
-    });
+    if (!current) {
+      this.invoicesLoading.set(false);
+      return;
+    }
+    this.invoicesLoading.set(true);
+    this.http
+      .get<{ items?: ResidentInvoiceRow[] }>('/api/invoices', {
+        params: { clientId: current.id },
+      })
+      .pipe(finalize(() => this.invoicesLoading.set(false)))
+      .subscribe({
+        next: (x) => this.invoices.set(x.items ?? []),
+        error: (error) =>
+          this.errorMessage.set(getApiErrorMessage(error, 'Unable to load invoices.')),
+      });
   }
 }
