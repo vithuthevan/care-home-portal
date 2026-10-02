@@ -32,6 +32,7 @@ interface FundingContractView {
   fundingAuthorityId: number;
   fundingAuthorityPublicId?: string;
   fundingAuthorityName: string;
+  invoiceCategoryId: number;
   invoiceCategoryName: string;
   nominalCode: string;
   invoiceTemplateId?: number | null;
