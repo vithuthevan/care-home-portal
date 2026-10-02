@@ -49,7 +49,7 @@ interface Finding {
       <p class="mt-2">Open findings: {{ dashboardOpen() }}</p>
     </section>
     @if (isLoading() && !errorMessage()) {
-      <app-loading-state label="Loading findings..." />
+      <app-loading-state variant="table" label="Loading findings..." />
     } @else if (!errorMessage() && findings().length === 0) {
       <app-empty-state title="No open findings" message="Run a scan to detect billing integrity issues." />
     } @else if (!errorMessage()) {

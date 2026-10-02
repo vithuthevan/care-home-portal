@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
 import { AuthService } from '../../../../core/auth.service';
@@ -12,6 +13,7 @@ import { PagedResult } from '../../../../core/models';
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
+import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 
 @Component({
@@ -25,6 +27,7 @@ import { ImportExportToolbarComponent } from '../../../../shared/ui/import-expor
     TablePaginationComponent,
     FilterBarComponent,
     EmptyStateComponent,
+    LoadingStateComponent,
     ImportExportToolbarComponent,
   ],
   templateUrl: './misc-charges.html',
@@ -36,6 +39,7 @@ export class MiscChargesPage implements OnInit {
   readonly billingHandoffQueryParams = signal<Record<string, string>>({});
   readonly preview = signal<any | null>(null);
   readonly batches = signal<any[]>([]);
+  readonly isLoading = signal(true);
   readonly totalCount = signal(0);
   readonly errorMessage = signal<string | null>(null);
   readonly info = signal<string | null>(null);
@@ -57,15 +61,19 @@ export class MiscChargesPage implements OnInit {
   }
 
   loadBatches(): void {
+    this.isLoading.set(true);
     const params = new HttpParams().set('page', this.page).set('pageSize', this.pageSize);
-    this.http.get<PagedResult<any>>('/api/misc-charges/imports', { params }).subscribe({
-      next: (x) => {
-        this.batches.set(x.items);
-        this.totalCount.set(x.totalCount);
-      },
-      error: (error) =>
-        this.errorMessage.set(getApiErrorMessage(error, 'Unable to load import batches.')),
-    });
+    this.http
+      .get<PagedResult<any>>('/api/misc-charges/imports', { params })
+      .pipe(finalize(() => this.isLoading.set(false)))
+      .subscribe({
+        next: (x) => {
+          this.batches.set(x.items);
+          this.totalCount.set(x.totalCount);
+        },
+        error: (error) =>
+          this.errorMessage.set(getApiErrorMessage(error, 'Unable to load import batches.')),
+      });
   }
 
   onPageChange(page: number): void {

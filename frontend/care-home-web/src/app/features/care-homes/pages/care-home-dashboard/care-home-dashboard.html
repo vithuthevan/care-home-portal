@@ -2,7 +2,7 @@
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
-    <app-loading-state label="Loading care home dashboard..." />
+    <app-loading-state variant="dashboard" label="Loading care home dashboard..." />
   }
 
   @if (data(); as data) {

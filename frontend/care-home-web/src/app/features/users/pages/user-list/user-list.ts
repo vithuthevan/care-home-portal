@@ -1,6 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
 
 import { getApiErrorMessage } from '../../../../core/api-error';
@@ -16,6 +17,7 @@ import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-but
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
+import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import { PagedResult } from '../../../../core/models';
 
@@ -31,6 +33,7 @@ import { PagedResult } from '../../../../core/models';
     TablePaginationComponent,
     FilterBarComponent,
     EmptyStateComponent,
+    LoadingStateComponent,
     ImportExportToolbarComponent,
   ],
   templateUrl: './user-list.html',
@@ -42,6 +45,7 @@ export class UserListPage implements OnInit {
   private readonly toast = inject(ToastService);
   readonly auth = inject(AuthService);
   readonly users = signal<any[]>([]);
+  readonly isLoading = signal(true);
   readonly totalCount = signal(0);
   readonly homes = signal<CareHomeLocation[]>([]);
   readonly errorMessage = signal<string | null>(null);
@@ -54,14 +58,18 @@ export class UserListPage implements OnInit {
   }
 
   loadUsers(): void {
+    this.isLoading.set(true);
     const params = new HttpParams().set('page', this.page).set('pageSize', this.pageSize);
-    this.http.get<PagedResult<any>>('/api/users', { params }).subscribe({
-      next: (page) => {
-        this.users.set(page.items);
-        this.totalCount.set(page.totalCount);
-      },
-      error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Unable to load users.')),
-    });
+    this.http
+      .get<PagedResult<any>>('/api/users', { params })
+      .pipe(finalize(() => this.isLoading.set(false)))
+      .subscribe({
+        next: (page) => {
+          this.users.set(page.items);
+          this.totalCount.set(page.totalCount);
+        },
+        error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Unable to load users.')),
+      });
   }
 
   onPageChange(page: number): void {

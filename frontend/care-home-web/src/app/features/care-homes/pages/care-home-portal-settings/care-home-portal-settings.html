@@ -9,7 +9,7 @@
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
-    <app-loading-state label="Loading settings..." />
+    <app-loading-state variant="form" label="Loading settings..." />
   }
 
   @if (home(); as location) {

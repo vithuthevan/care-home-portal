@@ -15,7 +15,7 @@
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
-    <app-loading-state label="Loading companies..." />
+    <app-loading-state variant="table" label="Loading companies..." />
   }
 
   @if (!isLoading() && companies().length === 0 && !searchText().trim() && totalCount() === 0) {

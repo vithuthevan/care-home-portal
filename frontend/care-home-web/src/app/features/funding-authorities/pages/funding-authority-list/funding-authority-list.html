@@ -19,7 +19,7 @@
   }
 
   @if (isLoading() && fundingAuthorities().length === 0 && !errorMessage()) {
-    <app-loading-state label="Loading funding authorities..." />
+    <app-loading-state variant="table" label="Loading funding authorities..." />
   }
 
   @if (!isLoading() && fundingAuthorities().length === 0 && !errorMessage()) {

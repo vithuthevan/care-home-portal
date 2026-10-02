@@ -15,7 +15,7 @@
   />
 
   @if (isLoading() && !summary()) {
-    <app-loading-state label="Loading receivables..." />
+    <app-loading-state variant="dashboard" label="Loading receivables..." />
   }
 
   @if (summary(); as s) {

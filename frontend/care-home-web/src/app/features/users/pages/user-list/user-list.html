@@ -11,7 +11,9 @@
 
   <app-api-error [message]="errorMessage()" />
 
-  @if (users().length) {
+  @if (isLoading()) {
+    <app-loading-state variant="table" label="Loading users..." [columns]="6" />
+  } @else if (users().length) {
     <div class="table-shell list-view-table--from-md">
       <app-filter-bar [toolbar]="true">
         <p class="m-0 text-sm text-[var(--app-text-muted)]">

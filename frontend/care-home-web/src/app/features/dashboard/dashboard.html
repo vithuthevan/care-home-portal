@@ -18,7 +18,7 @@
   }
 
   @if (isLoading() && !dashboard()) {
-    <app-loading-state label="Loading dashboard..." />
+    <app-loading-state variant="dashboard" label="Loading dashboard..." />
   }
 
   @if (dashboard(); as data) {

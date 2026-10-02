@@ -11,7 +11,7 @@
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
-    <app-loading-state label="Loading care home..." />
+    <app-loading-state variant="form" label="Loading care home..." />
   }
 
   @if (!isLoading()) {

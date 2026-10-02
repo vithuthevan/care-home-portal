@@ -5,6 +5,7 @@ import { finalize } from 'rxjs';
 import { PageHeaderComponent } from '../../../../shared/ui/page-header';
 import { ApiErrorComponent } from '../../../../shared/ui/api-error';
 import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
+import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { getApiErrorMessage } from '../../../../core/api-error';
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
@@ -41,6 +42,7 @@ interface RemittanceDetail {
     PageHeaderComponent,
     ApiErrorComponent,
     LoadingStateComponent,
+    EmptyStateComponent,
     ImportExportToolbarComponent,
   ],
   template: `
@@ -56,6 +58,14 @@ interface RemittanceDetail {
         <app-loading-state label="Importing..." />
       }
     </section>
+    @if (listLoading()) {
+      <app-loading-state variant="table" label="Loading remittances..." [columns]="5" />
+    } @else if (batches().length === 0) {
+      <app-empty-state
+        title="No remittances yet"
+        message="Import a funder remittance file to match payments to invoices."
+      />
+    } @else {
     <div class="table-wrap mt-4">
       <table class="data-table">
         <thead>
@@ -84,6 +94,7 @@ interface RemittanceDetail {
         </tbody>
       </table>
     </div>
+    }
   `,
 })
 export class RemittanceWorkspacePage implements OnInit {
@@ -92,6 +103,7 @@ export class RemittanceWorkspacePage implements OnInit {
 
   batches = signal<RemittanceBatch[]>([]);
   loading = signal(false);
+  listLoading = signal(true);
   errorMessage = signal<string | null>(null);
 
   ngOnInit(): void {
@@ -99,10 +111,14 @@ export class RemittanceWorkspacePage implements OnInit {
   }
 
   load(): void {
-    this.http.get<RemittanceBatch[]>('/api/remittances').subscribe({
-      next: (rows) => this.batches.set(rows),
-      error: (err) => this.errorMessage.set(getApiErrorMessage(err, 'Failed to load remittances.')),
-    });
+    this.listLoading.set(true);
+    this.http
+      .get<RemittanceBatch[]>('/api/remittances')
+      .pipe(finalize(() => this.listLoading.set(false)))
+      .subscribe({
+        next: (rows) => this.batches.set(rows),
+        error: (err) => this.errorMessage.set(getApiErrorMessage(err, 'Failed to load remittances.')),
+      });
   }
 
   onFile(event: Event): void {

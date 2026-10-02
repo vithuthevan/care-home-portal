@@ -67,6 +67,7 @@ export class CreditNoteWorkspacePage implements OnInit {
   readonly residents = signal<Client[]>([]);
   readonly preview = signal<any | null>(null);
   readonly notes = signal<any[]>([]);
+  readonly notesLoading = signal(true);
   readonly notesTotalCount = signal(0);
   notesPage = 1;
   notesPageSize = 20;
@@ -398,17 +399,21 @@ export class CreditNoteWorkspacePage implements OnInit {
   }
 
   private loadNotes(): void {
+    this.notesLoading.set(true);
     const params = new HttpParams()
       .set('page', this.notesPage)
       .set('pageSize', this.notesPageSize);
-    this.http.get<PagedResult<any>>('/api/credit-notes', { params }).subscribe({
-      next: (x) => {
-        this.notes.set(x.items);
-        this.notesTotalCount.set(x.totalCount);
-      },
-      error: (error) =>
-        this.errorMessage.set(getApiErrorMessage(error, 'Unable to load credit notes.')),
-    });
+    this.http
+      .get<PagedResult<any>>('/api/credit-notes', { params })
+      .pipe(finalize(() => this.notesLoading.set(false)))
+      .subscribe({
+        next: (x) => {
+          this.notes.set(x.items);
+          this.notesTotalCount.set(x.totalCount);
+        },
+        error: (error) =>
+          this.errorMessage.set(getApiErrorMessage(error, 'Unable to load credit notes.')),
+      });
   }
 
   onNotesPageChange(page: number): void {
