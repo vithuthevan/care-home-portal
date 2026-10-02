@@ -633,7 +633,7 @@ namespace CareHome.Api.Billing
                                 fragment.Start,
                                 fragment.End,
                                 rate.EffectiveFrom,
-                                rate.EffectiveTo);
+                                ApplicableRateEnd(contract, rate, rates));
 
                             if (rateSlice is null)
                             {
@@ -1117,6 +1117,35 @@ namespace CareHome.Api.Billing
                 CareHomeId = client?.CareHomeId,
                 ClientFundingContractId = contractId
             };
+        }
+
+        /// <summary>
+        /// A rate runs until its own end when that end is after the start.
+        /// A same-day end does not stop a contract that continues, unless a later
+        /// rate on this same contract takes over. A different invoice category does not close it.
+        /// </summary>
+        private static DateOnly? ApplicableRateEnd(
+            ClientFundingContract contract,
+            FundingRate rate,
+            IReadOnlyList<FundingRate> rates)
+        {
+            var laterRate = rates.Any(other => other.Id != rate.Id && other.EffectiveFrom > rate.EffectiveFrom);
+            if (rate.EffectiveTo is DateOnly to && to > rate.EffectiveFrom)
+            {
+                if (contract.ContractEndDate is DateOnly contractEnd && to > contractEnd)
+                {
+                    return contractEnd;
+                }
+
+                return to;
+            }
+
+            if (laterRate && rate.EffectiveTo is DateOnly closed)
+            {
+                return closed;
+            }
+
+            return contract.ContractEndDate;
         }
 
         private static string FormatName(Client client)
