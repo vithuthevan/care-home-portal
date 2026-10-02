@@ -139,8 +139,13 @@
             first.</mat-hint
           >
         </mat-form-field>
-        <app-date-field label="Period start" [(ngModel)]="periodStart" />
-        <app-date-field label="Period end" [(ngModel)]="periodEnd" />
+        <app-date-field label="Period start" [(ngModel)]="periodStart" [required]="true" />
+        <app-date-field label="Period end" [(ngModel)]="periodEnd" [required]="true" />
+        @if (needsBillingPeriod()) {
+          <p class="md:col-span-3 m-0 text-sm text-[var(--app-text-muted)]">
+            Billing period start and end are required.
+          </p>
+        }
         @if (funderCycle()) {
           <p class="md:col-span-2 m-0 text-sm text-[var(--app-text-muted)]">
             Funder cycle billing is enabled for this organisation. Period dates are suggested from

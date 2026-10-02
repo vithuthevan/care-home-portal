@@ -5,10 +5,9 @@ using CareHome.Api.Models;
 namespace CareHome.Api.Funding;
 
 /// <summary>
-/// Funding-stream identity is Tenant + Client + Funding Authority + Invoice Category.
-/// Nominal Code is not part of identity: a different nominal must not create a second
-/// simultaneously applicable contract. SQL Server cannot enforce arbitrary inclusive
-/// date-range overlap with a UNIQUE index, so overlap is validated in business logic.
+/// A funding authority may be used on only one active contract per resident and
+/// invoice category. The same authority may be used again when the invoice category
+/// is different. Nominal code is not part of that identity.
 /// </summary>
 public static class FundingContractOverlap
 {
@@ -17,7 +16,7 @@ public static class FundingContractOverlap
     public const string BillingCode = "OVERLAPPING_FUNDING_CONTRACTS";
 
     public const string ConflictMessage =
-        "This resident already has an overlapping funding arrangement for the selected funding authority and invoice category.";
+        "This resident already has an active contract for this funding authority in the same invoice category. The same funding authority can be used again with a different invoice category.";
 
     public static bool PeriodsOverlap(
         DateOnly startA,

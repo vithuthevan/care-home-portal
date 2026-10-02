@@ -221,6 +221,11 @@ export class BillingWorkspacePage implements OnInit {
   }
 
   runPreview(): void {
+    if (!this.canPreview()) {
+      this.errorMessage.set(this.previewBlockedMessage());
+      return;
+    }
+
     this.errorMessage.set(null);
     this.generateResult.set(null);
     this.isPreviewing.set(true);
@@ -538,7 +543,35 @@ export class BillingWorkspacePage implements OnInit {
   }
 
   canPreview(): boolean {
+    return this.hasBillingScope() && this.hasBillingPeriod();
+  }
+
+  needsBillingPeriod(): boolean {
+    return this.hasBillingScope() && !this.hasBillingPeriod();
+  }
+
+  private hasBillingScope(): boolean {
     return this.companyId !== 0 || this.careHomeId > 0;
+  }
+
+  private hasBillingPeriod(): boolean {
+    return this.isIsoDate(this.periodStart) && this.isIsoDate(this.periodEnd);
+  }
+
+  private previewBlockedMessage(): string {
+    if (!this.hasBillingScope()) {
+      return 'Select a company, a care home, or homes with no company.';
+    }
+    return 'Billing period start and end are required.';
+  }
+
+  private isIsoDate(value: string): boolean {
+    return /^\d{4}-\d{2}-\d{2}$/.test(value ?? '');
+  }
+
+  private billingDate(value: string): string {
+    const match = /^(\d{4}-\d{2}-\d{2})/.exec((value ?? '').trim());
+    return match?.[1] ?? '';
   }
 
   careHomesForSelect(): CareHomeLocation[] {
@@ -828,8 +861,8 @@ export class BillingWorkspacePage implements OnInit {
       invoiceTemplateId: this.invoiceCategoryId && this.invoiceTemplateId
         ? this.invoiceTemplateId
         : null,
-      periodStart: this.periodStart,
-      periodEnd: this.periodEnd,
+      periodStart: this.billingDate(this.periodStart),
+      periodEnd: this.billingDate(this.periodEnd),
       clientIds: this.selectedClientIds.length ? this.selectedClientIds : null,
       sendEmailAfterGenerate: this.sendEmailAfterGenerate,
     };

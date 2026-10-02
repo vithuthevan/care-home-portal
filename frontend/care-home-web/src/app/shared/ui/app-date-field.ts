@@ -31,7 +31,7 @@ export function parseIsoDateString(value: string | null | undefined): Date | nul
 
 /** Format local Date to yyyy-MM-dd. */
 export function formatIsoDateString(date: Date | null): string {
-  if (!date) {
+  if (!date || Number.isNaN(date.getTime())) {
     return '';
   }
   const y = date.getFullYear();
@@ -60,7 +60,7 @@ export function formatIsoDateString(date: Date | null): string {
         [disabled]="disabled"
         [(ngModel)]="pickerDate"
         [ngModelOptions]="{ standalone: true }"
-        (ngModelChange)="onDateChange($event)"
+        (dateChange)="onDateChange($event.value)"
         (blur)="onTouched()"
       />
       <mat-datepicker-toggle matIconSuffix [for]="picker" />
@@ -114,11 +114,16 @@ export class AppDateFieldComponent implements ControlValueAccessor {
   }
 
   onDateChange(date: Date | null | undefined): void {
-    const normalized = date ?? null;
+    const normalized =
+      date instanceof Date && !Number.isNaN(date.getTime()) ? date : null;
     this.pickerDate = normalized;
-    this.isoValue = formatIsoDateString(normalized);
-    this.onChange(this.isoValue);
+    const next = formatIsoDateString(normalized);
     this.onTouchedCallback();
+    if (next === this.isoValue) {
+      return;
+    }
+    this.isoValue = next;
+    this.onChange(this.isoValue);
   }
 
   onTouched(): void {

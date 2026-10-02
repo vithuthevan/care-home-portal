@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using CareHome.Api.Common;
 
 namespace CareHome.Api.Dtos.Billing
@@ -10,8 +13,10 @@ namespace CareHome.Api.Dtos.Billing
 
         public int? InvoiceCategoryId { get; set; }
 
+        [JsonConverter(typeof(BillingPeriodDateJsonConverter))]
         public DateOnly PeriodStart { get; set; }
 
+        [JsonConverter(typeof(BillingPeriodDateJsonConverter))]
         public DateOnly PeriodEnd { get; set; }
 
         public List<int>? ClientIds { get; set; }
@@ -22,6 +27,45 @@ namespace CareHome.Api.Dtos.Billing
         /// When true, attempt to email each generated invoice after creation (same rules as bulk send).
         /// </summary>
         public bool SendEmailAfterGenerate { get; set; }
+    }
+
+    /// <summary>
+    /// Accepts yyyy-MM-dd. A blank value binds as an unset date so request validation can explain it.
+    /// </summary>
+    public sealed class BillingPeriodDateJsonConverter : JsonConverter<DateOnly>
+    {
+        private const string Format = "yyyy-MM-dd";
+
+        public override DateOnly Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            if (reader.TokenType is JsonTokenType.Null)
+            {
+                return default;
+            }
+
+            if (reader.TokenType != JsonTokenType.String)
+            {
+                throw new JsonException("Billing period dates must use yyyy-MM-dd.");
+            }
+
+            var text = reader.GetString();
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return default;
+            }
+
+            if (DateOnly.TryParseExact(text, Format, CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+            {
+                return date;
+            }
+
+            throw new JsonException("Billing period dates must use yyyy-MM-dd.");
+        }
+
+        public override void Write(Utf8JsonWriter writer, DateOnly value, JsonSerializerOptions options)
+        {
+            writer.WriteStringValue(value.ToString(Format, CultureInfo.InvariantCulture));
+        }
     }
 
     public class BillingPreviewResponse

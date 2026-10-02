@@ -46,7 +46,7 @@ public class ConfigurableEmailSender(
             {
                 Success = false,
                 Simulated = false,
-                ErrorMessage = "From address is not configured. Set Email__FromAddress or organisation email settings."
+                ErrorMessage = "From address is not configured. Set the organisation email from address, or add an active tenant administrator with an email."
             };
         }
 

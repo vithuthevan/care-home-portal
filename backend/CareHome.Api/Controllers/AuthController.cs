@@ -155,7 +155,8 @@ public class AuthController(
                 "Reset your Care Home password",
                 body,
                 null,
-                null);
+                null,
+                user.TenantId);
             if (!sent.Success)
             {
                 logger.LogWarning(
