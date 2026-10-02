@@ -118,10 +118,24 @@ export class ClientProfilePage implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly selectedTabIndex = signal(0);
 
-  readonly primaryContract = computed(() => {
+  readonly fundingArrangements = computed(() => {
     const list = this.contracts();
-    return list.find((c) => c.status === 'Active') ?? list[0] ?? null;
+    const active = list.filter((contract) => contract.status === 'Active');
+    const source = active.length > 0 ? active : list;
+    const seen = new Set<string>();
+    const rows: FundingContractView[] = [];
+    for (const contract of source) {
+      const key = `${contract.fundingAuthorityId}:${contract.invoiceCategoryId}`;
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      rows.push(contract);
+    }
+    return rows;
   });
+
+  readonly primaryContract = computed(() => this.fundingArrangements()[0] ?? null);
 
   readonly currentRate = computed(() => {
     const contract = this.primaryContract();
@@ -157,20 +171,20 @@ export class ClientProfilePage implements OnInit {
   });
 
   readonly summaryStrip = computed((): EntitySummaryItem[] => {
-    const contract = this.primaryContract();
+    const arrangements = this.fundingArrangements();
     const rate = this.currentRate();
     const outstanding = this.outstandingAmount();
     const period = this.billingPeriodLabel();
-    const fundingConfigured = Boolean(contract);
+    const fundingConfigured = arrangements.length > 0;
 
     return [
       {
         label: 'Funding',
         value: fundingConfigured
-          ? (contract!.fundingAuthorityName ?? '—')
+          ? arrangements.map((item) => item.fundingAuthorityName).join(', ')
           : 'Funding not configured',
         hint: fundingConfigured
-          ? contract!.invoiceCategoryName
+          ? arrangements.map((item) => item.invoiceCategoryName).join(', ')
           : 'No funding contract or current rate is available for billing.',
         tone: fundingConfigured ? 'default' : 'attention',
       },

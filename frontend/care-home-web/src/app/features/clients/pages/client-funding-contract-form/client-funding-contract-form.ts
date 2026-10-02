@@ -63,6 +63,7 @@ export class ClientFundingContractForm implements OnInit {
   readonly isLoading = signal(true);
   readonly isSaving = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly existingContracts = signal<FundingContractDetail[]>([]);
 
   clientRouteKey = '';
   contractId: number | null = null;
@@ -137,6 +138,7 @@ export class ClientFundingContractForm implements OnInit {
       next: (client) => {
         this.client.set(client);
         this.setBreadcrumbs(client);
+        this.loadExistingContracts(client.id);
         if (this.isEditMode && this.contractId !== null) {
           this.loadContract();
         } else {
@@ -189,6 +191,23 @@ export class ClientFundingContractForm implements OnInit {
       });
   }
 
+  private loadExistingContracts(clientId: number): void {
+    this.http.get<FundingContractDetail[]>(`/api/clients/${clientId}/funding-contracts`).subscribe({
+      next: (contracts) => this.existingContracts.set(contracts),
+      error: () => this.existingContracts.set([]),
+    });
+  }
+
+  private duplicateAuthorityInCategory(): boolean {
+    return this.existingContracts().some(
+      (contract) =>
+        contract.status === 'Active' &&
+        contract.id !== this.contractId &&
+        contract.fundingAuthorityId === this.model.fundingAuthorityId &&
+        contract.invoiceCategoryId === this.model.invoiceCategoryId,
+    );
+  }
+
   save(): void {
     const resident = this.client();
     if (!resident || this.isSaving()) {
@@ -201,6 +220,13 @@ export class ClientFundingContractForm implements OnInit {
       !this.model.contractStartDate
     ) {
       this.errorMessage.set('Complete all required contract fields before saving.');
+      return;
+    }
+
+    if (this.model.status === 'Active' && this.duplicateAuthorityInCategory()) {
+      this.errorMessage.set(
+        'This funding authority is already used on an active contract in the same invoice category. Choose a different invoice category to use it again.',
+      );
       return;
     }
 

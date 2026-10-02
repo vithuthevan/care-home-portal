@@ -7,33 +7,23 @@ namespace CareHome.Api.Funding;
 
 public sealed class FundingContractQuery(CareHomeDbContext dbContext) : IFundingContractQuery
 {
-    public async Task<bool> HasOverlappingActiveContractAsync(
+    public Task<bool> HasActiveAuthorityInCategoryAsync(
         int tenantId,
         int clientId,
         int fundingAuthorityId,
         int invoiceCategoryId,
-        DateOnly contractStart,
-        DateOnly? contractEnd,
         int? excludeContractId,
-        CancellationToken cancellationToken = default)
-    {
-        var others = await dbContext.ClientFundingContracts
+        CancellationToken cancellationToken = default) =>
+        dbContext.ClientFundingContracts
             .AsNoTracking()
-            .Where(x => x.TenantId == tenantId
-                && x.ClientId == clientId
-                && x.FundingAuthorityId == fundingAuthorityId
-                && x.InvoiceCategoryId == invoiceCategoryId
-                && x.Status == FundingContractStatuses.Active
-                && (excludeContractId == null || x.Id != excludeContractId))
-            .Select(x => new { x.ContractStartDate, x.ContractEndDate })
-            .ToListAsync(cancellationToken);
-
-        return others.Any(x => FundingContractOverlap.PeriodsOverlap(
-            x.ContractStartDate,
-            x.ContractEndDate,
-            contractStart,
-            contractEnd));
-    }
+            .AnyAsync(
+                x => x.TenantId == tenantId
+                    && x.ClientId == clientId
+                    && x.FundingAuthorityId == fundingAuthorityId
+                    && x.InvoiceCategoryId == invoiceCategoryId
+                    && x.Status == FundingContractStatuses.Active
+                    && (excludeContractId == null || x.Id != excludeContractId),
+                cancellationToken);
 
     public Task<bool> IsContractUsedOnNonVoidInvoiceAsync(
         int tenantId,

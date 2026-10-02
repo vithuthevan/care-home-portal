@@ -5,13 +5,16 @@ namespace CareHome.Api.Funding.Contracts;
 /// </summary>
 public interface IFundingContractQuery
 {
-    Task<bool> HasOverlappingActiveContractAsync(
+    /// <summary>
+    /// True when this resident already has another active contract for the same
+    /// funding authority and the same invoice category. The same authority is
+    /// allowed again when the invoice category is different.
+    /// </summary>
+    Task<bool> HasActiveAuthorityInCategoryAsync(
         int tenantId,
         int clientId,
         int fundingAuthorityId,
         int invoiceCategoryId,
-        DateOnly contractStart,
-        DateOnly? contractEnd,
         int? excludeContractId,
         CancellationToken cancellationToken = default);
 

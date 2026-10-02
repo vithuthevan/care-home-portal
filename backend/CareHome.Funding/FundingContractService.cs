@@ -99,13 +99,11 @@ public class FundingContractService(
                 request.FundingAuthorityId,
                 request.InvoiceCategoryId));
 
-        if (await fundingContractQuery.HasOverlappingActiveContractAsync(
+        if (await fundingContractQuery.HasActiveAuthorityInCategoryAsync(
                 tenantId,
                 clientId,
                 request.FundingAuthorityId,
                 request.InvoiceCategoryId,
-                request.ContractStartDate,
-                request.ContractEndDate,
                 excludeContractId: null,
                 cancellationToken))
         {
@@ -220,13 +218,11 @@ public class FundingContractService(
         }
 
         if (request.Status == FundingContractStatuses.Active
-            && await fundingContractQuery.HasOverlappingActiveContractAsync(
+            && await fundingContractQuery.HasActiveAuthorityInCategoryAsync(
                 tenantId,
                 contract.ClientId,
                 request.FundingAuthorityId,
                 request.InvoiceCategoryId,
-                request.ContractStartDate,
-                request.ContractEndDate,
                 excludeContractId: contract.Id,
                 cancellationToken))
         {

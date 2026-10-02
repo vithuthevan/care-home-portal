@@ -43,68 +43,77 @@
             {{ client.companyName }}
           }
         </p>
-        @if (primaryContract(); as contract) {
+        @if (fundingArrangements().length) {
           <div class="funding-chain mt-4">
             <span class="funding-chain__step">{{ client.firstName }} {{ client.lastName }}</span>
-            <span class="funding-chain__arrow" aria-hidden="true">↓</span>
-            <span class="funding-chain__step">
-              @if (fundingAuthorityEditLink(contract); as faLink) {
-                <a [routerLink]="faLink">{{ contract.fundingAuthorityName }}</a>
-              } @else {
-                {{ contract.fundingAuthorityName }}
-              }
-            </span>
-            <span class="funding-chain__arrow" aria-hidden="true">↓</span>
-            <span class="funding-chain__step">{{ contract.invoiceCategoryName }}</span>
-            @if (currentRate(); as rate) {
+            @for (contract of fundingArrangements(); track contract.id) {
               <span class="funding-chain__arrow" aria-hidden="true">↓</span>
               <span class="funding-chain__step">
-                <app-currency-display [amount]="rate.amount" [suffix]="rateSuffix(rate.frequency)" />
+                @if (fundingAuthorityEditLink(contract); as faLink) {
+                  <a [routerLink]="faLink">{{ contract.fundingAuthorityName }}</a>
+                } @else {
+                  {{ contract.fundingAuthorityName }}
+                }
               </span>
+              <span class="funding-chain__arrow" aria-hidden="true">↓</span>
+              <span class="funding-chain__step">{{ contract.invoiceCategoryName }}</span>
+              @if (currentRateForContract(contract); as rate) {
+                <span class="funding-chain__arrow" aria-hidden="true">↓</span>
+                <span class="funding-chain__step">
+                  <app-currency-display [amount]="rate.amount" [suffix]="rateSuffix(rate.frequency)" />
+                </span>
+              }
             }
           </div>
         }
       </section>
 
       <section class="panel funding-summary">
-        <app-section-header title="Who pays?" subtitle="Funding authority and rate used for billing." />
-        @if (primaryContract(); as contract) {
-          <p class="m-0 font-semibold">
-            @if (fundingAuthorityEditLink(contract); as faLink) {
-              <a [routerLink]="faLink">{{ contract.fundingAuthorityName }}</a>
-            } @else {
-              {{ contract.fundingAuthorityName }}
-            }
-          </p>
-          <p class="mt-1 mb-3 text-sm text-[var(--app-text-muted)]">
-            {{ contract.invoiceCategoryName }} · Nominal {{ contract.nominalCode }}
-          </p>
-          <dl class="dl-grid profile-funding-meta">
-            <div>
-              <dt>Contract status</dt>
-              <dd><app-status-badge [value]="contract.status" /></dd>
-            </div>
-            <div>
-              <dt>Contract period</dt>
-              <dd>{{ formatContractRange(contract) }}</dd>
-            </div>
-          </dl>
-          @if (currentRate(); as rate) {
-            <div class="rate-highlight mt-3">
-              <p class="rate-highlight__label">Current rate</p>
-              <app-currency-display size="hero" [amount]="rate.amount" [suffix]="rateSuffix(rate.frequency)" />
-              <p class="rate-highlight__effective">
-                Effective from {{ rate.effectiveFrom | displayDate }}
-                @if (rate.effectiveTo) {
-                  until {{ rate.effectiveTo | displayDate }}
+        <app-section-header
+          title="Who pays?"
+          subtitle="Each funding authority is shown once per invoice category. The same authority can pay a different category."
+        />
+        @if (fundingArrangements().length) {
+          @for (contract of fundingArrangements(); track contract.id; let first = $first) {
+            <div [class.mt-4]="!first" [class.pt-4]="!first" [class.border-t]="!first" class="border-[var(--app-border)]">
+              <p class="m-0 font-semibold">
+                @if (fundingAuthorityEditLink(contract); as faLink) {
+                  <a [routerLink]="faLink">{{ contract.fundingAuthorityName }}</a>
                 } @else {
-                  · open ended
+                  {{ contract.fundingAuthorityName }}
                 }
               </p>
-            </div>
-          } @else {
-            <div class="alert-banner alert-banner--warning mt-3">
-              No rate on the active contract. Add a rate before billing this resident.
+              <p class="mt-1 mb-3 text-sm text-[var(--app-text-muted)]">
+                {{ contract.invoiceCategoryName }} · Nominal {{ contract.nominalCode }}
+              </p>
+              <dl class="dl-grid profile-funding-meta">
+                <div>
+                  <dt>Contract status</dt>
+                  <dd><app-status-badge [value]="contract.status" /></dd>
+                </div>
+                <div>
+                  <dt>Contract period</dt>
+                  <dd>{{ formatContractRange(contract) }}</dd>
+                </div>
+              </dl>
+              @if (currentRateForContract(contract); as rate) {
+                <div class="rate-highlight mt-3">
+                  <p class="rate-highlight__label">Current rate</p>
+                  <app-currency-display size="hero" [amount]="rate.amount" [suffix]="rateSuffix(rate.frequency)" />
+                  <p class="rate-highlight__effective">
+                    Effective from {{ rate.effectiveFrom | displayDate }}
+                    @if (rate.effectiveTo) {
+                      until {{ rate.effectiveTo | displayDate }}
+                    } @else {
+                      · open ended
+                    }
+                  </p>
+                </div>
+              } @else {
+                <div class="alert-banner alert-banner--warning mt-3">
+                  No rate on this contract. Add a rate before billing this category.
+                </div>
+              }
             </div>
           }
         } @else {
