@@ -7,19 +7,33 @@ import { ToastService } from './toast.service';
 import { getApiErrorMessage } from '../../core/api-error';
 import { AuthService } from '../../core/auth.service';
 
+export interface ExtraExportTarget {
+  entity: string;
+  label: string;
+}
+
 @Component({
   selector: 'app-import-export-toolbar',
   imports: [MatButtonModule, MatMenuModule, MatIconModule],
   template: `
+    @if (showExport() || showImport()) {
     <div class="flex flex-wrap items-center gap-2">
-      <button mat-stroked-button type="button" [matMenuTriggerFor]="exportMenu">
-        <mat-icon class="!text-base !w-4 !h-4 mr-1">download</mat-icon>
-        Export
-      </button>
-      <mat-menu #exportMenu="matMenu">
-        <button mat-menu-item type="button" (click)="export('csv')">CSV</button>
-        <button mat-menu-item type="button" (click)="export('xlsx')">Excel (.xlsx)</button>
-      </mat-menu>
+      @if (showExport()) {
+        <button mat-stroked-button type="button" [matMenuTriggerFor]="exportMenu">
+          <mat-icon class="!text-base !w-4 !h-4 mr-1">download</mat-icon>
+          {{ buttonLabel() }}
+        </button>
+        <mat-menu #exportMenu="matMenu">
+          @for (target of exportTargets(); track target.entity) {
+            <button mat-menu-item type="button" (click)="export('csv', target.entity)">
+              {{ menuLabel(target.label, 'CSV') }}
+            </button>
+            <button mat-menu-item type="button" (click)="export('xlsx', target.entity)">
+              {{ menuLabel(target.label, 'Excel (.xlsx)') }}
+            </button>
+          }
+        </mat-menu>
+      }
 
       @if (showImport()) {
         <button mat-stroked-button type="button" [matMenuTriggerFor]="templateMenu">
@@ -44,6 +58,7 @@ import { AuthService } from '../../core/auth.service';
         </label>
       }
     </div>
+    }
 
     @if (preview(); as p) {
       <section class="panel p-3 mt-3 w-full">
@@ -85,6 +100,10 @@ export class ImportExportToolbarComponent {
 
   readonly entity = input.required<string>();
   readonly importEnabled = input(true);
+  readonly showExport = input(true);
+  readonly buttonLabel = input('Export');
+  readonly exportLabel = input('');
+  readonly extraExports = input<ExtraExportTarget[]>([]);
 
   readonly imported = output<void>();
 
@@ -95,8 +114,19 @@ export class ImportExportToolbarComponent {
     return this.importEnabled() && this.auth.canManageOrganisation();
   }
 
-  export(format: 'csv' | 'xlsx'): void {
-    this.dataTransfer.downloadExport(this.entity(), format);
+  exportTargets(): ExtraExportTarget[] {
+    return [
+      { entity: this.entity(), label: this.exportLabel() || this.entity() },
+      ...this.extraExports(),
+    ];
+  }
+
+  menuLabel(targetLabel: string, format: string): string {
+    return this.exportTargets().length > 1 ? `${targetLabel} — ${format}` : format;
+  }
+
+  export(format: 'csv' | 'xlsx', entity?: string): void {
+    this.dataTransfer.downloadExport(entity ?? this.entity(), format);
   }
 
   template(format: 'csv' | 'xlsx'): void {

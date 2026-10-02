@@ -7,7 +7,7 @@
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
-    <app-loading-state label="Loading invoice template..." />
+    <app-loading-state variant="form" label="Loading invoice template..." />
   }
 
   @if (!isLoading()) {

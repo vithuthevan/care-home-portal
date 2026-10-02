@@ -25,7 +25,7 @@
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
-    <app-loading-state label="Loading care homes..." />
+    <app-loading-state variant="table" label="Loading care homes..." [columns]="6" />
   }
 
   @if (!isLoading() && careHomes().length === 0 && searchText().trim()) {

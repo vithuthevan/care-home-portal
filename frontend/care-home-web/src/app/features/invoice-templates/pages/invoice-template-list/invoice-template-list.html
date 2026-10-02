@@ -19,7 +19,7 @@
   }
 
   @if (isLoading() && items().length === 0 && !errorMessage()) {
-    <app-loading-state label="Loading invoice templates..." />
+    <app-loading-state variant="table" label="Loading invoice templates..." />
   }
 
   @if (!isLoading() && items().length === 0 && !errorMessage()) {

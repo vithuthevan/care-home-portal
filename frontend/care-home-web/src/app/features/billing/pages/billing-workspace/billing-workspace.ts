@@ -138,6 +138,7 @@ export class BillingWorkspacePage implements OnInit {
   private readonly clientsApi = inject(ClientService);
   private readonly route = inject(ActivatedRoute);
   readonly auth = inject(AuthService);
+  readonly billingExports = [{ entity: 'misc-charges', label: 'Misc charges' }];
   private readonly toast = inject(ToastService);
   private readonly confirm = inject(ConfirmDialogService);
 

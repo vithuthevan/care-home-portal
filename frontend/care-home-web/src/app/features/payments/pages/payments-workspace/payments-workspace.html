@@ -45,7 +45,7 @@
   </mat-tab-group>
 
   @if (loading()) {
-    <app-loading-state label="Loading payments..." />
+    <app-loading-state variant="table" label="Loading payments..." [columns]="7" />
   } @else if (rows().length === 0) {
     <app-empty-state title="No payments" message="Record a manual payment to get started." />
   } @else {

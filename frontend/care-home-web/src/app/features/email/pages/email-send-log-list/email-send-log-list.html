@@ -34,7 +34,7 @@
   </section>
 
   @if (isLoading()) {
-    <app-loading-state label="Loading email log..." />
+    <app-loading-state variant="table" label="Loading email log..." />
   } @else if (items().length === 0) {
     <app-empty-state title="No email attempts" message="No delivery attempts match the current filters." />
   } @else {

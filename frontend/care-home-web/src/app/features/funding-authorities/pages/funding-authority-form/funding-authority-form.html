@@ -5,7 +5,7 @@
   />
   <app-api-error [message]="errorMessage()" />
   @if (isLoading()) {
-    <app-loading-state label="Loading funding authority..." />
+    <app-loading-state variant="form" label="Loading funding authority..." />
   }
   @if (!isLoading()) {
     <form [formGroup]="form" (ngSubmit)="save()" class="panel max-w-4xl">

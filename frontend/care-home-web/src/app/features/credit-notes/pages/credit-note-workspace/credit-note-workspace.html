@@ -126,6 +126,7 @@
     </div>
     @if (isWorking()) {
       <app-loading-state
+        variant="table"
         [label]="preview() ? 'Generating credit note...' : 'Preparing credit note preview...'"
       />
     }
@@ -194,7 +195,9 @@
 
   <section class="panel">
     <app-section-header title="Existing credit notes" />
-    @if (notes().length === 0) {
+    @if (notesLoading()) {
+      <app-loading-state variant="table" label="Loading credit notes..." [columns]="7" />
+    } @else if (notes().length === 0) {
       <app-empty-state
         title="No credit notes yet"
         message="Credit notes appear here after you generate an adjustment against an invoice."

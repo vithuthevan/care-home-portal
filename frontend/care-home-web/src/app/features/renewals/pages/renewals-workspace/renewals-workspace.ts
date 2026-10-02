@@ -31,7 +31,7 @@ import { ImportExportToolbarComponent } from '../../../../shared/ui/import-expor
         (retry)="load()"
       />
     } @else if (isLoading()) {
-      <app-loading-state label="Loading contract renewals..." />
+      <app-loading-state variant="cards" label="Loading contract renewals..." />
     } @else {
       @if (dash(); as d) {
         <section class="panel panel--flat mt-4">

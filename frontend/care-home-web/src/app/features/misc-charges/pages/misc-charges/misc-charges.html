@@ -93,7 +93,9 @@
       <h2 class="m-0 text-section">Import history</h2>
       <p class="m-0 text-sm text-[var(--app-text-muted)]">{{ totalCount() }} batch(es)</p>
     </app-filter-bar>
-    @if (batches().length) {
+    @if (isLoading()) {
+      <app-loading-state variant="table" label="Loading import history..." [columns]="3" />
+    } @else if (batches().length) {
       <div class="table-container table-container--sticky">
         <table class="data-table">
           <thead>

@@ -10,7 +10,7 @@
   }
 
   @if (isLoading()) {
-    <app-loading-state label="Loading invoice..." />
+    <app-loading-state variant="detail" label="Loading invoice..." />
   }
 
   @if (invoice(); as inv) {

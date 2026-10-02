@@ -25,7 +25,7 @@
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
-    <app-loading-state label="Loading residents..." />
+    <app-loading-state variant="table" label="Loading residents..." [columns]="6" />
   }
 
   @if (!isLoading() && clients().length === 0) {

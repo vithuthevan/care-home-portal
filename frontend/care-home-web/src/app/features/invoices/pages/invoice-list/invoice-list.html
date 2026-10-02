@@ -12,7 +12,7 @@
   }
 
   @if (isLoading()) {
-    <app-loading-state label="Loading invoices..." />
+    <app-loading-state variant="table" label="Loading invoices..." [columns]="6" />
   }
 
   @if (!isLoading() && (items().length || hasActiveFilters())) {

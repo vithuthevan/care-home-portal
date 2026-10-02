@@ -19,7 +19,7 @@
   }
 
   @if (isLoading() && nominalCodes().length === 0 && !errorMessage()) {
-    <app-loading-state label="Loading nominal codes..." />
+    <app-loading-state variant="table" label="Loading nominal codes..." />
   }
 
   @if (!isLoading() && nominalCodes().length === 0 && !errorMessage()) {

@@ -7,6 +7,14 @@
     <a mat-flat-button color="primary" routerLink="/platform/tenants/new">Add organisation</a>
   </app-page-header>
   <app-api-error [message]="errorMessage()" />
+  @if (isLoading()) {
+    <app-loading-state variant="table" label="Loading organisations..." [columns]="5" />
+  } @else if (tenants().length === 0 && !errorMessage()) {
+    <app-empty-state
+      title="No organisations yet"
+      message="Add an organisation to start using the platform."
+    />
+  } @else {
   <div class="table-container">
     <table class="data-table">
       <thead>
@@ -37,4 +45,5 @@
       </tbody>
     </table>
   </div>
+  }
 </div>

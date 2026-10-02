@@ -24,7 +24,7 @@
   }
 
   @if (isLoading() && invoiceCategories().length === 0 && !errorMessage()) {
-    <app-loading-state label="Loading invoice categories..." />
+    <app-loading-state variant="table" label="Loading invoice categories..." />
   }
 
   @if (!isLoading() && invoiceCategories().length === 0 && !errorMessage()) {

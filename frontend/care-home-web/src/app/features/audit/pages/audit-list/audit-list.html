@@ -8,7 +8,7 @@
 
   <app-api-error [message]="errorMessage()" />
   @if (isLoading()) {
-    <app-loading-state label="Loading audit log..." />
+    <app-loading-state variant="table" label="Loading audit log..." />
   }
 
   @if (!isLoading()) {

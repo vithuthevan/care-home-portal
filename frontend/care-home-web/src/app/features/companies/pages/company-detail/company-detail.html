@@ -2,7 +2,7 @@
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
-    <app-loading-state label="Loading company..." />
+    <app-loading-state variant="detail" label="Loading company..." />
   }
 
   @if (company(); as co) {

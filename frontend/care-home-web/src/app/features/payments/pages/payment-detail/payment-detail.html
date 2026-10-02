@@ -3,7 +3,7 @@
 }
 
 @if (loading()) {
-  <app-loading-state label="Loading payment..." />
+  <app-loading-state variant="detail" label="Loading payment..." />
 }
 
 @if (detail(); as d) {
@@ -118,7 +118,7 @@
       </div>
 
       @if (candidatesLoading()) {
-        <app-loading-state label="Loading invoices..." />
+        <app-loading-state variant="table" label="Loading invoices..." />
       } @else if (candidates().length === 0) {
         <p class="m-0 text-supporting">No outstanding invoices match this payment scope.</p>
       } @else {

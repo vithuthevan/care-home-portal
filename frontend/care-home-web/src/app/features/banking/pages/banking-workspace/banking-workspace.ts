@@ -129,8 +129,10 @@ export class BankingWorkspacePage implements OnInit {
   private readonly confirm = inject(ConfirmDialogService);
   private readonly toast = inject(ToastService);
 
+  readonly bankExports = [{ entity: 'bank-transactions', label: 'Transactions' }];
   tabIndex = 0;
   errorMessage = signal<string | null>(null);
+  accountsLoading = signal(true);
   accounts = signal<BankAccount[]>([]);
   selectedAccountId = '';
 
@@ -158,15 +160,19 @@ export class BankingWorkspacePage implements OnInit {
   }
 
   loadAccounts(): void {
-    this.http.get<BankAccount[]>('/api/banking/accounts').subscribe({
-      next: (rows) => {
-        this.accounts.set(rows);
-        if (!this.selectedAccountId && rows.length > 0) {
-          this.selectedAccountId = rows[0].publicId;
-        }
-      },
-      error: (err) => this.errorMessage.set(getApiErrorMessage(err, 'Failed to load bank accounts.')),
-    });
+    this.accountsLoading.set(true);
+    this.http
+      .get<BankAccount[]>('/api/banking/accounts')
+      .pipe(finalize(() => this.accountsLoading.set(false)))
+      .subscribe({
+        next: (rows) => {
+          this.accounts.set(rows);
+          if (!this.selectedAccountId && rows.length > 0) {
+            this.selectedAccountId = rows[0].publicId;
+          }
+        },
+        error: (err) => this.errorMessage.set(getApiErrorMessage(err, 'Failed to load bank accounts.')),
+      });
   }
 
   loadMappingTemplates(): void {

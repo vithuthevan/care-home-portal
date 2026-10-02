@@ -7,7 +7,7 @@
   <app-api-error [message]="errorMessage()" />
 
   @if (isLoading()) {
-    <app-loading-state label="Loading resident..." />
+    <app-loading-state variant="form" label="Loading resident..." />
   } @else if (client(); as resident) {
     <p class="m-0 mb-4 text-sm text-[var(--app-text-muted)]">
       Resident: <strong>{{ resident.firstName }} {{ resident.lastName }}</strong> ·

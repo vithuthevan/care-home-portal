@@ -3,7 +3,6 @@
     title="Sage Export"
     subtitle="Export invoices as a Sage 50 CSV file for a date range. Validate first, then export."
   >
-    <app-import-export-toolbar entity="sage-exports" [importEnabled]="false" />
   </app-page-header>
   <app-api-error [message]="errorMessage()" />
   @if (infoMessage(); as info) {
@@ -74,11 +73,23 @@
     }
   }
   <section class="panel">
-    <h2 class="mt-0 text-lg font-semibold">Previous exports</h2>
-    <p class="mt-0 mb-3 text-sm text-[var(--app-text-muted)]">
-      Each row is an export batch. A completed batch has a downloadable CSV. File unavailable
-      means the export was recorded but the CSV cannot be downloaded until you retry.
-    </p>
+    <div class="mb-3 flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h2 class="mt-0 text-lg font-semibold">Previous exports</h2>
+        <p class="mt-0 mb-0 text-sm text-[var(--app-text-muted)]">
+          Each row is an export batch. A completed batch has a downloadable CSV. File unavailable
+          means the export was recorded but the CSV cannot be downloaded until you retry.
+        </p>
+      </div>
+      <app-import-export-toolbar
+        entity="sage-exports"
+        buttonLabel="Export history"
+        [importEnabled]="false"
+      />
+    </div>
+    @if (batchesLoading()) {
+      <app-loading-state variant="table" label="Loading previous exports..." [columns]="6" />
+    } @else {
     <div class="table-container">
       <table class="data-table">
         <thead>
@@ -143,5 +154,6 @@
       (pageChange)="onPageChange($event)"
       (pageSizeChange)="onPageSizeChange($event)"
     />
+    }
   </section>
 </div>
