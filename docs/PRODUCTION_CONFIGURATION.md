@@ -104,7 +104,7 @@ default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'
 That CSP is for JSON/file API responses. It is **not** intended for the Angular host. The static-file host should set its own CSP, typically:
 
 ```text
-default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
 ```
 
 `style-src 'unsafe-inline'` is required for this Angular build (component styles). Do not add `unsafe-eval` unless a future change proves it necessary.

@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,6 +19,7 @@ import { EmptyStateComponent } from '../../../../shared/ui/empty-state';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
 import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-button';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import { trustedObjectUrl } from '../../../../shared/ui/stored-logo';
 
 @Component({
   selector: 'app-company-detail',
@@ -46,7 +48,9 @@ export class CompanyDetail implements OnInit {
   readonly careHomes = signal<CareHomeLocation[]>([]);
   readonly isLoading = signal(false);
   readonly errorMessage = signal<string | null>(null);
-  readonly logoPreviewUrl = signal<string | null>(null);
+  private readonly sanitizer = inject(DomSanitizer);
+  readonly logoPreviewUrl = signal<SafeUrl | null>(null);
+  private logoObjectUrl: string | null = null;
 
   ngOnInit(): void {
     this.route.paramMap.subscribe((params) => {
@@ -64,10 +68,21 @@ export class CompanyDetail implements OnInit {
       .subscribe({
         next: (company) => {
           this.company.set(company);
+          if (this.logoObjectUrl) {
+            URL.revokeObjectURL(this.logoObjectUrl);
+            this.logoObjectUrl = null;
+          }
           this.logoPreviewUrl.set(null);
           if (company.logoPath) {
             this.companyService.getLogo(key).subscribe({
-              next: (blob) => this.logoPreviewUrl.set(URL.createObjectURL(blob)),
+              next: (blob) => {
+                if (!blob.size) {
+                  return;
+                }
+                const trusted = trustedObjectUrl(this.sanitizer, blob);
+                this.logoObjectUrl = trusted.objectUrl;
+                this.logoPreviewUrl.set(trusted.safeUrl);
+              },
             });
           }
           this.breadcrumbs.set([

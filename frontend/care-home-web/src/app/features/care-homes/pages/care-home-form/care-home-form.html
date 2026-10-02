@@ -110,7 +110,7 @@
           <div class="md:col-span-2">
             <p class="m-0 text-sm font-medium text-[var(--app-text)]">Logo</p>
             @if (logoPreviewUrl(); as logoUrl) {
-              <img [src]="logoUrl" alt="Care home logo" class="mt-2 max-h-16 max-w-xs object-contain" />
+              <img [src]="logoUrl" alt="Care home logo" class="logo-frame mt-2" />
             }
             <input class="mt-2 block" type="file" accept="image/png,image/jpeg,image/webp,image/gif" (change)="onLogoSelected($event)" />
             <p class="m-0 mt-1 text-sm text-[var(--app-text-muted)]">PNG, JPG, WEBP, or GIF up to 2 MB.</p>

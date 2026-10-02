@@ -20,7 +20,17 @@
 
     @if (home(); as location) {
       <section class="panel mt-4">
-        <h2 class="mt-0 text-section">Contact &amp; location</h2>
+        <div class="mb-4 flex flex-wrap items-center gap-4">
+          <h2 class="m-0 text-section">Contact &amp; location</h2>
+          @if (location.logoPath) {
+            <app-stored-logo
+              [sourceKey]="entityRouteKey(location)"
+              [present]="true"
+              [load]="loadCareHomeLogo"
+              [alt]="location.name + ' logo'"
+            />
+          }
+        </div>
         <dl class="dl-grid">
           <div>
             <dt>Address</dt>

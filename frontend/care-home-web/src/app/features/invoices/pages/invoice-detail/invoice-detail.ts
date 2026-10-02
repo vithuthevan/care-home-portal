@@ -313,24 +313,32 @@ export class InvoiceDetailPage implements OnInit {
     return params;
   }
 
-  lineAmountHint(line: {
-    amountBasis?: string | null;
-    eligibleDays?: number;
-    rateAmount?: number;
-    rateFrequency?: string;
-  }): string | null {
-    if (line.amountBasis?.trim()) {
-      return line.amountBasis.trim();
+  residentSummary(inv: { lines?: { clientId?: number; clientName?: string }[] }): string {
+    const lines = inv.lines ?? [];
+    const residents = new Set(
+      lines.map((line) => (line.clientId ? `id:${line.clientId}` : line.clientName || '')),
+    );
+    residents.delete('');
+    const count = residents.size;
+    if (count > 1) {
+      return `Bulk invoice for ${count} residents.`;
     }
-    if (line.eligibleDays === undefined || line.eligibleDays === null) {
-      return null;
+    return count === 1 ? '1 resident on this invoice.' : 'No residents on this invoice.';
+  }
+
+  lineServiceLabel(line: {
+    description?: string | null;
+    servicePeriodStart?: string;
+    servicePeriodEnd?: string;
+  }): string {
+    let text = line.description?.trim() ?? '';
+    if (line.servicePeriodStart && line.servicePeriodEnd) {
+      const suffix = `${line.servicePeriodStart} to ${line.servicePeriodEnd}`;
+      if (text.endsWith(suffix)) {
+        text = text.slice(0, -suffix.length).trim();
+      }
     }
-    const rate =
-      line.rateAmount != null ? `£${line.rateAmount.toFixed(2)} ${line.rateFrequency || ''}`.trim() : '';
-    if (rate) {
-      return `Line amount reflects ${line.eligibleDays} eligible day(s) at ${rate} (as calculated by billing).`;
-    }
-    return `Line amount reflects ${line.eligibleDays} eligible day(s) (as calculated by billing).`;
+    return text || 'Care';
   }
 
   clientProfileLink(line: { clientId?: number; clientPublicId?: string }): string[] | null {

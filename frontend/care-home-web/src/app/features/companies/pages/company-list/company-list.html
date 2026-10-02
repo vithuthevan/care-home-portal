@@ -60,6 +60,7 @@
         <table class="data-table data-table--responsive-hide-sm">
           <thead>
             <tr>
+              <th>Logo</th>
               <th>Company</th>
               <th class="num col-narrow">Care homes</th>
               <th class="num col-narrow">Residents</th>
@@ -70,6 +71,19 @@
           <tbody>
             @for (company of companies(); track company.id) {
               <tr [class.inactive-row]="!company.isActive">
+                <td>
+                  @if (company.logoPath) {
+                    <app-stored-logo
+                      [sourceKey]="entityRouteKey(company)"
+                      [present]="true"
+                      [load]="loadCompanyLogo"
+                      alt="Company logo"
+                      size="thumb"
+                    />
+                  } @else {
+                    —
+                  }
+                </td>
                 <td class="font-medium cell-truncate">
                   <a
                     class="font-medium"
@@ -136,6 +150,15 @@
     <div class="mobile-card-list mobile-card-list--breakpoint-md">
       @for (company of companies(); track company.id) {
         <article class="mobile-data-card" [class.inactive-row]="!company.isActive">
+          @if (company.logoPath) {
+            <app-stored-logo
+              [sourceKey]="entityRouteKey(company)"
+              [present]="true"
+              [load]="loadCompanyLogo"
+              alt="Company logo"
+              size="thumb"
+            />
+          }
           <a
             class="text-lg font-semibold no-underline cell-truncate"
             [routerLink]="['/companies', entityRouteKey(company)]"

@@ -673,7 +673,7 @@ namespace CareHome.Api.Billing
                                 Frequency = rate.Frequency,
                                 Rate = rate.Amount,
                                 Amount = amount,
-                                Description = $"{contract.InvoiceCategory.Name} {rateSlice.Value.Start:yyyy-MM-dd} to {rateSlice.Value.End:yyyy-MM-dd}",
+                                Description = contract.InvoiceCategory.Name,
                                 InvoiceTemplateId = template?.Id,
                                 CycleStart = fragment.CycleStart,
                                 GroupingMode = contract.InvoiceCategory.GroupingMode

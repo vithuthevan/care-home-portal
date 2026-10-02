@@ -25,6 +25,7 @@ import { IconActionButtonComponent } from '../../../../shared/ui/icon-action-but
 import { TablePaginationComponent } from '../../../../shared/ui/table-pagination';
 import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import { StoredLogoComponent } from '../../../../shared/ui/stored-logo';
 
 @Component({
   selector: 'app-company-list',
@@ -46,6 +47,7 @@ import { entityRouteKey } from '../../../../shared/routing/entity-route';
     IconActionButtonComponent,
     TablePaginationComponent,
     ImportExportToolbarComponent,
+    StoredLogoComponent,
   ],
   templateUrl: './company-list.html',
 })
@@ -55,6 +57,7 @@ export class CompanyList implements OnInit {
   private readonly confirm = inject(ConfirmDialogService);
   private readonly toast = inject(ToastService);
   readonly auth = inject(AuthService);
+  readonly loadCompanyLogo = (key: string) => this.companyService.getLogo(key);
 
   readonly companies = signal<Company[]>([]);
   readonly moreMenuCompany = signal<Company | null>(null);

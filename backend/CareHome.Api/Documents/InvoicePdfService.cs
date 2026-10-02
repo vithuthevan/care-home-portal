@@ -109,8 +109,6 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
 
     private static byte[] RenderInvoice(Invoice invoice, byte[]? logoBytes)
     {
-        var primaryLine = invoice.Lines.FirstOrDefault();
-
         return Document.Create(container =>
         {
             container.Page(page =>
@@ -126,12 +124,7 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
                 {
                     col.Spacing(18);
 
-                    col.Item().Row(row =>
-                    {
-                        row.RelativeItem().Element(c => ComposeResidentPanel(c, primaryLine));
-                        row.ConstantItem(24);
-                        row.RelativeItem().Element(c => ComposeFundingPanel(c, invoice));
-                    });
+                    col.Item().Element(c => ComposeFundingPanel(c, invoice));
 
                     col.Item().Element(c => ComposeLineItemsSection(c, invoice));
 
@@ -252,83 +245,65 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
         });
     }
 
-    private static void ComposeResidentPanel(IContainer container, InvoiceLine? line)
-    {
-        container.Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(12).Column(col =>
-        {
-            col.Spacing(8);
-            col.Item().Text("Resident").FontSize(10).SemiBold().FontColor(Colors.Grey.Darken2);
-
-            if (line is null)
-            {
-                col.Item().Text("—").FontColor(Colors.Grey.Darken1);
-                return;
-            }
-
-            col.Item().Table(table =>
-            {
-                table.ColumnsDefinition(columns =>
-                {
-                    columns.ConstantColumn(72);
-                    columns.RelativeColumn();
-                });
-
-                LabelValueRow(table, "Client", line.SnapshotClientName);
-            });
-        });
-    }
-
     private static void ComposeFundingPanel(IContainer container, Invoice invoice)
     {
         container.Border(0.5f).BorderColor(Colors.Grey.Lighten2).Padding(12).Column(col =>
         {
-            col.Spacing(8);
             col.Item().Text("Funding & billing").FontSize(10).SemiBold().FontColor(Colors.Grey.Darken2);
-
-            col.Item().Table(table =>
+            col.Item().PaddingTop(8).Row(row =>
             {
-                table.ColumnsDefinition(columns =>
+                void Fact(string label, string? value)
                 {
-                    columns.ConstantColumn(108);
-                    columns.RelativeColumn();
-                });
-
-                LabelValueRow(table, "Funding authority", invoice.SnapshotFundingAuthorityName);
-                LabelValueRow(table, "Funding code", NullIfEmpty(invoice.SnapshotFundingAuthorityCode));
-                LabelValueRow(table, "Category", invoice.SnapshotInvoiceCategoryName);
-                if (!string.IsNullOrWhiteSpace(invoice.SnapshotInvoiceCategoryCode))
-                {
-                    LabelValueRow(table, "Category code", invoice.SnapshotInvoiceCategoryCode);
+                    row.RelativeItem().Column(fact =>
+                    {
+                        fact.Item().Text(label).FontSize(8).FontColor(Colors.Grey.Darken1);
+                        fact.Item().PaddingTop(2).Text(string.IsNullOrWhiteSpace(value) ? "—" : value).FontSize(10).SemiBold();
+                    });
                 }
 
-                LabelValueRow(table, "Care home", invoice.SnapshotCareHomeName);
-                LabelValueRow(table, "Company", NullIfEmpty(invoice.SnapshotCompanyName));
+                Fact("Funding authority", invoice.SnapshotFundingAuthorityName);
+                Fact("Funding code", invoice.SnapshotFundingAuthorityCode);
+                Fact("Category", invoice.SnapshotInvoiceCategoryName);
+                if (!string.IsNullOrWhiteSpace(invoice.SnapshotInvoiceCategoryCode))
+                {
+                    Fact("Category code", invoice.SnapshotInvoiceCategoryCode);
+                }
             });
         });
     }
 
     private static void ComposeLineItemsSection(IContainer container, Invoice invoice)
     {
+        var residentCount = invoice.Lines
+            .Select(line => line.ClientId > 0 ? line.ClientId.ToString() : line.SnapshotClientName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+        var heading = residentCount > 1
+            ? $"Invoice lines · {residentCount} residents"
+            : "Invoice lines";
+
         container.Column(col =>
         {
             col.Spacing(10);
-            col.Item().Text("Invoice lines").FontSize(11).SemiBold();
+            col.Item().Text(heading).FontSize(11).SemiBold();
 
             col.Item().Table(table =>
             {
                 table.ColumnsDefinition(columns =>
                 {
-                    columns.RelativeColumn(2.2f);
-                    columns.RelativeColumn(3.4f);
+                    columns.RelativeColumn(2.1f);
+                    columns.RelativeColumn(2.4f);
+                    columns.RelativeColumn(1.8f);
                     columns.RelativeColumn(0.6f);
-                    columns.RelativeColumn(1.3f);
+                    columns.RelativeColumn(1.2f);
                     columns.RelativeColumn(1.1f);
                 });
 
                 table.Header(header =>
                 {
-                    header.Cell().Element(TableHeaderCell).Text("Client");
-                    header.Cell().Element(TableHeaderCell).Text("Service / description");
+                    header.Cell().Element(TableHeaderCell).Text("Resident");
+                    header.Cell().Element(TableHeaderCell).Text("Service");
+                    header.Cell().Element(TableHeaderCell).Text("Period");
                     header.Cell().Element(TableHeaderCell).AlignRight().Text("Days");
                     header.Cell().Element(TableHeaderCell).AlignRight().Text("Rate");
                     header.Cell().Element(TableHeaderCell).AlignRight().Text("Amount");
@@ -337,22 +312,9 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
                 foreach (var line in invoice.Lines)
                 {
                     table.Cell().Element(TableBodyCell).AlignMiddle().Text(line.SnapshotClientName);
-                    table.Cell().Element(TableBodyCell).Column(cell =>
-                    {
-                        cell.Item().Text(FormatDateRange(line.ServicePeriodStart, line.ServicePeriodEnd))
-                            .FontSize(9)
-                            .SemiBold();
-                        if (!string.IsNullOrWhiteSpace(line.Description))
-                        {
-                            cell.Item().PaddingTop(3).Text(line.Description).LineHeight(1.35f);
-                        }
-
-                        var basis = line.AmountBasis?.Trim();
-                        if (!string.IsNullOrWhiteSpace(basis))
-                        {
-                            cell.Item().PaddingTop(3).Text(basis).FontSize(8.5f).FontColor(Colors.Grey.Darken1).LineHeight(1.3f);
-                        }
-                    });
+                    table.Cell().Element(TableBodyCell).AlignMiddle().Text(ServiceLabel(line)).LineHeight(1.3f);
+                    table.Cell().Element(TableBodyCell).AlignMiddle()
+                        .Text(FormatDateRange(line.ServicePeriodStart, line.ServicePeriodEnd));
                     table.Cell().Element(TableBodyCell).AlignMiddle().AlignRight().Text(line.EligibleDays.ToString());
                     table.Cell().Element(TableBodyCell).AlignMiddle().AlignRight()
                         .Text($"{FormatMoney(line.RateAmount)} {line.RateFrequency}".Trim());
@@ -360,6 +322,23 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
                 }
             });
         });
+    }
+
+    private static string ServiceLabel(InvoiceLine line)
+    {
+        var description = line.Description?.Trim() ?? string.Empty;
+        var period = $"{line.ServicePeriodStart:yyyy-MM-dd} to {line.ServicePeriodEnd:yyyy-MM-dd}";
+        if (description.EndsWith(period, StringComparison.Ordinal))
+        {
+            description = description[..^period.Length].Trim();
+        }
+
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            description = line.SnapshotInvoiceCategoryName?.Trim() ?? string.Empty;
+        }
+
+        return string.IsNullOrWhiteSpace(description) ? "Care" : description;
     }
 
     private static void ComposeTotalsPanel(IContainer container, Invoice invoice)
@@ -455,12 +434,6 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
             .MinHeight(28);
     }
 
-    private static void LabelValueRow(TableDescriptor table, string label, string? value)
-    {
-        table.Cell().PaddingVertical(2).Text(label).FontSize(9).FontColor(Colors.Grey.Darken1);
-        table.Cell().PaddingVertical(2).Text(value ?? "—").FontSize(9.5f);
-    }
-
     private static bool HasBankDetails(Invoice invoice) =>
         !string.IsNullOrWhiteSpace(invoice.SnapshotBankDetails)
         || !string.IsNullOrWhiteSpace(invoice.SnapshotBankAccountName)
@@ -475,9 +448,6 @@ public class InvoicePdfService(IDocumentStore documents, ILogger<InvoicePdfServi
 
     private static string FormatMoney(decimal amount) =>
         amount.ToString("C2", UkCulture);
-
-    private static string NullIfEmpty(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? "—" : value;
 
     private static string? FormatContactLine(Invoice invoice)
     {

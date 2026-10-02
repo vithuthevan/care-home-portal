@@ -1,5 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -19,6 +20,7 @@ import {
   InvoiceTemplate,
   UpsertInvoiceTemplateRequest,
 } from '../../models/invoice-template.model';
+import { trustedObjectUrl } from '../../../../shared/ui/stored-logo';
 
 @Component({
   selector: 'app-invoice-template-form',
@@ -43,6 +45,7 @@ export class InvoiceTemplateFormPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly auth = inject(AuthService);
+  private readonly sanitizer = inject(DomSanitizer);
 
   templateId: number | null = null;
   isEditMode = false;
@@ -51,8 +54,10 @@ export class InvoiceTemplateFormPage implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly isLoading = signal(false);
   readonly isSaving = signal(false);
-  readonly companyLogoUrl = signal<string | null>(null);
-  readonly authorityLogoUrl = signal<string | null>(null);
+  readonly companyLogoUrl = signal<SafeUrl | null>(null);
+  readonly authorityLogoUrl = signal<SafeUrl | null>(null);
+  private companyLogoObjectUrl: string | null = null;
+  private authorityLogoObjectUrl: string | null = null;
 
   form = this.fb.nonNullable.group({
     name: ['', Validators.required],
@@ -151,7 +156,7 @@ export class InvoiceTemplateFormPage implements OnInit {
       this.http
         .get(`/api/invoice-templates/${id}/logo/company`, { responseType: 'blob' })
         .subscribe({
-          next: (blob) => this.companyLogoUrl.set(URL.createObjectURL(blob)),
+          next: (blob) => this.setLogoPreview('company', blob),
           error: () => this.companyLogoUrl.set(null),
         });
     } else {
@@ -161,7 +166,7 @@ export class InvoiceTemplateFormPage implements OnInit {
       this.http
         .get(`/api/invoice-templates/${id}/logo/authority`, { responseType: 'blob' })
         .subscribe({
-          next: (blob) => this.authorityLogoUrl.set(URL.createObjectURL(blob)),
+          next: (blob) => this.setLogoPreview('authority', blob),
           error: () => this.authorityLogoUrl.set(null),
         });
     } else {
@@ -169,15 +174,37 @@ export class InvoiceTemplateFormPage implements OnInit {
     }
   }
 
+  private setLogoPreview(kind: 'company' | 'authority', blob: Blob): void {
+    if (!blob.size) {
+      return;
+    }
+    const trusted = trustedObjectUrl(this.sanitizer, blob);
+    if (kind === 'company') {
+      if (this.companyLogoObjectUrl) {
+        URL.revokeObjectURL(this.companyLogoObjectUrl);
+      }
+      this.companyLogoObjectUrl = trusted.objectUrl;
+      this.companyLogoUrl.set(trusted.safeUrl);
+      return;
+    }
+    if (this.authorityLogoObjectUrl) {
+      URL.revokeObjectURL(this.authorityLogoObjectUrl);
+    }
+    this.authorityLogoObjectUrl = trusted.objectUrl;
+    this.authorityLogoUrl.set(trusted.safeUrl);
+  }
+
   private revokeLogoUrls(): void {
-    const company = this.companyLogoUrl();
-    const authority = this.authorityLogoUrl();
-    if (company) {
-      URL.revokeObjectURL(company);
+    if (this.companyLogoObjectUrl) {
+      URL.revokeObjectURL(this.companyLogoObjectUrl);
+      this.companyLogoObjectUrl = null;
     }
-    if (authority) {
-      URL.revokeObjectURL(authority);
+    if (this.authorityLogoObjectUrl) {
+      URL.revokeObjectURL(this.authorityLogoObjectUrl);
+      this.authorityLogoObjectUrl = null;
     }
+    this.companyLogoUrl.set(null);
+    this.authorityLogoUrl.set(null);
   }
 
   save(): void {
