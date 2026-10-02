@@ -23,6 +23,7 @@ import {
   EntitySummaryStripComponent,
 } from '../../../../shared/ui/entity-summary-strip';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import { StoredLogoComponent } from '../../../../shared/ui/stored-logo';
 import { DisplayDatePipe } from '../../../../shared/format/display-date.pipe';
 
 interface CareHomeDashboardInvoiceRow {
@@ -62,6 +63,7 @@ interface CareHomeDashboardData {
     LabeledStatusComponent,
     EntitySummaryStripComponent,
     DisplayDatePipe,
+    StoredLogoComponent,
   ],
   templateUrl: './care-home-dashboard.html',
 })
@@ -75,6 +77,7 @@ export class CareHomeDashboardPage implements OnInit {
   private readonly displayDate = new DisplayDatePipe();
   readonly auth = inject(AuthService);
   readonly entityRouteKey = entityRouteKey;
+  readonly loadCareHomeLogo = (key: string) => this.homes.getLogo(key);
 
   readonly data = signal<CareHomeDashboardData | null>(null);
   readonly home = signal<CareHomeLocation | null>(null);

@@ -9,7 +9,7 @@ public class SecurityHeadersMiddleware(RequestDelegate next)
     private const string SpaCsp =
         "default-src 'self'; script-src 'self'; " +
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-        "img-src 'self' data:; " +
+        "img-src 'self' data: blob:; " +
         "font-src 'self' https://fonts.gstatic.com; " +
         "connect-src 'self'; " +
         "frame-ancestors 'none'; base-uri 'self'; form-action 'self'";

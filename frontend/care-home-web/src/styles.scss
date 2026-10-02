@@ -1012,6 +1012,17 @@ app-root {
   }
 }
 
+.logo-frame {
+  display: block;
+  max-height: 4rem;
+  max-width: 12rem;
+  object-fit: contain;
+  background: #fff;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  padding: 0.25rem;
+}
+
 .state-panel {
   display: flex;
   flex-direction: column;

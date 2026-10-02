@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, of, switchMap } from 'rxjs';
@@ -17,6 +18,7 @@ import { ToastService } from '../../../../shared/ui/toast.service';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
 import { optionalEmail, optionalEmailValidator } from '../../../../shared/format/optional-email';
+import { trustedObjectUrl } from '../../../../shared/ui/stored-logo';
 
 @Component({
   selector: 'app-company-form',
@@ -47,7 +49,9 @@ export class CompanyForm implements OnInit {
   readonly isLoading = signal(false);
   readonly isSaving = signal(false);
   readonly errorMessage = signal<string | null>(null);
-  readonly logoPreviewUrl = signal<string | null>(null);
+  private readonly sanitizer = inject(DomSanitizer);
+  readonly logoPreviewUrl = signal<SafeUrl | null>(null);
+  private logoObjectUrl: string | null = null;
   private logoFile: File | null = null;
 
   readonly form = this.formBuilder.nonNullable.group({
@@ -98,7 +102,7 @@ export class CompanyForm implements OnInit {
           });
           if (company.logoPath && this.companyRouteKey) {
             this.companyService.getLogo(this.companyRouteKey).subscribe({
-              next: (blob) => this.setLogoPreview(URL.createObjectURL(blob)),
+              next: (blob) => this.setLogoPreview(blob),
             });
           }
           this.breadcrumbs.set([
@@ -177,7 +181,7 @@ export class CompanyForm implements OnInit {
       return;
     }
     this.logoFile = file;
-    this.setLogoPreview(URL.createObjectURL(file));
+    this.setLogoPreview(file);
   }
 
   private uploadLogo(key: string) {
@@ -187,17 +191,24 @@ export class CompanyForm implements OnInit {
     return this.companyService.uploadLogo(key, this.logoFile);
   }
 
-  private setLogoPreview(url: string): void {
-    const current = this.logoPreviewUrl();
-    if (current?.startsWith('blob:')) {
-      URL.revokeObjectURL(current);
+  private setLogoPreview(blob: Blob): void {
+    if (!blob.size) {
+      return;
     }
-    this.logoPreviewUrl.set(url);
+    if (this.logoObjectUrl) {
+      URL.revokeObjectURL(this.logoObjectUrl);
+    }
+    const trusted = trustedObjectUrl(this.sanitizer, blob);
+    this.logoObjectUrl = trusted.objectUrl;
+    this.logoPreviewUrl.set(trusted.safeUrl);
   }
 
   private clearLogo(): void {
     this.logoFile = null;
-    this.setLogoPreview('');
+    if (this.logoObjectUrl) {
+      URL.revokeObjectURL(this.logoObjectUrl);
+      this.logoObjectUrl = null;
+    }
     this.logoPreviewUrl.set(null);
   }
 }

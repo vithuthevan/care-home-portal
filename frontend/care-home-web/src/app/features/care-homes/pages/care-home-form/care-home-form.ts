@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 
@@ -27,6 +28,7 @@ import { LoadingStateComponent } from '../../../../shared/ui/loading-state';
 import { ToastService } from '../../../../shared/ui/toast.service';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import { trustedObjectUrl } from '../../../../shared/ui/stored-logo';
 
 @Component({
   selector: 'app-care-home-form',
@@ -75,7 +77,9 @@ export class CareHomeForm implements OnInit {
 
   readonly errorMessage = signal<string | null>(null);
 
-  readonly logoPreviewUrl = signal<string | null>(null);
+  private readonly sanitizer = inject(DomSanitizer);
+  readonly logoPreviewUrl = signal<SafeUrl | null>(null);
+  private logoObjectUrl: string | null = null;
 
   private logoFile: File | null = null;
 
@@ -197,7 +201,7 @@ export class CareHomeForm implements OnInit {
 
           if (careHome.logoPath && this.careHomeRouteKey) {
             this.careHomeService.getLogo(this.careHomeRouteKey).subscribe({
-              next: (blob) => this.setLogoPreview(URL.createObjectURL(blob)),
+              next: (blob) => this.setLogoPreview(blob),
             });
           }
 
@@ -345,7 +349,7 @@ export class CareHomeForm implements OnInit {
       return;
     }
     this.logoFile = file;
-    this.setLogoPreview(URL.createObjectURL(file));
+    this.setLogoPreview(file);
   }
 
   private uploadLogo(key: string): Observable<CareHomeLocation | void> {
@@ -355,11 +359,15 @@ export class CareHomeForm implements OnInit {
     return this.careHomeService.uploadLogo(key, this.logoFile);
   }
 
-  private setLogoPreview(url: string): void {
-    const current = this.logoPreviewUrl();
-    if (current?.startsWith('blob:')) {
-      URL.revokeObjectURL(current);
+  private setLogoPreview(blob: Blob): void {
+    if (!blob.size) {
+      return;
     }
-    this.logoPreviewUrl.set(url);
+    if (this.logoObjectUrl) {
+      URL.revokeObjectURL(this.logoObjectUrl);
+    }
+    const trusted = trustedObjectUrl(this.sanitizer, blob);
+    this.logoObjectUrl = trusted.objectUrl;
+    this.logoPreviewUrl.set(trusted.safeUrl);
   }
 }

@@ -83,6 +83,7 @@
       <table class="data-table data-table--responsive-hide-sm">
         <thead>
           <tr>
+            <th>Logo</th>
             <th>Code</th>
             <th>Care Home</th>
             <th>Company</th>
@@ -99,6 +100,19 @@
               [class.inactive-row]="!careHome.isActive"
               [routerLink]="['/care-homes', entityRouteKey(careHome), 'dashboard']"
             >
+              <td>
+                @if (careHome.logoPath) {
+                  <app-stored-logo
+                    [sourceKey]="entityRouteKey(careHome)"
+                    [present]="true"
+                    [load]="loadCareHomeLogo"
+                    alt="Care home logo"
+                    size="thumb"
+                  />
+                } @else {
+                  —
+                }
+              </td>
               <td>{{ careHome.code }}</td>
               <td class="font-medium">{{ careHome.name }}</td>
               <td>{{ careHome.companyName }}</td>
@@ -139,6 +153,15 @@
     <div class="mobile-card-list mobile-card-list--breakpoint-md">
       @for (careHome of careHomes(); track careHome.id) {
         <div class="entity-card" [class.inactive-row]="!careHome.isActive">
+          @if (careHome.logoPath) {
+            <app-stored-logo
+              [sourceKey]="entityRouteKey(careHome)"
+              [present]="true"
+              [load]="loadCareHomeLogo"
+              alt="Care home logo"
+              size="thumb"
+            />
+          }
           <div class="font-semibold">{{ careHome.name }}</div>
           <div class="mt-1 text-sm text-[var(--app-text-muted)]">
             {{ careHome.code }} · {{ careHome.companyName }}

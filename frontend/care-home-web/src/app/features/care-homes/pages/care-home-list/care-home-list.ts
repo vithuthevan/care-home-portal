@@ -25,6 +25,7 @@ import { FilterBarComponent } from '../../../../shared/ui/filter-bar';
 import { ImportExportToolbarComponent } from '../../../../shared/ui/import-export-toolbar';
 import { BreadcrumbService } from '../../../../shared/ui/breadcrumb.service';
 import { entityRouteKey } from '../../../../shared/routing/entity-route';
+import { StoredLogoComponent } from '../../../../shared/ui/stored-logo';
 
 @Component({
   selector: 'app-care-home-list',
@@ -44,6 +45,7 @@ import { entityRouteKey } from '../../../../shared/routing/entity-route';
     TablePaginationComponent,
     FilterBarComponent,
     ImportExportToolbarComponent,
+    StoredLogoComponent,
   ],
   templateUrl: './care-home-list.html',
 })
@@ -56,6 +58,7 @@ export class CareHomeList implements OnInit {
   private readonly confirm = inject(ConfirmDialogService);
   private readonly toast = inject(ToastService);
   readonly auth = inject(AuthService);
+  readonly loadCareHomeLogo = (key: string) => this.careHomeService.getLogo(key);
 
   readonly careHomes = signal<CareHomeLocation[]>([]);
   readonly totalCount = signal(0);

@@ -82,14 +82,14 @@
             <div>
               <p class="m-0 mb-2 text-sm font-medium">Company logo</p>
               @if (companyLogoUrl(); as url) {
-                <img [src]="url" alt="" class="mb-2 max-h-16 max-w-xs object-contain" />
+                <img [src]="url" alt="Company logo" class="logo-frame mb-2" />
               }
               <input type="file" accept="image/*" (change)="onLogoSelected($event, 'company')" />
             </div>
             <div>
               <p class="m-0 mb-2 text-sm font-medium">Authority logo</p>
               @if (authorityLogoUrl(); as url) {
-                <img [src]="url" alt="" class="mb-2 max-h-16 max-w-xs object-contain" />
+                <img [src]="url" alt="Authority logo" class="logo-frame mb-2" />
               }
               <input type="file" accept="image/*" (change)="onLogoSelected($event, 'authority')" />
             </div>
