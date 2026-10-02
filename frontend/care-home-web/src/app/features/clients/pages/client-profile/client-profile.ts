@@ -140,13 +140,7 @@ export class ClientProfilePage implements OnInit {
 
   readonly currentRate = computed(() => {
     const contract = this.primaryContract();
-    if (!contract?.rates?.length) {
-      return null;
-    }
-    const sorted = [...contract.rates].sort((a, b) =>
-      a.effectiveFrom < b.effectiveFrom ? 1 : a.effectiveFrom > b.effectiveFrom ? -1 : 0,
-    );
-    return sorted.find((r) => !r.effectiveTo) ?? sorted[0];
+    return contract ? this.currentRateForContract(contract) : null;
   });
 
   readonly outstandingAmount = computed(() =>
@@ -257,9 +251,37 @@ export class ClientProfilePage implements OnInit {
     return `${this.displayDate.transform(contract.contractStartDate)} → ${end}`;
   }
 
-  formatRateRange(rate: FundingRateView): string {
-    const end = rate.effectiveTo ? this.displayDate.transform(rate.effectiveTo) : 'Open ended';
-    return `${this.displayDate.transform(rate.effectiveFrom)} → ${end}`;
+  formatRateRange(contract: FundingContractView, rate: FundingRateView): string {
+    const end = this.applicableRateEnd(contract, rate);
+    const endLabel = end ? this.displayDate.transform(end) : 'Open ended';
+    return `${this.displayDate.transform(rate.effectiveFrom)} → ${endLabel}`;
+  }
+
+  /**
+   * A rate applies until its own end when that end is after the start.
+   * A same-day end does not cut a contract short unless a later rate on this
+   * contract replaces it. Another invoice category does not close this rate.
+   */
+  applicableRateEnd(contract: FundingContractView, rate: FundingRateView): string | null {
+    const from = rate.effectiveFrom.slice(0, 10);
+    const to = rate.effectiveTo ? rate.effectiveTo.slice(0, 10) : null;
+    const contractEnd = contract.contractEndDate ? contract.contractEndDate.slice(0, 10) : null;
+    const laterRate = (contract.rates ?? []).some(
+      (other) => other.id !== rate.id && other.effectiveFrom.slice(0, 10) > from,
+    );
+
+    if (to && to > from) {
+      if (contractEnd && to > contractEnd) {
+        return contractEnd;
+      }
+      return to;
+    }
+
+    if (laterRate && to) {
+      return to;
+    }
+
+    return contractEnd;
   }
 
   formatInvoicePeriod(invoice: ResidentInvoiceRow): string {
@@ -270,13 +292,22 @@ export class ClientProfilePage implements OnInit {
   }
 
   currentRateForContract(contract: FundingContractView): FundingRateView | null {
-    if (!contract.rates?.length) {
+    const rates = contract.rates ?? [];
+    if (!rates.length) {
       return null;
     }
-    const sorted = [...contract.rates].sort((a, b) =>
-      a.effectiveFrom < b.effectiveFrom ? 1 : a.effectiveFrom > b.effectiveFrom ? -1 : 0,
-    );
-    return sorted.find((r) => !r.effectiveTo) ?? sorted[0];
+
+    const anchor =
+      contract.contractEndDate?.slice(0, 10) ??
+      rates.map((rate) => rate.effectiveFrom.slice(0, 10)).sort().at(-1) ??
+      '';
+    const covering = rates.filter((rate) => {
+      const from = rate.effectiveFrom.slice(0, 10);
+      const end = this.applicableRateEnd(contract, rate);
+      return from <= anchor && (!end || end >= anchor);
+    });
+    const pool = covering.length ? covering : rates;
+    return [...pool].sort((a, b) => (a.effectiveFrom < b.effectiveFrom ? 1 : -1))[0];
   }
 
   rateSuffix(frequency: string): string {

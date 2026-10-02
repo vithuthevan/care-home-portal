@@ -102,8 +102,8 @@
                   <app-currency-display size="hero" [amount]="rate.amount" [suffix]="rateSuffix(rate.frequency)" />
                   <p class="rate-highlight__effective">
                     Effective from {{ rate.effectiveFrom | displayDate }}
-                    @if (rate.effectiveTo) {
-                      until {{ rate.effectiveTo | displayDate }}
+                    @if (applicableRateEnd(contract, rate); as rateEnd) {
+                      until {{ rateEnd | displayDate }}
                     } @else {
                       · open ended
                     }
@@ -302,6 +302,11 @@
                       />
                       <span class="text-sm text-[var(--app-text-muted)]">
                         from {{ rate.effectiveFrom | displayDate }}
+                        @if (applicableRateEnd(contract, rate); as rateEnd) {
+                          until {{ rateEnd | displayDate }}
+                        } @else {
+                          · open ended
+                        }
                       </span>
                     } @else {
                       <span class="text-sm text-[var(--app-text-muted)]">No rate</span>
@@ -323,9 +328,13 @@
                     </thead>
                     <tbody>
                       @for (rate of contract.rates; track rate.id) {
-                        <tr [class.rate-row--current]="!rate.effectiveTo && contract.status === 'Active'">
+                        <tr
+                          [class.rate-row--current]="
+                            contract.status === 'Active' && currentRateForContract(contract)?.id === rate.id
+                          "
+                        >
                           <td>
-                            @if (!rate.effectiveTo && contract.status === 'Active') {
+                            @if (contract.status === 'Active' && currentRateForContract(contract)?.id === rate.id) {
                               <div class="rate-highlight rate-highlight--inline">
                                 <app-currency-display [amount]="rate.amount" [suffix]="rateSuffix(rate.frequency)" />
                               </div>
@@ -334,7 +343,7 @@
                             }
                           </td>
                           <td>{{ rate.frequency }}</td>
-                          <td>{{ formatRateRange(rate) }}</td>
+                          <td>{{ formatRateRange(contract, rate) }}</td>
                         </tr>
                       }
                     </tbody>
