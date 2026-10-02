@@ -1,3 +1,4 @@
+using CareHome.Api.Common;
 using CareHome.Api.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -16,19 +17,41 @@ public class EmailFromResolver(CareHomeDbContext dbContext, IOptions<EmailOption
         {
             var settings = await dbContext.TenantSettings.AsNoTracking()
                 .FirstOrDefaultAsync(x => x.TenantId == id, cancellationToken);
-            if (settings is not null)
+
+            var name = string.IsNullOrWhiteSpace(settings?.EmailFromName)
+                ? _defaults.FromName
+                : settings.EmailFromName.Trim();
+
+            if (!string.IsNullOrWhiteSpace(settings?.EmailFromAddress))
             {
-                var address = string.IsNullOrWhiteSpace(settings.EmailFromAddress)
-                    ? _defaults.FromAddress
-                    : settings.EmailFromAddress.Trim();
-                var name = string.IsNullOrWhiteSpace(settings.EmailFromName)
-                    ? _defaults.FromName
-                    : settings.EmailFromName.Trim();
-                if (!string.IsNullOrWhiteSpace(address))
-                {
-                    return (address, name);
-                }
+                return (settings.EmailFromAddress.Trim(), name);
             }
+
+            var admin = await (
+                from user in dbContext.Users.AsNoTracking()
+                join userRole in dbContext.UserRoles.AsNoTracking() on user.Id equals userRole.UserId
+                join role in dbContext.Roles.AsNoTracking() on userRole.RoleId equals role.Id
+                where user.TenantId == id
+                    && user.IsActive
+                    && role.Name == AppRoles.TenantAdmin
+                    && user.Email != null
+                    && user.Email != ""
+                orderby user.Email
+                select new { user.Email, user.DisplayName }
+            ).FirstOrDefaultAsync(cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(admin?.Email))
+            {
+                if (string.IsNullOrWhiteSpace(settings?.EmailFromName)
+                    && !string.IsNullOrWhiteSpace(admin.DisplayName))
+                {
+                    name = admin.DisplayName.Trim();
+                }
+
+                return (admin.Email.Trim(), name);
+            }
+
+            return (string.Empty, name);
         }
 
         return (_defaults.FromAddress ?? string.Empty, _defaults.FromName);
