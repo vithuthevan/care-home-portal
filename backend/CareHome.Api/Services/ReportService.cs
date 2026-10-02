@@ -281,26 +281,37 @@ public class ReportService(
             .ToList();
     }
 
-    public byte[] ToCsv<T>(IEnumerable<T> rows)
+    public byte[] ToCsv<T>(string report, IEnumerable<T> rows)
     {
-        var props = typeof(T).GetProperties();
-        var lines = new List<string> { string.Join(",", props.Select(p => p.Name)) };
+        var props = ExportProperties(typeof(T));
+        var lines = new List<string>
+        {
+            string.Join(",", props.Select(p => CsvFormulaSanitizer.CsvField(ColumnLabel(report, p.Name), neutralizeFormula: false)))
+        };
         foreach (var row in rows)
         {
             lines.Add(string.Join(",", props.Select(p => Escape(p.GetValue(row)))));
         }
 
-        return System.Text.Encoding.UTF8.GetBytes(string.Join("\n", lines));
+        return new System.Text.UTF8Encoding(encoderShouldEmitUTF8Identifier: true).GetBytes(string.Join("\r\n", lines));
     }
 
-    public byte[] ToExcel<T>(string sheetName, IEnumerable<T> rows)
+    public byte[] ToExcel<T>(string report, IEnumerable<T> rows)
     {
         using var workbook = new XLWorkbook();
-        var sheet = workbook.AddWorksheet(sheetName);
-        var props = typeof(T).GetProperties();
+        var sheet = workbook.AddWorksheet(SheetName(report));
+        var props = ExportProperties(typeof(T));
         for (var i = 0; i < props.Length; i++)
         {
-            sheet.Cell(1, i + 1).Value = props[i].Name;
+            var header = sheet.Cell(1, i + 1);
+            header.Value = ColumnLabel(report, props[i].Name);
+            header.Style.Font.Bold = true;
+            header.Style.Fill.BackgroundColor = XLColor.FromHtml("#E8EEF4");
+            header.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+            if (IsNumeric(props[i].Name))
+            {
+                header.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Right;
+            }
         }
 
         var r = 2;
@@ -308,17 +319,30 @@ public class ReportService(
         {
             for (var c = 0; c < props.Length; c++)
             {
-                var raw = props[c].GetValue(row);
-                var text = raw?.ToString() ?? "";
-                if (raw is not decimal and not DateOnly and not DateTimeOffset and not DateTime and not bool and not int and not long)
-                {
-                    text = CsvFormulaSanitizer.Neutralize(text);
-                }
-
-                sheet.Cell(r, c + 1).Value = text;
+                WriteCell(sheet.Cell(r, c + 1), props[c].GetValue(row));
             }
 
             r++;
+        }
+
+        if (props.Length > 0)
+        {
+            var lastRow = Math.Max(r - 1, 1);
+            var range = sheet.Range(1, 1, lastRow, props.Length);
+            if (lastRow > 1)
+            {
+                var table = range.CreateTable("ReportTable");
+                table.Theme = XLTableTheme.TableStyleMedium2;
+                table.ShowAutoFilter = true;
+            }
+            else
+            {
+                range.SetAutoFilter();
+            }
+
+            sheet.SheetView.FreezeRows(1);
+            sheet.Columns(1, props.Length).AdjustToContents(1, Math.Min(lastRow, 40));
+            sheet.Rows(1, lastRow).AdjustToContents();
         }
 
         using var stream = new MemoryStream();
@@ -326,21 +350,99 @@ public class ReportService(
         return stream.ToArray();
     }
 
-    public byte[] ToPdf(string title, IEnumerable<string> lines)
+    public byte[] ToPdf<T>(string report, IEnumerable<T> rows)
     {
+        var data = rows as IList<T> ?? rows.ToList();
+        var props = ExportProperties(typeof(T));
+        var title = ReportTitle(report);
+
         return Document.Create(container =>
         {
             container.Page(page =>
             {
-                page.Margin(40);
-                page.Size(PageSizes.A4);
-                page.Header().Text(title).FontSize(16).Bold();
-                page.Content().Column(col =>
+                page.Margin(28);
+                page.Size(props.Length > 6 ? PageSizes.A4.Landscape() : PageSizes.A4);
+                page.DefaultTextStyle(x => x.FontSize(props.Length > 8 ? 8 : 9));
+                page.Header().Column(col =>
                 {
-                    foreach (var line in lines)
+                    col.Item().Text(title).FontSize(16).Bold();
+                    col.Item().PaddingTop(2).Text($"{data.Count} row(s)").FontSize(9).FontColor(Colors.Grey.Darken1);
+                });
+                page.Footer().AlignRight().Text(text =>
+                {
+                    text.Span("Page ");
+                    text.CurrentPageNumber();
+                    text.Span(" of ");
+                    text.TotalPages();
+                });
+                page.Content().PaddingTop(12).Element(body =>
+                {
+                    if (props.Length == 0)
                     {
-                        col.Item().Text(line).FontSize(10);
+                        body.Text("Nothing to export.");
+                        return;
                     }
+
+                    body.Table(table =>
+                    {
+                        table.ColumnsDefinition(columns =>
+                        {
+                            foreach (var prop in props)
+                            {
+                                if (IsNumeric(prop.Name))
+                                {
+                                    columns.ConstantColumn(72);
+                                }
+                                else
+                                {
+                                    columns.RelativeColumn();
+                                }
+                            }
+                        });
+
+                        table.Header(header =>
+                        {
+                            foreach (var prop in props)
+                            {
+                                IContainer cell = header.Cell()
+                                    .Background(Colors.Grey.Lighten3)
+                                    .BorderBottom(1)
+                                    .BorderColor(Colors.Grey.Medium)
+                                    .Padding(4);
+                                if (IsNumeric(prop.Name))
+                                {
+                                    cell = cell.AlignRight();
+                                }
+
+                                cell.Text(ColumnLabel(report, prop.Name)).SemiBold();
+                            }
+                        });
+
+                        if (data.Count == 0)
+                        {
+                            table.Cell().ColumnSpan((uint)props.Length).Padding(8).Text("No rows.");
+                            return;
+                        }
+
+                        for (var i = 0; i < data.Count; i++)
+                        {
+                            var shade = i % 2 == 1 ? Colors.Grey.Lighten4 : Colors.White;
+                            foreach (var prop in props)
+                            {
+                                IContainer cell = table.Cell()
+                                    .Background(shade)
+                                    .BorderBottom(0.5f)
+                                    .BorderColor(Colors.Grey.Lighten2)
+                                    .Padding(3);
+                                if (IsNumeric(prop.Name))
+                                {
+                                    cell = cell.AlignRight();
+                                }
+
+                                cell.Text(FormatExportValue(prop.GetValue(data[i])));
+                            }
+                        }
+                    });
                 });
             });
         }).GeneratePdf();
@@ -370,13 +472,162 @@ public class ReportService(
 
     private static string Escape(object? value)
     {
-        var text = value?.ToString() ?? "";
-        if (value is not decimal and not DateOnly and not DateTimeOffset and not DateTime and not bool and not int and not long)
+        var text = FormatExportValue(value);
+        if (value is not decimal and not DateOnly and not DateTimeOffset and not DateTime and not bool and not int and not long and not double)
         {
             text = CsvFormulaSanitizer.Neutralize(text);
         }
 
         return CsvFormulaSanitizer.CsvField(text, neutralizeFormula: false);
     }
+
+    private static System.Reflection.PropertyInfo[] ExportProperties(Type type) =>
+        type.GetProperties()
+            .Where(p => p.CanRead && !p.Name.EndsWith("PublicId", StringComparison.Ordinal))
+            .ToArray();
+
+    private static void WriteCell(IXLCell cell, object? raw)
+    {
+        switch (raw)
+        {
+            case null:
+                cell.Value = string.Empty;
+                return;
+            case decimal dec:
+                cell.Value = (double)dec;
+                cell.Style.NumberFormat.Format = "#,##0.00";
+                return;
+            case int number:
+                cell.Value = number;
+                return;
+            case long number:
+                cell.Value = (double)number;
+                cell.Style.NumberFormat.Format = "#,##0";
+                return;
+            case double number:
+                cell.Value = number;
+                return;
+            case bool flag:
+                cell.Value = flag ? "Yes" : "No";
+                return;
+            case DateOnly date:
+                cell.Value = date.ToDateTime(TimeOnly.MinValue);
+                cell.Style.DateFormat.Format = "yyyy-mm-dd";
+                return;
+            case DateTime date:
+                cell.Value = date;
+                cell.Style.DateFormat.Format = "yyyy-mm-dd hh:mm";
+                return;
+            case DateTimeOffset date:
+                cell.Value = date.UtcDateTime;
+                cell.Style.DateFormat.Format = "yyyy-mm-dd hh:mm";
+                return;
+            default:
+                cell.Value = CsvFormulaSanitizer.Neutralize(raw.ToString() ?? "");
+                return;
+        }
+    }
+
+    private static string FormatExportValue(object? value) => value switch
+    {
+        null => "",
+        DateOnly date => date.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
+        DateTime date => date.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture),
+        DateTimeOffset date => date.ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture),
+        bool flag => flag ? "Yes" : "No",
+        decimal amount => amount.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
+        double amount => amount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture),
+        _ => value.ToString() ?? ""
+    };
+
+    private static bool IsNumeric(string property) =>
+        property is "Amount" or "TotalAmount" or "Capacity" or "CurrentClients" or "AvailableBeds";
+
+    private static string ColumnLabel(string report, string property)
+    {
+        if (property == "Amount" && report is "invoices-by-client" or "invoices-by-care-home" or "income-by-category")
+        {
+            return "Net billed";
+        }
+
+        if (property == "PaymentStatus")
+        {
+            return "Payment status";
+        }
+
+        return ColumnLabels.TryGetValue(property, out var label) ? label : SplitWords(property);
+    }
+
+    private static string ReportTitle(string report) => report switch
+    {
+        "client-census" => "Resident census",
+        "current-rates" => "Current rates",
+        "invoices-by-client" => "Invoices by resident",
+        "invoices-by-care-home" => "Invoices by care home",
+        "income-by-category" => "Income by category",
+        "occupancy" => "Occupancy / availability",
+        "rate-history" => "Funding rate history",
+        "billing-exceptions" => "Billing exceptions",
+        "outstanding" => "Payment status / outstanding",
+        _ => SplitWords(report.Replace('-', ' '))
+    };
+
+    private static string SheetName(string report)
+    {
+        var cleaned = new string(report.Select(ch => ":\\/?*[]".Contains(ch) ? '-' : ch).ToArray()).Trim();
+        if (string.IsNullOrWhiteSpace(cleaned))
+        {
+            cleaned = "Report";
+        }
+
+        return cleaned.Length <= 31 ? cleaned : cleaned[..31];
+    }
+
+    private static string SplitWords(string name)
+    {
+        var chars = new List<char>(name.Length + 4);
+        for (var i = 0; i < name.Length; i++)
+        {
+            if (i > 0 && char.IsUpper(name[i]) && !char.IsUpper(name[i - 1]))
+            {
+                chars.Add(' ');
+            }
+
+            chars.Add(i == 0 ? char.ToUpperInvariant(name[i]) : name[i]);
+        }
+
+        return new string(chars.ToArray());
+    }
+
+    private static readonly Dictionary<string, string> ColumnLabels = new(StringComparer.Ordinal)
+    {
+        ["ClientName"] = "Resident",
+        ["ReferenceNumber"] = "Reference",
+        ["CareHomeName"] = "Care Home",
+        ["CompanyName"] = "Company",
+        ["Status"] = "Status",
+        ["CareType"] = "Care Type",
+        ["AdmissionDate"] = "Admission Date",
+        ["ClientStatus"] = "Resident Status",
+        ["FundingAuthority"] = "Funding Authority",
+        ["Category"] = "Category",
+        ["Frequency"] = "Frequency",
+        ["Amount"] = "Amount",
+        ["EffectiveFrom"] = "Effective From",
+        ["EffectiveTo"] = "Effective To",
+        ["InvoiceNumber"] = "Invoice",
+        ["InvoiceDate"] = "Invoice Date",
+        ["TotalAmount"] = "Amount",
+        ["Capacity"] = "Capacity",
+        ["CurrentClients"] = "Current Residents",
+        ["AvailableBeds"] = "Available Beds",
+        ["Notes"] = "Notes",
+        ["LoggedAt"] = "Logged At",
+        ["Severity"] = "Severity",
+        ["Code"] = "Code",
+        ["Message"] = "Message",
+        ["DueDate"] = "Due Date",
+        ["IsDue"] = "Overdue",
+    };
 }
 

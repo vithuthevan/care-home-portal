@@ -147,9 +147,19 @@ public static class TabularSpreadsheet
     {
         using var workbook = new XLWorkbook();
         var sheet = workbook.Worksheets.Add("Data");
+        if (headers.Count == 0)
+        {
+            using var empty = new MemoryStream();
+            workbook.SaveAs(empty);
+            return empty.ToArray();
+        }
+
         for (var c = 0; c < headers.Count; c++)
         {
-            sheet.Cell(1, c + 1).Value = headers[c];
+            var header = sheet.Cell(1, c + 1);
+            header.Value = headers[c];
+            header.Style.Font.Bold = true;
+            header.Style.Fill.BackgroundColor = XLColor.FromHtml("#E8EEF4");
         }
 
         for (var r = 0; r < rows.Count; r++)
@@ -158,9 +168,26 @@ public static class TabularSpreadsheet
             for (var c = 0; c < headers.Count; c++)
             {
                 row.TryGetValue(headers[c], out var value);
-                sheet.Cell(r + 2, c + 1).Value = value ?? string.Empty;
+                var text = value ?? string.Empty;
+                sheet.Cell(r + 2, c + 1).Value = text;
             }
         }
+
+        var lastRow = Math.Max(rows.Count + 1, 1);
+        var range = sheet.Range(1, 1, lastRow, headers.Count);
+        if (rows.Count > 0)
+        {
+            var table = range.CreateTable("ExportTable");
+            table.Theme = XLTableTheme.TableStyleMedium2;
+            table.ShowAutoFilter = true;
+        }
+        else
+        {
+            range.SetAutoFilter();
+        }
+
+        sheet.SheetView.FreezeRows(1);
+        sheet.Columns(1, headers.Count).AdjustToContents(1, Math.Min(lastRow, 40));
 
         using var ms = new MemoryStream();
         workbook.SaveAs(ms);

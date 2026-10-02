@@ -111,7 +111,7 @@
           color="primary"
           type="button"
           (click)="load()"
-          [disabled]="isLoading()"
+          [disabled]="isLoading() || isExporting()"
         >
           @if (isLoading()) {
             Generating...
@@ -123,7 +123,7 @@
           mat-stroked-button
           type="button"
           (click)="exportFormat('csv')"
-          [disabled]="isLoading()"
+          [disabled]="isLoading() || isExporting()"
         >
           CSV
         </button>
@@ -131,7 +131,7 @@
           mat-stroked-button
           type="button"
           (click)="exportFormat('xlsx')"
-          [disabled]="isLoading()"
+          [disabled]="isLoading() || isExporting()"
         >
           Excel
         </button>
@@ -139,7 +139,7 @@
           mat-stroked-button
           type="button"
           (click)="exportFormat('pdf')"
-          [disabled]="isLoading()"
+          [disabled]="isLoading() || isExporting()"
         >
           PDF
         </button>
@@ -148,7 +148,7 @@
   </section>
 
   @if (isLoading()) {
-    <app-loading-state label="Generating report..." />
+    <app-loading-state variant="table" label="Generating report..." [columns]="6" />
   } @else if (rows().length) {
     <section class="report-layout__results table-container panel table-container--sticky">
       <table class="data-table">

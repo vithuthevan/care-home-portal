@@ -110,6 +110,7 @@ export class ReportsPage implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly hasRun = signal(false);
   readonly isLoading = signal(false);
+  readonly isExporting = signal(false);
 
   ngOnInit(): void {
     const params = this.route.snapshot.queryParamMap;
@@ -405,18 +406,25 @@ export class ReportsPage implements OnInit {
   }
 
   exportFormat(format: string): void {
-    if (this.isLoading()) {
+    if (this.isLoading() || this.isExporting()) {
       return;
     }
-    let params = this.reportParams().set('format', format);
+    this.errorMessage.set(null);
+    this.isExporting.set(true);
+    const params = this.reportParams().set('format', format);
     this.http
       .get(`/api/reports/${this.report}`, { params, responseType: 'blob' })
-      .subscribe((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${this.report}.${format === 'xlsx' ? 'xlsx' : format}`;
-        a.click();
+      .pipe(finalize(() => this.isExporting.set(false)))
+      .subscribe({
+        next: (blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${this.report}.${format === 'xlsx' ? 'xlsx' : format}`;
+          a.click();
+          URL.revokeObjectURL(url);
+        },
+        error: (error) => this.errorMessage.set(getApiErrorMessage(error, 'Unable to export report.')),
       });
   }
 
