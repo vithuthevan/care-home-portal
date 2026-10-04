@@ -1,4 +1,7 @@
 .profile-tabs {
+  display: block;
+  width: 100%;
+  max-width: 100%;
   margin-top: var(--space-2);
   --mat-tab-header-active-label-text-color: var(--app-primary);
   --mat-tab-header-active-ripple-color: var(--app-primary);
@@ -8,12 +11,19 @@
 }
 
 .profile-tabs ::ng-deep .mat-mdc-tab-header {
-  overflow-x: auto;
-  scrollbar-width: thin;
+  overflow: hidden;
+}
+
+.profile-tabs ::ng-deep .mat-mdc-tab-body-wrapper,
+.profile-tabs ::ng-deep .mat-mdc-tab-body,
+.profile-tabs ::ng-deep .mat-mdc-tab-body.mat-mdc-tab-body-active,
+.profile-tabs ::ng-deep .mat-mdc-tab-body-content {
+  width: 100%;
+  overflow: visible;
 }
 
 .profile-tabs ::ng-deep .mat-mdc-tab-body-content {
-  overflow: visible;
+  height: auto;
 }
 
 .profile-card {

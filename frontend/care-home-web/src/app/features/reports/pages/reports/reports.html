@@ -191,5 +191,20 @@
       title="No results"
       message="No rows matched this report and date range. Try widening the period or choose another report."
     />
+  } @else {
+    <app-empty-state
+      title="No report yet"
+      message="Choose a report and filters, then run it. Results appear here. Use CSV, Excel, or PDF when you need a copy."
+    >
+      <button
+        mat-flat-button
+        color="primary"
+        type="button"
+        (click)="load()"
+        [disabled]="isLoading() || isExporting()"
+      >
+        Run report
+      </button>
+    </app-empty-state>
   }
 </div>
